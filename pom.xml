@@ -1,0 +1,41 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>de.fzi.ids</groupId>
+  <artifactId>ic-workspace</artifactId>
+  <name>IC Workspace</name>
+  <version>1.0</version>
+  <packaging>pom</packaging>
+
+  <organization>
+    <name>FZI Forschungszentrum Informatik</name>
+    <url>http://www.fzi.de</url>
+  </organization>
+
+  <repositories>
+    <repository>
+      <id>clojure.org</id>
+      <name>Clojure Maven Repository</name>
+      <url>http://build.clojure.org/releases</url>
+    </repository>
+    <repository>
+      <id>scala-tools.org</id>
+      <name>Scala-tools Maven Repository</name>
+      <url>http://scala-tools.org/repo-releases</url>
+    </repository>
+    <repository>
+      <id>tanesha.net</id>
+      <name>Tanesha Maven Repository</name>
+      <url>http://tanesha.net/maven2</url>
+    </repository>
+  </repositories>
+
+  <modules>
+   <module>packages</module>
+  </modules>
+
+  <properties>
+    <appassembler-target-directory>${project.parent.parent.parent.basedir}/export/java</appassembler-target-directory>
+  </properties>
+</project>

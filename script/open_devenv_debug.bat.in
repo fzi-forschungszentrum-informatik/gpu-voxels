@@ -1,0 +1,18 @@
+@echo off
+rem # --------------------------------------------------------------------------------------
+rem #
+rem #	File	open_devenv_debug.bat
+rem #	Author	Klaus Uhl
+rem #	Date	2012-01-13
+rem #
+rem # --------------------------------------------------------------------------------------
+
+if EXIST .\setenv.bat (
+	cd ..
+) else (
+	echo Could not find "$(MCAHOME)\script\setenv.bat".
+)
+
+call script\setenv --debug
+
+start devenv.exe @ICMAKER_PROJECT_NAME@.sln

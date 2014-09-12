@@ -1,0 +1,118 @@
+Project icmaker is intended to be used building the various interchange libraries. 
+
+When creating CMakeLists for building a library, it is necessary to use the predefined macros in IcMakerMacros.cmake. Theses are mostly self-describing and are named as follows:
+  * ICMAKER_INTERNAL_DEPENDENCIES
+  * ICMAKER_EXTERNAL_DEPENDENCIES
+  * ICMAKER_BUILD_LIBRARY
+  * ICMAKER_BUILD_PLUGIN
+  * ICMAKER_BUILD_ANNOUNCEMENT
+  * ICMAKER_BUILD_PROGRAM
+  * ICMAKER_INSTALL_HEADERS
+  * ICMAKER_INSTALL_GLOBHEADERS
+  * ICMAKER_INSTALL_HEADER_EXTRAS
+  * ICMAKER_INSTALL_SHARED_EXTRAS
+  * ICMAKER_INSTALL_CONFIG_EXTRAS
+  * ICMAKER_GLOBAL_CPPDEFINES
+  * ICMAKER_LOCAL_CPPDEFINES
+
+
+Let's have a look at some example usage, how a library folder structure and the appropriate CMakeLists.txt should look like. An example folder structure is given by:
+icl_foobar
+  CMakeLists.txt [root]
+  doc
+    CMakeLists.txt [doc]
+  src
+    CMakeLists.txt [src]
+    icl_foobar
+      CMakeLists.txt [lib]
+      foobar.h
+      foobar.cpp
+    examples
+      CMakeLists.txt [examples]
+      example.cpp
+    tools
+      CMakeLists.txt [tools]
+      main.cpp
+    tests
+      CMakeLists.txt [tests]
+      test.cpp
+
+
+CMakeLists.txt [root] definition:
+    ADD_SUBDIRECTORY(src)
+    ADD_SUBDIRECTORY(doc)
+
+
+CMakeLists.txt [src] definition:
+    SET(ICL_FOOBAR_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "")
+    ADD_SUBDIRECTORY(icl_foobar)
+    ADD_SUBDIRECTORY(tools)
+    
+    IF(BUILD_EXAMPLES)
+      ADD_SUBDIRECTORY(examples)
+    ENDIF()
+    
+    IF(BUILD_TESTS)
+      ADD_SUBDIRECTORY(tests)
+    ENDIF()
+
+
+CMakeLists.txt [lib] definition:
+    ICMAKER_SET("icl_foobar")
+    ICMAKER_ADD_SOURCES(
+        foobar.cpp
+    )
+    
+    ICMAKER_ADD_HEADERS(
+        foobar.h
+        test.h
+    )
+    
+    ICMAKER_LOCAL_CPPDEFINES(-DICL_FOOBAR_EXPORT_SYMBOLS)
+    ICMAKER_GLOBAL_CPPDEFINES(-DGLOBAL_CPP_DEFINES_COME_HERE -D_IC_BUILDER_FOOBAR_)
+    
+    ICMAKER_INCLUDE_DIRECTORIES(${ICL_FOOBAR_INCLUDE_DIRS})
+    
+    # Add external dependencies
+    FIND_PACKAGE( Boost 1.34.0 COMPONENTS date_time )
+    ICMAKER_EXTERNAL_DEPENDENCIES(
+        Boost
+        OpenCV
+    )
+    
+    # Add internal dependencies
+    ICMAKER_INTERNAL_DEPENDENCIES(
+        icl_other
+        icl_core_logging
+    )
+    
+    # Add optional internal dependencies
+    ICMAKER_INTERNAL_DEPENDENCIES(OPTIONAL
+        icl_optional
+    )
+    
+    ICMAKER_BUILD_LIBRARY()
+    ICMAKER_INSTALL_HEADERS("icl_foobar")
+
+If the library is build as a plugin, use ICMAKER_BUILD_PLUGIN instead:
+    SET(subdir "foobar")
+    ICMAKER_BUILD_PLUGIN(${subdir})
+
+
+CMakeLists.txt [examples] definition:
+    ICMAKER_SET("icl_foobar_example")
+    ICMAKER_ADD_SOURCES(
+      example.cpp
+    )
+    
+    # Add dependencies
+    ICMAKER_INTERNAL_DEPENDENCIES(
+      icl_foobar
+    )
+    
+    ICMAKER_BUILD_PROGRAM()
+
+Further tools and tests should look similar to CMakeLists.txt [examples].
+
+Please consider the usage of ICMAKER_GLOBAL_CPPDEFINES and ICMAKER_LOCAL_CPPDEFINES: External Libraries themselves set aglobal cpp definition _IC_BUILDER_EXTERNAL_LIB_NAME_, whereas internal libraries must make usage of ICMAKER_GLOBAL_CPPDEFINES to set this definition.
+

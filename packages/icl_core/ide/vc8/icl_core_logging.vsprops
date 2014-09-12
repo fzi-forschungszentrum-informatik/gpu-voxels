@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="icl_core_logging"
+	InheritedPropertySheets=".\common_icl_core.vsprops;..\..\..\..\ide\ic\vc8\boost.vsprops"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		AdditionalIncludeDirectories=""
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		AdditionalDependencies="icl_core_logging.lib"
+	/>
+</VisualStudioPropertySheet>

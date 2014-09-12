@@ -1,0 +1,14 @@
+#ifndef _icl_core_iTimeSpan_idl_
+#define _icl_core_iTimeSpan_idl_
+
+module icl_core {
+
+struct iTimeSpan
+{
+  long long sec;
+  long nsec;
+};
+
+};
+
+#endif

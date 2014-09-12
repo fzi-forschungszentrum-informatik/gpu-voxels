@@ -1,0 +1,14 @@
+#ifndef _icl_core_iTimeStamp_idl_
+#define _icl_core_iTimeStamp_idl_
+
+module icl_core {
+
+struct iTimeStamp
+{
+  unsigned long long sec;
+  unsigned long nsec;
+};
+
+};
+
+#endif

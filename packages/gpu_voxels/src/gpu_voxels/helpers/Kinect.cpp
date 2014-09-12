@@ -1,0 +1,119 @@
+// this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
+
+// -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This program is free software licensed under the CDDL
+// (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
+// You can find a copy of this license in LICENSE.txt in the top
+// directory of the source code.
+//
+// © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
+//
+// -- END LICENSE BLOCK ------------------------------------------------
+
+//----------------------------------------------------------------------
+/*!\file
+ *
+ * \author  Sebastian Klemm
+ * \date    2012-09-13
+ *
+ */
+//----------------------------------------------------------------------
+
+#include "Kinect.h"
+
+#include <iostream>
+#include <math.h>
+#include <utility>
+//#include <pcl_conversions/pcl_conversions.h>
+
+namespace gpu_voxels {
+
+Kinect::Kinect() :
+     m_running(false)
+{
+  //m_viewer("Sensor Data Viewer");
+  m_data = new std::vector<Vector3f>(640*480);
+}
+
+Kinect::~Kinect()
+{
+  if (m_running)
+  {
+    stop();
+  }
+  delete[] m_data;
+}
+
+
+void Kinect::cloud_callback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr &cloud)
+{
+
+//	m_pcl_cloud = new pcl::PointCloud<pcl::PointXYZRGBA>;
+  pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
+
+
+
+  for (uint32_t i=0; i<cloud->points.size(); i++)
+  {
+    m_data->at(i).x = /*(float)1000.0**/(cloud->points[i].x);
+    m_data->at(i).y = /*(float)1000.0**/(cloud->points[i].y);
+    m_data->at(i).z = /*(float)1000.0**/(cloud->points[i].z);
+
+//    // cut kinect data to a specific range: (debugging)
+//    const float max_range = 2500;
+//    if (m_data[i].z > max_range)
+//    {
+//      m_data[i].x = NAN;
+//      m_data[i].y = NAN;
+//      m_data[i].z = NAN;
+//    }
+
+    //printf("kinect point: %f, %f, %f\n", m_data[i].x,m_data[i].y, m_data[i].z);
+  }
+  //m_voxelmap->insertSensorData(m_data, m_enable_raycasting, m_cut_real_robot, m_robotmap->getDeviceDataPtr());
+  //m_voxelmap->increaseUpdateCounter();
+
+
+//  if (!m_viewer.wasStopped())
+//  {
+//    m_viewer.showCloud(cloud);
+//  }
+}
+
+//void Kinect::getLastPCStamp()
+//{
+//
+//}
+
+void Kinect::run()
+{
+  LOGGING_INFO_C(Gpu_voxels_helpers, Kinect, "Kinect: starting capture interface." << endl);
+  m_interface = new pcl::OpenNIGrabber();
+
+  boost::function<void(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr&)> f_cb =
+      boost::bind(&Kinect::cloud_callback, this, _1);
+
+  m_interface->registerCallback(f_cb);
+
+  m_interface->start();
+  m_running = true;
+  LOGGING_INFO_C(Gpu_voxels_helpers, Kinect, "Kinect: capture interface started." << endl);
+}
+
+void Kinect::stop()
+{
+  LOGGING_INFO_C(Gpu_voxels_helpers, Kinect, "Kinect: stopping capture interface." << endl);
+  m_interface->stop();
+  delete m_interface;
+  m_running = false;
+  LOGGING_INFO_C(Gpu_voxels_helpers, Kinect, "Kinect: capture interface stopped" << endl);
+}
+
+bool Kinect::isRunning()
+{
+  return m_running;
+}
+
+} // end of namespace

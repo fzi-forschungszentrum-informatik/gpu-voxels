@@ -1,0 +1,3 @@
+test -f ./script/setenv || echo "Please source this script in the main directory"
+test -f ./script/setenv || return
+. ./script/ic/setenv $*

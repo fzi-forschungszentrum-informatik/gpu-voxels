@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Config>
+    <IclCore>
+        <Logging>
+            <OutputStream1>
+                <OutputStreamName>File</OutputStreamName>
+                <Name>LogFile</Name>
+		<FileName>log/LoggingTest.log</FileName>
+		<MesageQueueSize>512</MesageQueueSize>
+                <LogLevel>Trace</LogLevel>
+                <LogStream1>Main</LogStream1>
+                <LogStream2>ThreadLog</LogStream2>
+            </OutputStream1>
+            <LogStream1>
+                <Name>ThreadLog</Name>
+                <LogLevel>Trace</LogLevel>
+            </LogStream1>
+            <LogStream2>
+                <Name>Main</Name>
+                <LogLevel>Debug</LogLevel>
+            </LogStream2>
+        </Logging>
+    </IclCore>
+    <TestLogging>
+        <ThreadPriority>0</ThreadPriority>
+        <MessageCount>100</MessageCount>
+        <SleepTimeUS>1000</SleepTimeUS>
+    </TestLogging>
+</Config>

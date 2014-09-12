@@ -1,0 +1,16 @@
+{
+example{
+    :Example
+    config{
+        :Config
+        node:  Node  
+    }config
+}example
+bla{
+    :Bla
+    blubb:Blubb
+}bla
+example{
+    config:NewConfig
+}example
+}

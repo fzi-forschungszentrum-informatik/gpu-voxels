@@ -1,0 +1,49 @@
+# ===================================================================================
+#  @ICLIB_PACKAGE_NAME_CONFIGCMAKE@ CMake configuration file
+#
+#             ** File generated automatically, do not modify **
+#
+#  Usage from an external project:
+#    In your CMakeLists.txt, add these lines:
+#
+#    FIND_PACKAGE(@ICLIB_PACKAGE_NAME_CONFIGCMAKE@ REQUIRED )
+#    TARGET_LINK_LIBRARIES(MY_TARGET_NAME ${@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIBRARIES})
+#
+#    This file will define the following variables:
+#      - @ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIBRARIES            : The list of libraries to links against.
+#      - @ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIB_DIR              : The directory where lib files are. Calling LINK_DIRECTORIES
+#                                                                with this path is NOT needed.
+#      - @ICLIB_PACKAGE_NAME_CONFIGCMAKE@_INCLUDE_DIRS         : The include directories.
+#
+#    Advanced variables:
+#      - @ICLIB_PACKAGE_NAME_CONFIGCMAKE@_CONFIG_PATH
+#
+# =================================================================================================
+
+# Extract the directory where *this* file has been installed (determined at cmake run-time)
+get_filename_component(@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+# Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
+get_filename_component(@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_INSTALL_PATH "${@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_CONFIG_PATH}/../.." REALPATH)
+
+# ======================================================
+# Include directories to add to the user project:
+# ======================================================
+
+# Provide the include directories to the caller
+SET(@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_INCLUDE_DIRS @ICLIB_INCLUDE_DIRS_CONFIGCMAKE@)
+
+# ======================================================
+# Link directories to add to the user project:
+# ======================================================
+
+SET(@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIB_COMPONENTS @ICLIB_PACKAGE_NAME_CONFIGCMAKE_COMPONENTS@)
+
+# Provide the libs directory anyway, it may be needed in some cases.
+SET(@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIB_DIR @ICLIB_LIB_DIRS_CONFIGCMAKE@)
+LINK_DIRECTORIES(${@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIB_DIR})
+
+SET(@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIBRARIES "")
+foreach(__ICLIB ${@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIB_COMPONENTS})
+  SET(@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIBRARIES ${@ICLIB_PACKAGE_NAME_CONFIGCMAKE@_LIBRARIES} ${__ICLIB})
+endforeach()

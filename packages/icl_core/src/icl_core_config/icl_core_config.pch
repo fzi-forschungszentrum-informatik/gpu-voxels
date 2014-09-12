@@ -1,0 +1,27 @@
+// this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
+
+// -- BEGIN LICENSE BLOCK ----------------------------------------------
+// -- END LICENSE BLOCK ------------------------------------------------
+
+//----------------------------------------------------------------------
+/*!\file
+ *
+ * \author  Klaus Uhl
+ * \date    2010-04-21
+ *
+ * \brief   Collects all exported header files for use with precompiled headers.
+ *
+ */
+//----------------------------------------------------------------------
+#ifndef ICL_CORE_CONFIG_ICL_CORE_CONFIG_PCH_INCLUDED
+#define ICL_CORE_CONFIG_ICL_CORE_CONFIG_PCH_INCLUDED
+
+#ifndef _IC_BUILDER_ICL_CORE_CONFIG_
+#  define _IC_BUILDER_ICL_CORE_CONFIG_
+#endif
+
+#include <boost/regex.h>
+#include <tinyxml/tinyxml.h>
+#include <icl_core/icl_core.h>
+
+#endif

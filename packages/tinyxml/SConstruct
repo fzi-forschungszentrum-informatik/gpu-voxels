@@ -1,0 +1,9 @@
+import os.path
+import sys
+
+build_home = Dir(name = '#', directory = '.').get_abspath()
+sys.path.insert(0, os.path.join(build_home, 'python'))
+
+import Ic.SCons
+
+Ic.SCons.InitBuild(build_home)

@@ -1,0 +1,18 @@
+@echo off
+rem # --------------------------------------------------------------------------------------
+rem #
+rem #	File	open_cmd_release.bat
+rem #	Author	Klaus Uhl
+rem #	Date	2012-01-13
+rem #
+rem # 	Opens an IC Workspace command shell in the $(MCAHOME) directory.
+rem #
+rem # --------------------------------------------------------------------------------------
+
+if EXIST .\setenv.bat (
+	cd ..
+) else (
+	echo Could not find "$(MCAHOME)\script\setenv.bat".
+)
+
+start "FZI - IC Workspace" cmd /K "script\setenv --release"

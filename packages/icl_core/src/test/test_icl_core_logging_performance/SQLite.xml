@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Config>
+  <IclCore>
+    <Logging>
+      <OutputStream1>
+	<OutputStreamName>SQLite</OutputStreamName>
+	<Name>SQLite</Name>
+	<FileName>LoggingPerformanceTest.sqlite</FileName>
+	<MesageQueueSize>512</MesageQueueSize>
+	<LogLevel>Trace</LogLevel>
+	<LogStream1>Default</LogStream1>
+	<LogStream2>PerformanceTest</LogStream2>
+      </OutputStream1>
+    </Logging>
+  </IclCore>
+</Config>

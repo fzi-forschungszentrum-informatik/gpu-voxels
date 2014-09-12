@@ -1,0 +1,123 @@
+// this is for emacs file handling -&- mode: c++; indent-tabs-mode: nil -&-
+
+// -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This program is free software licensed under the CDDL
+// (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
+// You can find a copy of this license in LICENSE.txt in the top
+// directory of the source code.
+//
+// © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
+//
+// -- END LICENSE BLOCK ------------------------------------------------
+
+//----------------------------------------------------------------------
+/*!\file
+ *
+ * \author  Sebastian Klemm
+ * \date    2012-08-23
+ *
+ */
+//----------------------------------------------------------------------
+#ifndef GPU_VOXELS_CUDAMATH_H_INCLUDED
+#define GPU_VOXELS_CUDAMATH_H_INCLUDED
+
+#include <gpu_voxels/helpers/cuda_datatypes.h>
+
+namespace gpu_voxels {
+
+/*!
+ * \brief CUDA class CudaMath
+ *
+ * Basic gpu accelerated linear algebra functions
+ */
+class CudaMath
+{
+public:
+
+  //! Constructor
+  CudaMath();
+
+  /*! Constructor with custom member intialization
+   *  \param max_nr_of_devices The maximum number of graphics cards compatible with CUDA
+   *  \param max_nr_of_blocks The maximum available number of CUDA blocks on the GPU.
+   *  \param max_nr_of_threads_per_block The maximum available number of CUDA threads per block on the GPU.
+   */
+  CudaMath(unsigned int max_nr_of_devices, unsigned int max_nr_of_blocks, unsigned int max_nr_of_threads_per_block);
+
+  //! Destructor
+  ~CudaMath();
+
+  //! For more comfortable matrix output
+  void printMatrix(const Matrix4f& matrix);
+
+  //! Device load balancing functions
+  void computeLinearLoad(const uint32_t nr_of_items, uint32_t* blocks,
+                         uint32_t* threads_per_block);
+
+
+  //! Reformatting functions (not gpu accelerated)
+  void Vec3ToMat4(const Vector3f& vec_in, Matrix4f& mat_out);
+  void Mat3ToMat4(const Matrix3d& in, Matrix4f& out);
+  void Mat3AndVec3ToMat4(const Matrix3d& mat_in, const Vector3f& vec_in, Matrix4f& out);
+  void Mat3AndVec4ToMat4(const Matrix3d& mat_in, const Vector4d& vec_in, Matrix4f& out);
+
+  void Mat3AndVec3ToMat4(const Matrix3f& mat_in, const Vector3f& vec_in, Matrix4f& mat_out);
+
+  //! Transpose a matrix
+  void transpose(const Matrix3d& in, Matrix3d& out);
+  void transpose(const Matrix4f& in, Matrix4f& out);
+
+  //! Invert a matrix (not gpu accelerated because of low benefit)
+  // void invert(const Matrix4f& in, Matrix4f& out);
+
+  /*! Transform Matrix (corresponding to mcal_kinematic::tTransformCoordinates style)
+         computes absoultes[] = base    * relatives[]
+      or computes absoultes[] = base^-1 * relatives[] if invert_base is true
+      warning: the inversion-part is not gpu accelerated
+   */
+  void transform(unsigned int nr_of_transformations, Matrix4f& base, const Matrix4f* relatives,
+                 Matrix4f* absolutes, bool invert_base);
+
+
+  /*! Interpolate linear between the values \a value1 and \a value2 using the given \a ratio.
+   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
+   *  middle.
+   */
+  static float interpolateLinear(float value1, float value2, float ratio);
+
+
+  /*! Interpolate linear between the values \a value1 and \a value2 using the given \a ratio.
+   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
+   *  middle.
+   */
+  static double interpolateLinear(double value1, double value2, double ratio);
+
+
+  /*! Interpolate linear between the robot joint vectors \a joint_state1 and \a joint_state2
+   *  using the given \a ratio.
+   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
+   *  middle.
+   */
+  static std::vector<float> interpolateLinear(const std::vector<float>& joint_state1,
+                                              const std::vector<float>& joint_state2, float ratio);
+
+  /*! Interpolate linear between the robot joint vectors \a joint_state1 and \a joint_state2
+   *  using the given \a ratio.
+   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
+   *  middle.
+   */
+  static std::vector<double> interpolateLinear(const std::vector<double>& joint_state1,
+                                               const std::vector<double>& joint_state2, double ratio);
+
+private:
+  const unsigned int m_max_nr_of_devices;
+  const unsigned int m_max_nr_of_blocks;
+  const unsigned int m_max_nr_of_threads_per_block;
+
+};
+
+} // end of namespace
+
+#endif
