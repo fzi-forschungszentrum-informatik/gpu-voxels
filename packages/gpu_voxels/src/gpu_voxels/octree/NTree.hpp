@@ -2453,15 +2453,13 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate_bottom
   //printf("num_voxel %u level %u\n", num_voxel, level);
 #endif
 
-  const uint32_t numThreadsPerBlock = 32;
-
   // propagate bottom up level by level
   timespec time = getCPUTime();
   for (uint32_t l = level; l < level_count - 1; ++l)
   {
     timespec time_loop = getCPUTime();
 //    kernel_propagate_bottom_up<branching_factor, level_count, InnerNode, LeafNode> <<<numBlocks,
-//                                                                                      numThreadsPerBlock>>>(
+//                                                                                      32>>>(
 //        m_root, d_voxel_id, num_voxel, l);
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef PROPAGATE_MESSAGES
@@ -2787,12 +2785,6 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 void NTree<branching_factor, level_count, InnerNode,
     LeafNode>::rebuild()
 {
-#ifdef LOAD_BALANCING_PROPAGATE
-  const bool update_Flag = true;
-#else
-  const bool update_Flag = false;
-#endif
-
   const std::string prefix = __FUNCTION__;
   const std::string temp_timer = prefix + "_temp";
   PerformanceMonitor::start(prefix);
@@ -2920,8 +2912,6 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate(const 
   const std::string temp_timer = prefix + "_temp";
   PerformanceMonitor::start(prefix);
 
-  double balance_overhead = 0;
-  int num_balance_tasks = 0;
   uint32_t blocks = DEFAULT_PROPAGATE_QUEUE_NTASKS;
 
   if(num_changed_nodes != 0)

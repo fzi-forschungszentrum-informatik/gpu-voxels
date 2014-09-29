@@ -56,10 +56,7 @@ template<std::size_t branching_factor, std::size_t level_count, class InnerNode,
     class WorkItem, typename RunConfig>
 void AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, WorkItem, RunConfig>::run()
 {
-  printf("doPreparations\n");
-  timespec time = getCPUTime();
   bool preparations_success = doPreparations();
-  printf("doPreparations: %f ms\n", timeDiff(time, getCPUTime()));
   if(preparations_success)
   {
       HANDLE_CUDA_ERROR(cudaMemcpy(&m_dev_work_stacks1[0], &m_init_work_item, sizeof(WorkItem), cudaMemcpyHostToDevice));
@@ -73,11 +70,8 @@ void AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, Wo
       while (total_work_items > 0)
       {
         HANDLE_CUDA_ERROR(cudaMemset(m_dev_tasks_idle_count, 0, sizeof(uint32_t)));
-        printf("doWork\n");
-        time = getCPUTime();
         doWork();
         HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-        printf("doWork: %f ms\n", timeDiff(time, getCPUTime()));
 
         ++num_work_tasks;
 
@@ -86,10 +80,7 @@ void AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, Wo
 
         if (idle_count >= (NUM_TASKS * IDLE_THESHOLD))
         {
-          printf("doBalance\n");
-          time = getCPUTime();
           total_work_items = doBalance();
-          printf("doBalance: %f ms\n", timeDiff(time, getCPUTime()));
           ++num_balance_tasks;
 
           // Swap stack pointers due to load balance from stack1 to stack2
@@ -98,15 +89,9 @@ void AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, Wo
           m_dev_work_stacks2 = tmp;
         }
       }
-      printf("doPostCalculations\n");
-      time = getCPUTime();
       doPostCalculations();
-      printf("doPostCalculations: %f ms\n", timeDiff(time, getCPUTime()));
   }
-  printf("doCleanup\n");
-  time = getCPUTime();
   doCleanup();
-  printf("doCleanup: %f ms\n", timeDiff(time, getCPUTime()));
 }
 
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,

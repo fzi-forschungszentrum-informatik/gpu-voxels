@@ -123,6 +123,7 @@ public:
   }
   //######################################
 
+  __host__ __device__
   static Probability floatToProbability(const float val)
   {
     float tmp = (val * (float(MAX_OCCUPANCY) - float(MIN_OCCUPANCY))) + MIN_OCCUPANCY;

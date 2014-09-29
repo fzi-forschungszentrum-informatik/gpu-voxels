@@ -2395,8 +2395,6 @@ static void kernel_checkTree(InnerNode* root, uint8_t* error)
   __shared__ InnerNode* shared_stack[level_count];
 
   *error = 0;
-  const uint8_t status_mask = ~(ns_PART | ns_COLLISION | ns_LAST_LEVEL);
-  const uint8_t status_compare_mask = status_mask | ns_PART | ns_LAST_LEVEL;
 
   VoxelID last_voxel = (VoxelID) powf(branching_factor, level_count - 1);
   for (VoxelID i = 0; i < last_voxel && !*error;)

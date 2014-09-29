@@ -92,7 +92,6 @@ void Extract<branching_factor, level_count, InnerNode, LeafNode, clear_collision
     // Copy results from device to host
     HANDLE_CUDA_ERROR(
         cudaMemcpy(&m_num_elements, m_dev_global_voxel_list_count, sizeof(uint32_t), cudaMemcpyDeviceToHost));
-    printf("%u\n", m_num_elements);
 }
 // --------------------------------------------------------
 

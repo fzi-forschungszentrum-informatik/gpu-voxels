@@ -23,6 +23,7 @@
 #ifndef GPU_VOXELS_OCTREE_LOAD_BALANCED_KERNEL_CONFIG_PROPAGATE_CUH_INCLUDED
 #define GPU_VOXELS_OCTREE_LOAD_BALANCED_KERNEL_CONFIG_PROPAGATE_CUH_INCLUDED
 
+#include <cuda_runtime.h>
 #include <gpu_voxels/octree/DataTypes.h>
 #include <gpu_voxels/octree/kernels/kernel_common.h>
 #include <gpu_voxels/octree/NTreeData.h>
@@ -363,10 +364,16 @@ public:
       __syncthreads();
 
 #ifndef NDEBUG
-      uint32_t bottom_up_count = __syncthreads_count(insert_bottom_up_work_item);
-      uint32_t top_down_count = __syncthreads_count(insert_top_down_work_item);
-      assert(bottom_up_count == shared_mem.warp_prefix_sum[constants.num_warps]);
-      assert(top_down_count == shared_mem.warp_prefix_sum[2 * constants.num_warps + 1]);
+      // ##### Had to remove the following code to compile without errors ####
+      // The error message isn't useful at all, since it complains about device functions like ____syncthreads.
+      // It's probably a compiler bug, due to too much used registers,
+      // since only the following line also leads to the same problem: const bool foo = true;
+      // #####################################################################
+      // TODO Deal with compiler problem to enable the assertions
+//      uint32_t bottom_up_count = __syncthreads_count(insert_bottom_up_work_item);
+//      uint32_t top_down_count = __syncthreads_count(insert_top_down_work_item);
+//      assert(bottom_up_count == shared_mem.warp_prefix_sum[constants.num_warps]);
+//      assert(top_down_count == shared_mem.warp_prefix_sum[2 * constants.num_warps + 1]);
 #endif
 
       if (constants.thread_id == 0)
@@ -376,9 +383,7 @@ public:
         int32_t num_inserts = shared_mem.warp_prefix_sum[constants.num_warps]
             + shared_mem.warp_prefix_sum[2 * constants.num_warps + 1];
         for (int32_t i = 0; i < (num_inserts - 1); ++i)
-          assert(
-              shared_mem.my_work_stack[shared_mem.num_stack_work_items + i].level
-                  >= shared_mem.my_work_stack[shared_mem.num_stack_work_items + i + 1].level);
+          assert(shared_mem.my_work_stack[shared_mem.num_stack_work_items + i].level >= shared_mem.my_work_stack[shared_mem.num_stack_work_items + i + 1].level);
 #endif
 
         shared_mem.num_stack_work_items += shared_mem.warp_prefix_sum[constants.num_warps]

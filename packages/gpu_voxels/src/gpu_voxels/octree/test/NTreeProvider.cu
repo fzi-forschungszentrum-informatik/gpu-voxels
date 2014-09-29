@@ -155,7 +155,6 @@ void NTreeProvider::visualize()
   HANDLE_CUDA_ERROR(cudaIpcGetMemHandle(m_shm_memHandle, ptr));
   *m_shm_numCubes = num_cubes;
   *m_shm_bufferSwapped = true;
-  printf("numCUbes %u\n", num_cubes);
   m_mutex.unlock();
   m_shared_mutex.unlock();
 }

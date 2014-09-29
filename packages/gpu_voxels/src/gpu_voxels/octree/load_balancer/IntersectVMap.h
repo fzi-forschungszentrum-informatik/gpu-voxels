@@ -24,11 +24,14 @@
 #define GPU_VOXELS_OCTREE_LOAD_BALANCER_INTERSECT_VMAP_H_INCLUDED
 
 #include <gpu_voxels/octree/load_balancer/AbstractLoadBalancer.h>
-#include <gpu_voxels/octree/DefaultCollider.h>
 #include <gpu_voxels/octree/NTree.h>
 
 namespace gpu_voxels {
 namespace NTree {
+
+// Forward declaration
+class DefaultCollider;
+
 namespace LoadBalancer {
 
 typedef RunConfig<128> IntersectVMapRunConfig; // Experimental founding

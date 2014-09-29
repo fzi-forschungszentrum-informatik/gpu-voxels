@@ -24,7 +24,6 @@
 #define GPU_VOXELS_OCTREE_LOAD_BALANCER_PROPAGATE_H_INCLUDED
 
 #include <gpu_voxels/octree/load_balancer/AbstractLoadBalancer.h>
-#include <gpu_voxels/octree/DefaultCollider.h>
 
 namespace gpu_voxels {
 namespace NTree {
