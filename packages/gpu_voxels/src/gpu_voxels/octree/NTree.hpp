@@ -2503,10 +2503,12 @@ static int num_extract_call = -1;
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes(
-    thrust::device_vector<Cube> & d_cubes, uint8_t* d_status_selection, uint32_t min_level)
+    thrust::device_vector<Cube> *&d_cubes, uint8_t* d_status_selection, uint32_t min_level)
 {
 //  std::size_t size = allocInnerNodes + allocLeafNodes;
-//  d_cubes.resize(size);
+//  d_cubes->resize(size);
+
+  if(!d_cubes) d_cubes = new thrust::device_vector<Cube>(1);
 
   if (d_status_selection == NULL)
     d_status_selection = m_extract_status_selection;
@@ -2582,7 +2584,7 @@ uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes
   //LOGGING_INFO(OctreeLog, "used min level: " << min_level << endl);
   //printf("used min level: %u\n", min_level);
 
-  d_cubes.resize(used_size);
+  d_cubes->resize(used_size);
 
   uint8_t* mapping = m_status_mapping;
 //  if (num_extract_call == 1)
@@ -2607,11 +2609,11 @@ uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes
 //                   cudaMemcpyHostToDevice));
 //    num_extract_call = -1;
 //  }
-  thrust::transform(d_node_data.begin(), d_node_data.begin() + used_size, d_cubes.begin(),
+  thrust::transform(d_node_data.begin(), d_node_data.begin() + used_size, d_cubes->begin(),
                     Trafo_NodeData_to_Cube(mapping));
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-  uint32_t num_coll = thrust::count_if(d_cubes.begin(), d_cubes.end(), Comp_is_collision());
+  uint32_t num_coll = thrust::count_if(d_cubes->begin(), d_cubes->end(), Comp_is_collision());
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   //LOGGING_INFO(OctreeLog, "extract num_coll: " << num_coll << endl);
  //printf("extract num_coll: %u\n", num_coll);
@@ -2622,11 +2624,11 @@ uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes
     m_extract_buffer_size = max(m_extract_buffer_size/2, INITIAL_EXTRACT_BUFFER_SIZE);
 
 #ifdef EXTRACTCUBE_MESSAGES
-  LOGGING_INFO(OctreeExtractCubeLog, "cubes buffer size " << d_cubes.size() << endl);
+  LOGGING_INFO(OctreeExtractCubeLog, "cubes buffer size " << d_cubes->size() << endl);
   LOGGING_INFO(OctreeExtractCubeLog, "used_size " << used_size << endl);
   LOGGING_INFO(OctreeExtractCubeLog, "extractCubes total: " << timeDiff(time, getCPUTime()) << " ms" << endl);
   LOGGING_INFO(OctreeExtractCubeLog, "balance overhead: " << balance_overhead << " ms  balance tasks: " << num_balance_tasks << endl);
-//  printf("cubes buffer size %lu\n", d_cubes.size());
+//  printf("cubes buffer size %lu\n", d_cubes->size());
 //  printf("used_size %u\n", used_size);
 //  printf("extractCubes total: %f ms\n", timeDiff(time, getCPUTime()));
 //  printf("balance overhead: %f ms  balance tasks: %i\n", balance_overhead, num_balance_tasks);
@@ -2933,7 +2935,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate(const 
 
       // next measurment point
       blocks_1 = 1;
-      nodes_1 = 10000;
+      nodes_1 = 128; //10000;
       blocks = linearApprox(blocks_1, nodes_1, blocks_2, nodes_2, num_changed_nodes);
     }
     PerformanceMonitor::addData(prefix, "LinearApprox", blocks);

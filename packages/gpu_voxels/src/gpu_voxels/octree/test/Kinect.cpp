@@ -363,7 +363,7 @@ void Kinect::run()
   if (m_parameter->mode == Provider::Provider_Parameter::MODE_KINECT_PLAYBACK)
     m_interface = new pcl::ONIGrabber(m_parameter->pcd_file.c_str(), true, true);
   else
-    m_interface = new pcl::OpenNIGrabber();
+    m_interface = new pcl::OpenNIGrabber(m_parameter->kinect_id);
 
   //new pcl::ONIGrabber("./Recordings/Captured_0.oni", true, true);
 

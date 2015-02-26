@@ -21,6 +21,7 @@ ADD_SUBDIRECTORY (src/uls)
 ICMAKER_CONFIGURE_PACKAGE()
 
 IF (BUILD_TESTS)
+  ADD_SUBDIRECTORY (src/test/test_icl_core)
   ADD_SUBDIRECTORY (src/test/test_icl_core_config)
   ADD_SUBDIRECTORY (src/test/test_icl_core_logging)
   ADD_SUBDIRECTORY (src/ts/icl_core)

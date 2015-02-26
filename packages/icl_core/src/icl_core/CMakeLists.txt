@@ -17,8 +17,11 @@ ICMAKER_ADD_SOURCES(
     )
 
 ICMAKER_ADD_HEADERS(
+    Array2D.h
+    AtScopeEnd.h
     BaseTypes.h
     BitfieldHelper.h
+    Convert.h
     DataHeader.h
     EnumHelper.h
     Explicit.h
@@ -62,6 +65,7 @@ ICMAKER_ADD_HEADERS(
     TimeBase.h
     TimeSpan.h
     TimeStamp.h
+    UnionFind.h
     Vector.h
     VectorWrapper.h
     ZBuffer.h
@@ -84,7 +88,7 @@ ICMAKER_ADD_HEADERS(
     tVector.h
 )
 ENDIF()
-   
+
 IF(WIN32)
   ICMAKER_ADD_SOURCES(
       os_win32_fs.cpp

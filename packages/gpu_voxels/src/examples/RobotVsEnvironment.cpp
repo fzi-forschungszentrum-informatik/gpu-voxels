@@ -23,6 +23,8 @@
 #include <cstdlib>
 #include <signal.h>
 
+#include <icl_core_config/Config.h>
+
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
@@ -54,9 +56,14 @@ int main(int argc, char* argv[])
   signal(SIGINT, ctrlchandler);
   signal(SIGTERM, killhandler);
 
+  icl_core::config::GetoptParameter ident_parameter("device-identifier:", "id",
+                                                    "Identifer of the kinect device");
+  icl_core::config::addParameter(ident_parameter);
   icl_core::logging::initialize(argc, argv);
 
-  Kinect* kinect = new Kinect();
+  std::string identifier = icl_core::config::Getopt::instance().paramOpt("device-identifier");
+
+  Kinect* kinect = new Kinect(identifier);
 
   /*!
    * First, we generate an API class, which defines the
@@ -103,7 +110,7 @@ int main(int argc, char* argv[])
   }
 
   bfs::path pcd_file = bfs::path(model_path / "pointcloud_0002.pcd");
-  if (!gvl->getMap("myEnvironmentMap2")->insertPCD(pcd_file.generic_string(), eVT_OCCUPIED,
+  if (!gvl->getMap("myEnvironmentMap2")->insertPointcloudFromFile(pcd_file.generic_string(), eVT_OCCUPIED,
                                                   true, Vector3f(1, 1, 0)))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);

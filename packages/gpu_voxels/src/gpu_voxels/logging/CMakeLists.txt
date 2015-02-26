@@ -19,6 +19,7 @@ ICMAKER_ADD_HEADERS(
   logging_gpu_voxels_helpers.h
   logging_cuda.h
   logging_voxelmap.h
+  logging_primitive_array.h
   logging_robot.h
   logging_octree.h
   )
@@ -28,6 +29,7 @@ ICMAKER_ADD_SOURCES(
   logging_gpu_voxels_helpers.cpp
   logging_cuda.cpp
   logging_voxelmap.cpp
+  logging_primitive_array.cpp
   logging_robot.cpp
   logging_octree.cpp
   )

@@ -28,8 +28,6 @@
 
 namespace gpu_voxels {
 
-typedef boost::shared_ptr<VisProvider> VisProviderSharedPtr;
-
 struct ManagedMap
 {
 

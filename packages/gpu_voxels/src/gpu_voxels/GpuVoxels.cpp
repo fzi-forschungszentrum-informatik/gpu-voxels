@@ -39,6 +39,53 @@ GpuVoxels::~GpuVoxels()
   m_managed_maps.clear();
 }
 
+bool GpuVoxels::addPrimitives(const primitive_array::PrimitiveType prim_type, const std::string &array_name)
+{
+  // check if array with same name already exists
+  ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(array_name);
+  if (it != m_managed_primitive_arrays.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Primitives array with name '" << array_name << "' already exists." << endl);
+    return false;
+  }
+
+  primitive_array::PrimitiveArraySharedPtr primitive_array_shared_ptr;
+  VisProviderSharedPtr vis_primitives_shared_ptr;
+
+  primitive_array::PrimitiveArray* orig_prim_array = new primitive_array::PrimitiveArray(prim_type);
+  VisPrimitiveArray* vis_prim_array = new VisPrimitiveArray(orig_prim_array, array_name);
+  primitive_array_shared_ptr = primitive_array::PrimitiveArraySharedPtr(orig_prim_array);
+  vis_primitives_shared_ptr = VisProviderSharedPtr(vis_prim_array);
+
+  std::pair<std::string, ManagedPrimitiveArray> named_primitives_array_pair(array_name,
+                                                    ManagedPrimitiveArray(primitive_array_shared_ptr, vis_primitives_shared_ptr));
+  m_managed_primitive_arrays.insert(named_primitives_array_pair);
+  return true;
+}
+
+bool GpuVoxels::delPrimitives(const std::string &array_name)
+{
+  ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(array_name);
+  if (it == m_managed_primitive_arrays.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Primitives array with name '" << array_name << "' not found." << endl);
+    return false;
+  }
+  m_managed_primitive_arrays.erase(it);
+  return true;
+}
+
+bool GpuVoxels::modifyPrimitives(const std::string &array_name, std::vector<Vector4f>& prim_positions)
+{
+  ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(array_name);
+  if (it == m_managed_primitive_arrays.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Primitives array with name '" << array_name << "' not found." << endl);
+    return false;
+  }
+  it->second.prim_array_shared_ptr->setPoints(prim_positions);
+}
+
 bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
 {
   // check if map with same name already exists
@@ -244,34 +291,22 @@ bool GpuVoxels::insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &cor
     return false;
   }
 
-
-  Vector3f box_size = corner_max - corner_min;
-  std::cout << "=============== Box Size: " << box_size << std::endl;
   float delta = m_voxel_side_length / points_per_voxel;
-  std::cout << "=============== Box Deltas: " << delta << std::endl;
-  uint32_t num_points = ceil(box_size.x / delta) * ceil(box_size.y / delta) * ceil(box_size.z / delta);
-
-  std::vector<Vector3f> box_cloud(num_points);
-  uint32_t i = 0;
+  std::vector<Vector3f> box_cloud;
 
   for(float x_dim = corner_min.x; x_dim <= corner_max.x; x_dim += delta)
   {
-      for(float y_dim = corner_min.y; y_dim <= corner_max.y; y_dim += delta)
+    for(float y_dim = corner_min.y; y_dim <= corner_max.y; y_dim += delta)
+    {
+      for(float z_dim = corner_min.z; z_dim <= corner_max.z; z_dim += delta)
       {
-          for(float z_dim = corner_min.z; z_dim <= corner_max.z; z_dim += delta)
-          {
-            Vector3f blub(x_dim, y_dim, z_dim);
-            box_cloud.at(i) = blub;
-            std::cout << "=============== Inserted point: " << blub << std::endl;
-          }
+        Vector3f point(x_dim, y_dim, z_dim);
+        box_cloud.push_back(point);
       }
+    }
   }
-
-  LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "=========================== Num points in box '" << num_points << "'" << endl);
-
   std::vector<std::vector<Vector3f> > box_clouds;
   box_clouds.push_back(box_cloud);
-
   MetaPointCloud boxes(box_clouds);
   boxes.syncToDevice();
 
@@ -315,13 +350,24 @@ bool GpuVoxels::visualizeMap(const std::string &map_name, const bool force_repai
   return it->second.vis_provider_shared_ptr.get()->visualize(force_repaint);
 }
 
+bool GpuVoxels::visualizePrimitivesArray(const std::string &prim_array_name, const bool force_repaint)
+{
+  ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(prim_array_name);
+  if (it == m_managed_primitive_arrays.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Primitives Array with name '" << prim_array_name << "' not found." << endl);
+    return false;
+  }
+  return it->second.vis_provider_shared_ptr.get()->visualize(force_repaint);
+}
+
 VisProvider* GpuVoxels::getVisualization(const std::string &map_name)
 {
   ManagedMapsIterator it = m_managed_maps.find(map_name);
   if (it == m_managed_maps.end())
   {
     LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Map with name '" << map_name << "' not found." << endl);
-    return false;
+    return NULL;
   }
   return it->second.vis_provider_shared_ptr.get();
 }

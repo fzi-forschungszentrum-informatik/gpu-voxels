@@ -98,7 +98,6 @@ bool XMLInterpreter::getColorPairFromXML(colorPair& colors, boost::filesystem::p
     { /*If there is no second color specified use the first again*/
       colors.second = color_1;
     }
-
     return true;
   }
   return false;
@@ -152,7 +151,6 @@ bool XMLInterpreter::getDataContext(DataContext* context, std::string name)
     {
       context->m_colors[i] = colors;
     }
-
     else
     {
       break;
@@ -177,7 +175,6 @@ bool XMLInterpreter::getVoxelmapContext(VoxelmapContext* context, uint32_t index
   { // if no context has been found for the name try the old naming
     p = "/voxelmap_" + boost::lexical_cast<std::string>(index);
     return getDataContext(context, p);
-
   }
   return true;
 }
@@ -193,7 +190,21 @@ bool XMLInterpreter::getOctreeContext(OctreeContext* context, uint32_t index)
   { // if no context has been found for the name try the old naming
     p = "/octree_" + boost::lexical_cast<std::string>(index);
     return getDataContext(context, p);
+  }
+  return true;
+}
 
+bool XMLInterpreter::getPrimitiveArrayContext(PrimitiveArrayContext* context, uint32_t index)
+{
+  if (!m_is_initialized)
+  {
+    return false;
+  }
+  std::string p = "/" + context->m_map_name;
+  if (!getDataContext(context, p))
+  { // if no context has been found for the name try the old naming
+    p = "/primitive_array_" + boost::lexical_cast<std::string>(index);
+    return getDataContext(context, p);
   }
   return true;
 }

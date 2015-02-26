@@ -32,7 +32,6 @@ ICMAKER_ADD_HEADERS(
   RobotNodes.h
   Sensor.h
   SensorModel.h
-  Util.h
   Voxel.h
   VoxelList.h
   VoxelTypeFlags.h
@@ -45,6 +44,7 @@ ICMAKER_ADD_HEADERS(
 ICMAKER_ADD_SOURCES(
   Dummy.cpp
   PerformanceMonitor.cpp
+  VisNTree.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(
@@ -91,9 +91,6 @@ ICMAKER_ADD_CUDA_FILES(
   Sensor.cu
   Sensor.h
   SensorModel.h
-  Util.h
-  VisNTree.h
-  VisNTree.hpp
   Voxel.h
   VoxelList.h
   VoxelTypeFlags.h

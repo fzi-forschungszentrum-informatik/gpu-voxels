@@ -116,6 +116,11 @@ boost::shared_ptr<LifeCycle> autoStart(int &argc, char *argv[])
   return boost::shared_ptr<LifeCycle>(new LifeCycle(argc, argv));
 }
 
+void setLogLevel(icl_core::logging::LogLevel log_level)
+{
+  LoggingManager::instance().setLogLevel(log_level);
+}
+
 ////////////// DEPRECATED VERSIONS //////////////
 #ifdef _IC_BUILDER_DEPRECATED_STYLE_
 

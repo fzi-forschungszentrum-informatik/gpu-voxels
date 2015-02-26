@@ -25,21 +25,21 @@
 #ifndef GPU_VOXELS_VISUALIZATION_SHAREDMEMORYMANAGEROCTREES_H_INCLUDED
 #define GPU_VOXELS_VISUALIZATION_SHAREDMEMORYMANAGEROCTREES_H_INCLUDED
 
-#include <gpu_visualization/SharedMemoryManager.h>
-#include <gpu_voxels/vis_interface/VisualizerInterface.h>
 #include <boost/lexical_cast.hpp>
 #include <glm/glm.hpp>
 #include <gpu_voxels/vis_interface/VisualizerInterface.h>
 
 namespace gpu_voxels {
 namespace visualization {
-class SharedMemoryManagerOctrees: public SharedMemoryManager
+
+// forward declaration so we don't have to include the header
+// which contains boost code
+class SharedMemoryManager;
+
+class SharedMemoryManagerOctrees
 {
 public:
-  SharedMemoryManagerOctrees() :
-      SharedMemoryManager(shm_segment_name_octrees, true)
-  {
-  }
+  SharedMemoryManagerOctrees();
   uint32_t getNumberOfOctreesToDraw();
   std::string getNameOfOctree(const uint32_t index);
   bool getOctreeVisualizationData(Cube*& cubes, uint32_t& size,const uint32_t index);
@@ -50,7 +50,7 @@ public:
   bool getSuperVoxelSize(uint32_t & sdim);
   void setSuperVoxelSize(uint32_t sdim);
 private:
-
+  SharedMemoryManager* shmm;
 }
 ;
 } //end of namespace visualization

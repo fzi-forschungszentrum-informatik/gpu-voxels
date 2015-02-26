@@ -78,6 +78,7 @@ void AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, Wo
         uint32_t idle_count;
         HANDLE_CUDA_ERROR(cudaMemcpy(&idle_count, m_dev_tasks_idle_count, sizeof(uint32_t), cudaMemcpyDeviceToHost));
 
+        // Perform load balancing step if necessary
         if (idle_count >= (NUM_TASKS * IDLE_THESHOLD))
         {
           total_work_items = doBalance();

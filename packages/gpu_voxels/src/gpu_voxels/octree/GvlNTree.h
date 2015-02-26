@@ -45,15 +45,17 @@ public:
 
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, VoxelType voxel_type);
 
+  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<VoxelType>& voxel_types);
+
   virtual void clearMap();
 
   virtual void clearVoxelType(VoxelType voxel_type);
 
-  virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0);
+  virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
 
-  virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0);
+  virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0, const Vector3ui &offset = Vector3ui());
 
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, voxelmap::BitVectorVoxel&  types_in_collision, float coll_threshold = 1.0);
+  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, voxelmap::BitVectorVoxel&  types_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
 
   virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
 
@@ -66,6 +68,10 @@ public:
   virtual bool needsRebuild();
 
   virtual bool rebuild();
+
+  virtual Vector3ui getDimensions();
+
+  virtual Vector3f getMetricDimensions();
 
   // ------ END Global API functions ------
 

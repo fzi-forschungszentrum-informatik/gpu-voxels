@@ -22,13 +22,20 @@
  */
 //----------------------------------------------------------------------
 #include <gpu_visualization/SharedMemoryManagerVoxelMaps.h>
+#include <gpu_visualization/SharedMemoryManager.h>
+
 using namespace boost::interprocess;
 namespace gpu_voxels {
 namespace visualization {
 
+SharedMemoryManagerVoxelMaps::SharedMemoryManagerVoxelMaps()
+{
+  shmm = new SharedMemoryManager(shm_segment_name_voxelmaps, true);
+}
+
 uint32_t SharedMemoryManagerVoxelMaps::getNumberOfVoxelMapsToDraw()
 {
-  std::pair<uint32_t*, std::size_t> res = m_segment.find<uint32_t>(
+  std::pair<uint32_t*, std::size_t> res = shmm->getMemSegment().find<uint32_t>(
       shm_variable_name_number_of_voxelmaps.c_str());
   if (res.second == 0)
   {
@@ -42,7 +49,7 @@ bool SharedMemoryManagerVoxelMaps::getDevicePointer(void*& dev_pointer, const ui
 {
   std::string index_str = boost::lexical_cast<std::string>(index);
   std::string handler_var_name = shm_variable_name_voxelmap_handler_dev_pointer + index_str;
-  std::pair<cudaIpcMemHandle_t*, std::size_t> res = m_segment.find<cudaIpcMemHandle_t>(
+  std::pair<cudaIpcMemHandle_t*, std::size_t> res = shmm->getMemSegment().find<cudaIpcMemHandle_t>(
       handler_var_name.c_str());
   if (res.second == 0)
   {
@@ -51,6 +58,7 @@ bool SharedMemoryManagerVoxelMaps::getDevicePointer(void*& dev_pointer, const ui
   cudaIpcMemHandle_t handler = *res.first;
   cudaError_t cuda_error = cudaIpcOpenMemHandle((void**) &dev_pointer, (cudaIpcMemHandle_t) handler,
                                                 cudaIpcMemLazyEnablePeerAccess);
+  // the handle is closed by Visualizer.cu
   return cuda_error == cudaSuccess;
 }
 
@@ -58,7 +66,7 @@ bool SharedMemoryManagerVoxelMaps::getVoxelMapDimension(Vector3ui& dim, const ui
 {
   std::string index_str = boost::lexical_cast<std::string>(index);
   std::string dimension_var_name = shm_variable_name_voxelmap_dimension + index_str;
-  std::pair<Vector3ui*, std::size_t> res = m_segment.find<Vector3ui>(dimension_var_name.c_str());
+  std::pair<Vector3ui*, std::size_t> res = shmm->getMemSegment().find<Vector3ui>(dimension_var_name.c_str());
   if (res.second == 0)
   {
     return false;
@@ -71,7 +79,7 @@ bool SharedMemoryManagerVoxelMaps::getVoxelMapSideLength(float& voxel_side_lengt
 {
   std::string index_str = boost::lexical_cast<std::string>(index);
   std::string sidelength_var_name = shm_variable_name_voxel_side_length + index_str;
-  std::pair<float*, std::size_t> res = m_segment.find<float>(sidelength_var_name.c_str());
+  std::pair<float*, std::size_t> res = shmm->getMemSegment().find<float>(sidelength_var_name.c_str());
   if (res.second == 0)
   {
     return false;
@@ -84,7 +92,7 @@ bool SharedMemoryManagerVoxelMaps::getVoxelMapName(std::string& map_name, const 
 {
   std::string index_str = boost::lexical_cast<std::string>(index);
   std::string voxel_map_name_var_name = shm_variable_name_voxelmap_name + index_str;
-  std::pair<char*, std::size_t> res_n = m_segment.find<char>(voxel_map_name_var_name.c_str());
+  std::pair<char*, std::size_t> res_n = shmm->getMemSegment().find<char>(voxel_map_name_var_name.c_str());
   if (res_n.second == 0)
   { /*If the segment couldn't be find or the string is empty*/
     map_name = "voxelmap_" + index_str;
@@ -98,7 +106,7 @@ void SharedMemoryManagerVoxelMaps::setVoxelMapDataChangedToFalse(const uint32_t 
 {
   std::string swapped_buffer_name = shm_variable_name_voxelmap_data_changed
       + boost::lexical_cast<std::string>(index);
-  std::pair<bool*, std::size_t> swapped = m_segment.find<bool>(swapped_buffer_name.c_str());
+  std::pair<bool*, std::size_t> swapped = shmm->getMemSegment().find<bool>(swapped_buffer_name.c_str());
 
   if (swapped.second)
   {
@@ -110,7 +118,7 @@ bool SharedMemoryManagerVoxelMaps::hasVoxelMapDataChanged(const uint32_t index)
 {
   std::string swapped_buffer_name = shm_variable_name_voxelmap_data_changed
       + boost::lexical_cast<std::string>(index);
-  std::pair<bool*, std::size_t> swapped = m_segment.find<bool>(swapped_buffer_name.c_str());
+  std::pair<bool*, std::size_t> swapped = shmm->getMemSegment().find<bool>(swapped_buffer_name.c_str());
 
   if (swapped.second != 0)
   {
@@ -125,7 +133,7 @@ bool SharedMemoryManagerVoxelMaps::hasVoxelMapDataChanged(const uint32_t index)
 bool SharedMemoryManagerVoxelMaps::getVoxelMapType(MapType& type, const uint32_t index)
 {
   std::string voxelmap_type_name = shm_variable_name_voxelmap_type + boost::lexical_cast<std::string>(index);
-  std::pair<MapType*, std::size_t> res = m_segment.find<MapType>(voxelmap_type_name.c_str());
+  std::pair<MapType*, std::size_t> res = shmm->getMemSegment().find<MapType>(voxelmap_type_name.c_str());
   if (res.second == 0)
   {
     return false;

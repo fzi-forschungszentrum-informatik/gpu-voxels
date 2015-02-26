@@ -74,6 +74,7 @@
 #include <gpu_voxels/helpers/cuda_handling.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/voxelmap/VoxelMap.h>
+#include <gpu_voxels/primitive_array/PrimitiveArray.h>
 #include <gpu_visualization/kernels/VoxelMapVisualizerOperations.h>
 #include <gpu_visualization/Camera.h>
 
@@ -89,6 +90,7 @@
 
 #include <gpu_visualization/SharedMemoryManagerOctrees.h>
 #include <gpu_visualization/SharedMemoryManagerVoxelMaps.h>
+#include <gpu_visualization/SharedMemoryManagerPrimitiveArrays.h>
 #include <gpu_visualization/SharedMemoryManagerVisualizer.h>
 
 // todo remove this
@@ -125,6 +127,7 @@ public:
   //Data handling functions
   void registerVoxelMap(voxelmap::AbstractVoxelMap* map, uint32_t index, std::string map_name);
   void registerOctree(uint32_t index, std::string map_name);
+  void registerPrimitiveArray(uint32_t index, std::string prim_array_name);
 
   ////////////////////////////////Getter & Setter////////////////////////////////
   int32_t getHeight() const
@@ -187,13 +190,13 @@ private:
 
   void createGridVBO();
   void createFocusPointVBO();
-  void createSphere(glm::vec3 pos, float radius, glm::vec4 color);
-  void createCuboid(glm::vec3 pos, glm::vec3 side_length, glm::vec4 color);
+  void createHelperSphere(glm::vec3 pos, float radius, glm::vec4 color);
+  void createHelperCuboid(glm::vec3 pos, glm::vec3 side_length, glm::vec4 color);
 
   void drawDataContext(DataContext* context);
   void drawGrid();
   void drawFocusPoint();
-  void drawPrimitives();
+  void drawHelperPrimitives();
   void drawPrimitivesFromSharedMem();
 
   bool fillGLBufferWithoutPrecounting(VoxelmapContext* context);
@@ -271,13 +274,9 @@ private:
   XMLInterpreter* m_interpreter;
   SharedMemoryManagerOctrees* m_shm_manager_octrees;
   SharedMemoryManagerVoxelMaps* m_shm_manager_voxelmaps;
+  SharedMemoryManagerPrimitiveArrays* m_shm_manager_primitive_arrays;
   SharedMemoryManagerVisualizer* m_shm_manager_visualizer;
 
-
-  glm::vec3* m_d_positions;
-  uint32_t m_number_of_primitives;
-  PrimitiveTypes m_type_primitive;
-  GLuint m_vbo_primitives_pos;
   Primitive* m_default_prim;
 
   std::vector<Primitive*> m_primitives;

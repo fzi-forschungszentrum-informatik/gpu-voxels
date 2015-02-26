@@ -483,16 +483,25 @@ MACRO(ICMAKER_BUILD_LIBRARY_IN_SUBDIR _subdir_lib _subdir_bin _sources)
       ENDFOREACH()
     ENDIF()
 
+    # Add tcmalloc library if this is desired globally.
+    SET(tcmalloc_libraries)
+    SET(tcmalloc_flags)
+    IF (ICMAKER_USE_TCMALLOC AND Tcmalloc_FOUND)
+      SET(tcmalloc_libraries ${Tcmalloc_LIBRARY})
+      SET(tcmalloc_flags ${Tcmalloc_FLAGS})
+    ENDIF ()
+
     # set_target_properties below needs the definitions as a whitespace delimited string!
-    SET(definitions_str)
+    SET(definitions_str ${tcmalloc_flags})
     FOREACH (definition ${${icmaker_target}_AGGREGATE_DEFINITIONS})
       SET(definitions_str "${definitions_str} ${definition}")
     ENDFOREACH()
     IF (definitions_str)
       set_target_properties(${icmaker_target} PROPERTIES COMPILE_FLAGS ${definitions_str})
     ENDIF()
-    target_link_libraries(${icmaker_target} ${${icmaker_target}_AGGREGATE_TARGET_LINK_LIBRARIES} ${${icmaker_target}_AGGREGATE_LDFLAGS})
-    
+
+    target_link_libraries(${icmaker_target} ${${icmaker_target}_AGGREGATE_TARGET_LINK_LIBRARIES} ${${icmaker_target}_AGGREGATE_LDFLAGS} ${tcmalloc_libraries})
+
     # Install definied target
     install(TARGETS ${icmaker_target}
             RUNTIME DESTINATION ${_subdir_bin} COMPONENT main
@@ -581,6 +590,9 @@ MACRO(ICMAKER_BUILD_ANNOUNCEMENT)
     SET(${icmaker_targetUpper}_LIBRARIES ""  CACHE INTERNAL "")
     SET(${icmaker_targetUpper}_INCLUDE_DIRS "${${icmaker_target}_MACRO_EXPORT_INCLUDE_DIRS}" CACHE INTERNAL "")
     SET(${icmaker_targetUpper}_DEFINITIONS "${${icmaker_target}_MACRO_EXPORT_DEFINITIONS}" CACHE INTERNAL "")
+  ELSE()
+    MESSAGE(STATUS "Warning: ${icmaker_target} -- not building announcement, missing [${${icmaker_target}_DEPENDENCIES_MISSING}].")
+    SET(${icmaker_target}_FOUND FALSE CACHE INTERNAL "")
   ENDIF()
 
   IF (DEFINED ${icmaker_target})
@@ -647,15 +659,24 @@ MACRO(ICMAKER_BUILD_PROGRAM_INTERNAL)
         ENDIF()
     endforeach()
 
+    # Add tcmalloc library if this is desired globally.
+    SET(tcmalloc_libraries)
+    SET(tcmalloc_flags)
+    IF (ICMAKER_USE_TCMALLOC AND Tcmalloc_FOUND)
+      SET(tcmalloc_libraries ${Tcmalloc_LIBRARY})
+      SET(tcmalloc_flags ${Tcmalloc_FLAGS})
+    ENDIF ()
+
     # set_target_properties below needs the definitions as a whitespace delimited string!
-    SET(definitions_str)
+    SET(definitions_str ${tcmalloc_flags})
     FOREACH (definition ${${icmaker_target}_AGGREGATE_DEFINITIONS})
       SET(definitions_str "${definitions_str} ${definition}")
     ENDFOREACH()
     IF (definitions_str)
       set_target_properties(${icmaker_target} PROPERTIES COMPILE_FLAGS ${definitions_str})
     ENDIF()
-    target_link_libraries(${icmaker_target} ${${icmaker_target}_AGGREGATE_TARGET_LINK_LIBRARIES} ${${icmaker_target}_AGGREGATE_LDFLAGS})
+
+    target_link_libraries(${icmaker_target} ${${icmaker_target}_AGGREGATE_TARGET_LINK_LIBRARIES} ${${icmaker_target}_AGGREGATE_LDFLAGS} ${tcmalloc_libraries})
 
     # Install definied target
     install(TARGETS ${icmaker_target}

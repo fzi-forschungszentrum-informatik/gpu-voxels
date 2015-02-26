@@ -13,6 +13,7 @@
 #------------- anounce basic libs ----------------------------
 ADD_SUBDIRECTORY(logging)
 ADD_SUBDIRECTORY(helpers)
+ADD_SUBDIRECTORY(primitive_array) #could later be splitted up into basic and specific type
 
 #------------- gpu_voxels_core libaray -----------------------
 ICMAKER_SET("gpu_voxels_core" IDE_FOLDER ${GPU_VOXELS_IDE_FOLDER})
@@ -20,6 +21,7 @@ ICMAKER_SET("gpu_voxels_core" IDE_FOLDER ${GPU_VOXELS_IDE_FOLDER})
 ICMAKER_ADD_HEADERS(
   GpuVoxelsMap.h
   ManagedMap.h
+  ManagedPrimitiveArray.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -44,6 +46,7 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
   icl_core_logging
   gpu_voxels_logging
   gpu_voxels_helpers
+  gpu_voxels_primitive_array
   )
 
 ICMAKER_EXTERNAL_DEPENDENCIES(
@@ -93,6 +96,7 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
   gpu_voxels_robot
   gpu_voxels_voxelmap
   gpu_voxels_octree
+  gpu_voxels_primitive_array
   gpu_voxels_vis_interface
   )
 

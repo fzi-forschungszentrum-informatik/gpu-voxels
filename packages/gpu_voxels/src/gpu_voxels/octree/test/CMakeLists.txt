@@ -107,6 +107,7 @@ ICMAKER_ADD_HEADERS(
   Provider.h
   SensorData.h
   Helper.h
+  NTreeProvider.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -116,13 +117,11 @@ ICMAKER_ADD_SOURCES(
   OctomapProvider.cpp
   Provider.cpp
   Helper.cpp
+  VoxelMapProvider.cpp
+  NTreeProvider.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(
-  NTreeProvider.cu
-  NTreeProvider.h
-  VoxelMapProvider.cu
-  VoxelMapProvider.h
   )
 
 ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
@@ -134,6 +133,7 @@ ICMAKER_INCLUDE_DIRECTORIES(../octomap/octomap/include/)
 
 ICMAKER_INTERNAL_DEPENDENCIES(
   gpu_voxels_octree
+  gpu_voxels_voxelmap
   icl_core
   )
 
@@ -176,6 +176,7 @@ ICMAKER_ADD_HEADERS(
   Provider.h
   SensorData.h
   Helper.h
+  NTreeProvider.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -185,13 +186,11 @@ ICMAKER_ADD_SOURCES(
   OctomapProvider.cpp
   Provider.cpp
   Helper.cpp
+  NTreeProvider.cpp
+  VoxelMapProvider.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(
-  NTreeProvider.cu
-  NTreeProvider.h
-  VoxelMapProvider.cu
-  VoxelMapProvider.h
   )
 
 ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
@@ -204,6 +203,7 @@ ICMAKER_INCLUDE_DIRECTORIES(../octomap/octomap/include/)
 
 ICMAKER_INTERNAL_DEPENDENCIES(
   gpu_voxels_octree
+  gpu_voxels_voxelmap
   icl_core
   ROS
   )

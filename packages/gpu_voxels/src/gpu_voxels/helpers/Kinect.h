@@ -38,7 +38,7 @@ class Kinect
 {
 public:
   //! Constructor
-  Kinect();
+  Kinect(std::string identifier = "");
 
   //! Destructor
   ~Kinect();
@@ -62,6 +62,8 @@ private:
   std::vector<Vector3f> *m_data;
 
   bool m_running;
+
+  std::string m_identifier;
 
   // Callback triggered when new data is available
   void cloud_callback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr &cloud);

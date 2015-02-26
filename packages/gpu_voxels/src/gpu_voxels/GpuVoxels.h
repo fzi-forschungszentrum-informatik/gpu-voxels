@@ -36,10 +36,14 @@
 
 #include <gpu_voxels/GpuVoxelsMap.h>
 #include <gpu_voxels/ManagedMap.h>
+#include <gpu_voxels/ManagedPrimitiveArray.h>
 #include <gpu_voxels/vis_interface/VisVoxelMap.h>
+#include <gpu_voxels/vis_interface/VisPrimitiveArray.h>
+#include <gpu_voxels/octree/VisNTree.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/voxelmap/VoxelMap.h>
 #include <gpu_voxels/octree/Octree.h>
+#include <gpu_voxels/primitive_array/PrimitiveArray.h>
 
 #include <gpu_voxels/robot/KinematicLink.h>
 #include <gpu_voxels/robot/KinematicChain.h>
@@ -60,6 +64,9 @@ namespace gpu_voxels {
 typedef boost::shared_ptr<cudaIpcMemHandle_t> CudaIpcMemHandleSharedPtr;
 typedef std::map<std::string, ManagedMap > ManagedMaps;
 typedef ManagedMaps::iterator ManagedMapsIterator;
+
+typedef std::map<std::string, ManagedPrimitiveArray > ManagedPrimitiveArrays;
+typedef ManagedPrimitiveArrays::iterator ManagedPrimitiveArraysIterator;
 
 typedef boost::shared_ptr<KinematicLink> KinematicLinkSharedPtr;
 
@@ -130,6 +137,15 @@ public:
   bool visualizeMap(const std::string &map_name, const bool force_repaint = true);
 
   /*!
+   * \brief visualizePrimitivesArray Visualizes the array of primitives only if necessary.
+   * That's the case if it's enforced by \code force_repaint = true or the visualizer requested it.
+   * \param prim_array_name Name of the array, that should be visualized.
+   * \param force_repaint True to force a repainting of the array. e.g. needed to visualize changed map data
+   * \return Returns true, if there was work to do, false otherwise.
+   */
+  bool visualizePrimitivesArray(const std::string &prim_array_name, const bool force_repaint = true);
+
+  /*!
    * \brief addRobot Define a robot with its geometries and kinematic structure
    * \param robot_name Name of the robot, used as handler
    * \param dh_params DH representation of the robots kinematics. Has to be of the same dimensionality as the \code robot_cloude
@@ -187,6 +203,29 @@ public:
   bool updateRobotPart(std::string robot_name, size_t link, const std::vector<Vector3f> pointcloud);
 
   /*!
+   * \brief addPrimitives
+   * \param prim_type Cubes or Spheres
+   * \param array_name Name of the new array
+   * \return true if successful, false otherwise
+   */
+  bool addPrimitives(const primitive_array::PrimitiveType prim_type, const std::string &array_name);
+
+  /*!
+   * \brief delPrimitives
+   * \param array_name Name of the array to delete
+   * \return true if successful, false otherwise
+   */
+  bool delPrimitives(const std::string &array_name);
+
+  /*!
+   * \brief modifyPrimitives Sets to points and sizes of the primitives in the array.
+   * \param array_name Name of array to modify
+   * \param prim_positions Vector of new positions / sizes
+   * \return true if successful, false otherwise
+   */
+  bool modifyPrimitives(const std::string &array_name, std::vector<Vector4f>& prim_positions);
+
+  /*!
    * \brief getVisualization Gets a handle to the visualization interface of this map.
    * \return pointer to \code VisProvider of the map with the given name.
    */
@@ -196,6 +235,7 @@ private:
 
   ManagedMaps m_managed_maps;
   ManagedRobots m_managed_robots;
+  ManagedPrimitiveArrays m_managed_primitive_arrays;
   uint32_t m_dim_x;
   uint32_t m_dim_y;
   uint32_t m_dim_z;

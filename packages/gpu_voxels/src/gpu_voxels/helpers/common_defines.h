@@ -58,6 +58,7 @@ static const std::string GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED = "THIS OPERATIO
 static const std::string GPU_VOXELS_MAP_ONLY_SUPPORTS_VT_0 = "THIS DATA STRUCTURE ONLY SUPPORTS VOXEL TYPE 0!";
 static const std::string GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED = "THIS OPERATION IS NOT YET SUPPORTED BY THE DATA STRUCTURE!";
 static const std::string GPU_VOXELS_MAP_SWAP_FOR_COLLIDE = "TRY TO SWAP BOTH DATA STRUCTURES TO COLLIDE.";
+static const std::string GPU_VOXELS_MAP_OFFSET_ON_WRONG_DATA_STRUCTURE = "OFFSET ADDITION ONLY POSSIBLE WHEN COLLIDING WITH VOXELMAP/VOXELLIST";
 
 // ################ Definition of the data structures build into the gpu_voxels library  #######################
 // Also have a look at

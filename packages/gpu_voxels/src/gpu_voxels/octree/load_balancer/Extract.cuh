@@ -60,6 +60,7 @@ Extract<branching_factor, level_count, InnerNode, LeafNode, clear_collision_flag
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode, bool clear_collision_flag, bool count_mode>
 void Extract<branching_factor, level_count, InnerNode, LeafNode, clear_collision_flag, count_mode>::doWork()
 {
+  // Passing of template types needed by the kernel function through the helper struct KernelConfig
   typedef ExtractNTreeKernelConfig<
       RunConfig::NUM_TRAVERSAL_THREADS,
       branching_factor,
@@ -69,6 +70,7 @@ void Extract<branching_factor, level_count, InnerNode, LeafNode, clear_collision
       clear_collision_flag,
       count_mode> KernelConfig;
 
+  // Parameters for the kernel function required for the load balancing concept.
   const typename KernelConfig::Base::AbstractKernelParameters abstract_parameters(
       Base::m_dev_work_stacks1,
       Base::m_dev_work_stacks1_item_count,
@@ -76,6 +78,7 @@ void Extract<branching_factor, level_count, InnerNode, LeafNode, clear_collision
       Base::m_dev_tasks_idle_count,
       Base::getIdleCountThreshold());
 
+  // Specific parameters for the kernel function.
   typename KernelConfig::KernelParams kernel_params(
     abstract_parameters,
     m_min_level,
@@ -83,6 +86,7 @@ void Extract<branching_factor, level_count, InnerNode, LeafNode, clear_collision
     m_node_data_size,
     m_dev_global_voxel_list_count);
 
+  // Call the templated kernel function. It's behavior is defined by the given KernelConfig.
   kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS>>>(kernel_params);
 }
 

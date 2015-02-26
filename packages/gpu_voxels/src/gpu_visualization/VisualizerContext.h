@@ -35,6 +35,7 @@
 
 #include <gpu_visualization/VoxelmapContext.h>
 #include <gpu_visualization/OctreeContext.h>
+#include <gpu_visualization/PrimitiveArrayContext.h>
 
 namespace gpu_voxels {
 namespace visualization {
@@ -85,6 +86,10 @@ struct VisualizerContext
     {
       delete *it;
     }
+    for (std::vector<PrimitiveArrayContext*>::iterator it = m_prim_arrays.begin(); it != m_prim_arrays.end(); ++it)
+    {
+      delete *it;
+    }
     delete m_camera;
   }
 
@@ -93,6 +98,9 @@ struct VisualizerContext
 
   // the voxel maps of this context
   std::vector<OctreeContext*> m_octrees;
+
+  // the primitive arrays of this context
+  std::vector<PrimitiveArrayContext*> m_prim_arrays;
 
   // the dimensions of the super voxel
   Vector3ui m_dim_svoxel;

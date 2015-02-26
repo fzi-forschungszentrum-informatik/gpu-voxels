@@ -33,6 +33,14 @@ namespace gpu_voxels {
 namespace NTree {
 namespace LoadBalancer {
 
+/**
+ * @brief First step of balancing the work stacks. For each stack the work elements are counted by level.
+ * @param work_stacks Pointer to the work stacks.
+ * @param work_stacks_item_count Pointer to the number of elements on each stack.
+ * @param stack_size_per_task The max size of each stack.
+ * @param item_sums_per_level Array to hold the counted elements per level per stack.
+ * @param inter_stack_offsets Offsets calculated for each stack and level.
+ */
 template<class WorkItem, std::size_t level_count>
 __global__ void kernelCountElements(WorkItem* work_stacks, uint32_t* work_stacks_item_count,
                                     const uint32_t stack_size_per_task, uint32_t* item_sums_per_level,
@@ -113,6 +121,16 @@ __global__ void kernelCountElements(WorkItem* work_stacks, uint32_t* work_stacks
 //                                       interQueueOffsets[task_id * level_count + thread_id]);
 }
 
+/**
+ * @brief Second and last step of balancing the work stacks. The work items of all stacks are distributed equally based on their level. The biggest work elemets (highest level) are distributed first.
+ * @param work_stacks_in
+ * @param work_stacks_out
+ * @param work_stacks_item_count
+ * @param item_sums_per_level
+ * @param inter_stack_offsets
+ * @param num_total_work_items
+ * @param stack_size_per_task
+ */
 template<class WorkItem, std::size_t level_count>
 __global__ void kernelMoveElements(WorkItem* work_stacks_in, WorkItem* work_stacks_out,
                                    uint32_t* work_stacks_item_count, uint32_t* item_sums_per_level,
@@ -156,6 +174,15 @@ __global__ void kernelMoveElements(WorkItem* work_stacks_in, WorkItem* work_stac
   }
 }
 
+/**
+ * @brief Redistribute the work items of the stacks equally to balance the work load between the different processing unites.
+ * @param dev_work_stacks_in
+ * @param dev_work_stacks_out
+ * @param dev_work_stacks_item_count
+ * @param num_tasks
+ * @param host_num_total_work_items
+ * @param stack_size_per_task
+ */
 template<std::size_t num_threads, typename WorkItem, std::size_t branching_factor, std::size_t level_count>
 void balanceWorkStacks(WorkItem* dev_work_stacks_in, WorkItem* dev_work_stacks_out,
                        uint32_t* dev_work_stacks_item_count, const uint32_t num_tasks,
@@ -218,25 +245,12 @@ void balanceWorkStacks(WorkItem* dev_work_stacks_in, WorkItem* dev_work_stacks_o
 // ###################### Concept of kernel for processing the work ########################
 // #########################################################################################
 
-static __device__ __forceinline__
-bool handleIdleCounter(const uint32_t num_stack_work_items, const uint32_t stack_items_threshold,
-                       uint32_t* tasks_idle_counter, const uint32_t idle_count_threshold,
-                       const uint32_t thread_id)
-{
-  if ((num_stack_work_items == 0) || (num_stack_work_items >= stack_items_threshold))
-  {
-    if (thread_id == 0)
-      atomicInc(tasks_idle_counter, UINT_MAX);
-    return true;
-  }
-  else
-  {
-    const bool idle_threshold_reached = __syncthreads_or(
-        thread_id == 0 && (*tasks_idle_counter >= idle_count_threshold));
-    return idle_threshold_reached;
-  }
-}
-
+/**
+ * @brief Templated struct which controls the behavior of the general kernel for load balanced work processing.
+ * @tparam _WorkItem The work item to use for the stacks.
+ * @tparam num_threads The number of threads to use for the kernel.
+ * @tparam branching_factor The branching factor of the corresponding \code NTree \endcode
+ */
 template<class _WorkItem, std::size_t num_threads, std::size_t branching_factor>
 struct AbstractKernelConfig
 {
@@ -252,6 +266,9 @@ public:
   typedef _WorkItem WorkItem;
   // ###########################################
 
+  /**
+   * @brief Basic shared memory data needed for the load balancing concept.
+   */
   struct AbstractSharedMemConfig
   {
   public:
@@ -260,12 +277,18 @@ public:
     WorkItem* my_work_stack; // pointer to stack of this task
   };
 
+  /**
+   * @brief Basic volatile shared memory data needed for the load balancing concept.
+   */
   struct AbstractSharedVolatileMemConfig
   {
   public:
     // nothing
   };
 
+  /**
+   * @brief Basic variables needed for the load balancing concept.
+   */
   struct AbstractVariablesConfig
   {
   public:
@@ -273,6 +296,9 @@ public:
     bool is_active;
   };
 
+  /**
+   * @brief Basic constants needed for the load balancing concept.
+   */
   struct AbstractConstConfig
   {
   public:
@@ -290,6 +316,15 @@ public:
 
     const uint32_t stack_items_threshold;
 
+    /**
+     * @brief AbstractConstConfig constructor to set the constants.
+     * @param p_grid_dim
+     * @param p_block_dim
+     * @param p_block_ids
+     * @param p_thread_ids
+     * @param p_stack_size_per_task
+     * @param p_stack_items_threshold
+     */
     __host__ __device__
     AbstractConstConfig(const dim3 p_grid_dim,
                         const dim3 p_block_dim,
@@ -313,6 +348,9 @@ public:
     }
   };
 
+  /**
+   * @brief Basic parameters needed for the load balancing concept.
+   */
   struct AbstractKernelParameters
   {
   public:
@@ -335,6 +373,10 @@ public:
 
     }
 
+    /**
+     * @brief AbstractKernelParameters copy constructor.
+     * @param params
+     */
     __host__ __device__
     AbstractKernelParameters(const AbstractKernelParameters& params) :
         work_stacks(params.work_stacks),
@@ -347,20 +389,65 @@ public:
     }
   };
 
+  /**
+   * @brief Type definition of shared memory data.
+   */
   typedef AbstractSharedMemConfig SharedMem;
+
+  /**
+   * @brief Type definition of volatile shared memory data.
+   */
   typedef AbstractSharedVolatileMemConfig SharedVolatileMem;
+
+  /**
+   * @brief Type definition of variables per thread.
+   */
   typedef AbstractVariablesConfig Variables;
+
+  /**
+   * @brief Type definition of constants per thread.
+   */
   typedef AbstractConstConfig Constants;
+
+  /**
+   * @brief Type definition of parameters passed to the kernel function.
+   */
   typedef AbstractKernelParameters KernelParams;
 
+
+  /**
+   * @brief Device function for parallel data processing within the load balanced concept. Each block has it's own stack of work items.
+   * @param shared_mem
+   * @param shared_volatile_mem
+   * @param variables
+   * @param constants
+   * @param kernel_params
+   */
   __device__
   static void doLoadBalancedWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
                                  Variables& variables, const Constants& constants, KernelParams& kernel_params);
 
+  /**
+   * @brief Device function for reducing the data within a block, before the kernel is aborted e.g. due to load imbalance.
+   * @param shared_mem
+   * @param shared_volatile_mem
+   * @param variables
+   * @param constants
+   * @param kernel_params
+   */
   __device__
   static void doReductionWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params);
 
+  /**
+   * @brief This device function checks whether to abort the kernel function. This can happen if the work stacks are empty, there is an load imbalance or the stacks are full.
+   * @param shared_mem
+   * @param shared_volatile_mem
+   * @param variables
+   * @param constants
+   * @param kernel_params
+   * @return
+   */
   __device__
   static bool abortLoop(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params)
@@ -380,6 +467,11 @@ public:
   }
 };
 
+/**
+ * @brief Templated kernel that handles the load balancing. The specific behavior of this kernel is defined by template parameter \code LBKernelConfig \endcode
+ * @tparam LBKernelConfig This class has to inherit from \code AbstractKernelConfig \endcode and defines the behavior of this kernel.
+ * @param kernel_params The necessary data that is going to be processed.
+ */
 template<class LBKernelConfig>
 __global__
 void kernelLBWorkConcept(typename LBKernelConfig::KernelParams kernel_params)
@@ -401,8 +493,6 @@ void kernelLBWorkConcept(typename LBKernelConfig::KernelParams kernel_params)
 
   while (true)
   {
-    //    if (handleIdleCounter(shared_mem.num_stack_work_items, constants.stack_items_threshold, kernel_params.tasks_idle_count,
-    //                          kernel_params.idle_count_threshold, constants.thread_id))
     if(LBKernelConfig::abortLoop(shared_mem, shared_volatile_mem, variables, constants, kernel_params))
       break;
 

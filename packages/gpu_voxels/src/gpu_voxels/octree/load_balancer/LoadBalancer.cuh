@@ -23,6 +23,11 @@
 #ifndef GPU_VOXELS_OCTREE_LOAD_BALANCER_LOAD_BALANCER_CUH_INCLUDED
 #define GPU_VOXELS_OCTREE_LOAD_BALANCER_LOAD_BALANCER_CUH_INCLUDED
 
+
+// #################################################################
+// Collection of includes for load balancing
+// #################################################################
+
 #include <gpu_voxels/octree/load_balancer/AbstractLoadBalancer.cuh>
 #include <gpu_voxels/octree/load_balancer/Extract.cuh>
 #include <gpu_voxels/octree/load_balancer/Intersect.cuh>

@@ -27,6 +27,8 @@ namespace visualization {
 
 REGISTER_LOG_STREAM (Visualization);
 REGISTER_LOG_STREAM (Shader);
+REGISTER_LOG_STREAM (SharedMemManager);
+REGISTER_LOG_STREAM (Context);
 
 }
 }

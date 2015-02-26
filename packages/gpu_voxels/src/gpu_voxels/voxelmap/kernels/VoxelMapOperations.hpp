@@ -295,6 +295,49 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
   }
 }
 
+template<class Voxel>
+__global__
+void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
+                                VoxelType* voxel_types, const Vector3ui *map_dim,
+                                const float voxel_side_length)
+{
+  const Vector3ui dimensions = (*map_dim);
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < meta_point_cloud->accumulated_cloud_size;
+      i += blockDim.x * gridDim.x)
+  {
+    uint32_t voxel_type_index = i / meta_point_cloud->cloud_sizes[0];
+    const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length,
+                                                      meta_point_cloud->clouds_base_addresses[0][i]);
+
+//        printf("Point @(%f,%f,%f)\n",
+//               meta_point_cloud->clouds_base_addresses[0][i].x,
+//               meta_point_cloud->clouds_base_addresses[0][i].y,
+//               meta_point_cloud->clouds_base_addresses[0][i].z);
+
+    //check if point is in the range of the voxel map
+    if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
+        && (integer_coordinates.z < dimensions.z))
+    {
+      Voxel* voxel = &voxelmap[getVoxelIndex(map_dim, integer_coordinates.x, integer_coordinates.y,
+                                             integer_coordinates.z)];
+      voxel->insert(voxel_types[voxel_type_index]);
+
+//        printf("Inserted Point @(%u,%u,%u) with type %u into the voxel map \n",
+//               integer_coordinates.x,
+//               integer_coordinates.y,
+//               integer_coordinates.z,
+//               voxel_types[voxel_type_index]);
+
+    }
+    else
+    {
+      printf("Point (%u,%u,%u) is not in the range of the voxel map \n",
+             meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
+             meta_point_cloud->clouds_base_addresses[0][i].z);
+    }
+  }
+}
+
 //template<std::size_t length>
 //__global__
 //void kernelInsertSensorDataWithRayCasting(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,

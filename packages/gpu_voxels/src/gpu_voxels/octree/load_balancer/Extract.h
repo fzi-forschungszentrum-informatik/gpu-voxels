@@ -29,8 +29,18 @@ namespace gpu_voxels {
 namespace NTree {
 namespace LoadBalancer {
 
-typedef RunConfig<128> ExtractRunConfig; // Experimental founding
+typedef RunConfig<128> ExtractRunConfig; // Number of threads due to experimental founding
 
+/**
+ * @brief Extraction of stored data from \code NTree \endcode with help of the load balancing concept.
+ *
+ * @tparam branching_factor Branching factor of the corresponding \code NTree \endcode
+ * @tparam level_count Number of levels of the corresponding \code NTree \endcode
+ * @tparam InnerNode Inner node type of the corresponding \code NTree \endcode
+ * @tparam LeafNode Leaf node type of the corresponding \code NTree \endcode
+ * @tparam clear_collision_flag \code true \endcode to clear the collision flag while extracting data.
+ * @tparam count_mode \code true \endcode to only count the number of items to extract.
+ */
 template<std::size_t branching_factor,
     std::size_t level_count,
     class InnerNode,
@@ -45,6 +55,14 @@ public:
   typedef ExtractRunConfig RunConfig;
   typedef AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, WorkItem, RunConfig> Base;
 
+   /**
+   * @brief Extract constructor.
+   * @param ntree NTree to extract the data from.
+   * @param dev_node_data Data buffer on device to write the extracted data to.
+   * @param m_node_data_size The size of \code dev_node_data \endcode
+   * @param dev_status_selection Device array of size \code extract_selection_size \endcode where each entry (0 or 1) defines whether data with this status should be extracted (1) or not (0).
+   * @param min_level The minimal level of \code ntree \endcode to extract data from
+   */
   Extract(
       NTree<branching_factor, level_count, InnerNode, LeafNode>* ntree,
       NodeData* dev_node_data,
@@ -74,7 +92,7 @@ protected:
 
 public:
   /**
-   * Holds the number of extracted elements.
+   * @brief Holds the number of extracted elements.
    */
   uint32_t m_num_elements;
 

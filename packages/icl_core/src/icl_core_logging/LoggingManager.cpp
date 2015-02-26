@@ -275,6 +275,20 @@ void LoggingManager::configure()
   }
 }
 
+void LoggingManager::setLogLevel(icl_core::logging::LogLevel log_level)
+{
+  for (LogStreamMap::iterator lsm_it = m_log_streams.begin(); lsm_it != m_log_streams.end(); ++lsm_it)
+  {
+    lsm_it->second->m_initial_level = log_level;
+  }
+
+  for (LogOutputStreamMap::iterator los_it = m_log_output_streams.begin();
+       los_it != m_log_output_streams.end(); ++los_it)
+  {
+    los_it->second->setLogLevel(log_level);
+  }
+}
+
 void LoggingManager::assertInitialized() const
 {
   if (!initialized())

@@ -130,6 +130,13 @@ IF(ROS_FIND_COMPONENTS)
   # ROS message filters
   SET( ROS_MESSAGE_FILTERS_HEADER_NAMES message_filters/subscriber.h)
   SET( ROS_MESSAGE_FILTERS_LIBRARY_NAMES message_filters)
+  
+  # ROS rosbag stack
+  SET( ROS_ROSBAG_HEADER_NAMES rosbag/bag.h)
+  SET( ROS_ROSBAG_LIBRARY_NAMES rosbag rosbag_storage )
+
+  # ROS rosbag stack
+  SET( ROS_ROSBAG_HEADER_NAMES rosbag/bag.h)
 
   # ROS gps common
   SET( ROS_GPS_COMMON_INCLUDE_DIR_SUGGESTIONS ${ROS_ROOT}/stacks/gps_umd/gps_common/msg_gen/cpp/include ${ROS_ROOT}/include)

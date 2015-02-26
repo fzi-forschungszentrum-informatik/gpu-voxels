@@ -212,6 +212,15 @@ bool parseArguments(vector<Provider_Parameter>& parameter, int argc, char **argv
           argv[i] = deleted_argument;
         }
       }
+      else if (a.compare("-id") == 0)
+      {
+        if (i + 1 < argc)
+        {
+          argv[i] = deleted_argument;
+          parameter.back().kinect_id = argv[++i];
+          argv[i] = deleted_argument;
+        }
+      }
       else if (a.compare("-fps") == 0)
       {
         if (i + 1 < argc)

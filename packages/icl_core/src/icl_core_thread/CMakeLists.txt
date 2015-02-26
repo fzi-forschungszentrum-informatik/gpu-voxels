@@ -25,6 +25,8 @@ ICMAKER_ADD_HEADERS(
     ScopedMutexLock.h
     Sem.h
     SingletonThreadingModels.h
+    SpinLock.h
+    ScopedSpinLock.h
     Thread.h
     )
 

@@ -1,0 +1,27 @@
+Changelog of GPU-Voxels:
+
+V 0.1 (2014-09-29):
+===================
+- Initial Version of GPU Voxels 
+  (Please find a list of features on the Website or the according scientific papers or have a look at the example programs)
+- Open Issue: Compiled only in Debug Mode
+
+V 0.2 (2014-09-12):
+===================
+- Fixed compilation issued in Release Mode
+
+V 0.3 (2015-02-26):
+===================
+- Made changes in the include structure to allow compilation with CUDA 6.5 (no longer trying to compile Boost-SharedMem-Headers with NVCC)
+- Added datatype "PrimitiveArray" to quickly visualize helpers like thousands of spheres or cubes.
+- Added InsertMetaPointCloud option to give each sub-cloud an own voxel type
+- Function to sync a MetaPointCloud back to Host Memory
+- Speed up in clearing VoxelMaps
+- Added an optional offset when intersecting maps. So you can move one map relative to another before intersecting them.
+- Added parameter to Kinect Interface to support the new PCL interface where a Cam ID has to be specified.
+- More documentation in Octree kernels
+- Added more operators for primitive data types
+- Added Binvox as file format to generate Pointclouds
+- Added Example program to demonstrate the insertion of IBEO Sensor Pointclouds
+- Added missing config file for example program that intersects live Kinect data with a robot model (RobotVsEnvironment)
+- Open Issues: Flickering colors in Visualization

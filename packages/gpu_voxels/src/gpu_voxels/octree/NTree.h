@@ -246,7 +246,7 @@ public:
    */
   bool checkTree();
 
-  uint32_t extractCubes(thrust::device_vector<Cube> & d_cubes, uint8_t* d_status_selection = NULL,
+  uint32_t extractCubes(thrust::device_vector<Cube> *&d_cubes, uint8_t* d_status_selection = NULL,
                         uint32_t min_level = 0);
 
   /**

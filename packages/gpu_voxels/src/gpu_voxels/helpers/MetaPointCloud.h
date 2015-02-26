@@ -67,6 +67,8 @@ public:
    */
   void syncToDevice();
 
+  void syncToHost();
+
   /*!
    * \brief updatePointCloud This updates a specific cloud on the host.
    * Call syncToDevice() after updating all clouds or set sync to true

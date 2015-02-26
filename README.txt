@@ -22,5 +22,6 @@ COMPILATION:
 mkdir build
 cd build
 cmake ..
+make
 
 ==> This will also generate example programs and a visualization tool to see some live demos.

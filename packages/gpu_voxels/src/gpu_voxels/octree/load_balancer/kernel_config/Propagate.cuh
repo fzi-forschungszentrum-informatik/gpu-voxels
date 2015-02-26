@@ -33,6 +33,9 @@ namespace gpu_voxels {
 namespace NTree {
 namespace LoadBalancer {
 
+/**
+ * @brief This struct defines the shared memory, variables, kernel functions etc. needed to do propagate node changes up and down the \code NTree \endcode with help of the load balancing concept.
+ */
 template<std::size_t num_threads,
   std::size_t branching_factor,
   typename InnerNode,
@@ -143,10 +146,7 @@ public:
       node = &shared_mem.work_item_cache[constants.work_index].node[constants.work_lane];
       assert(node != NULL);
       is_top_down_mode = shared_mem.work_item_cache[constants.work_index].is_top_down;
-      update_subtree = shared_mem.work_item_cache[constants.work_index].update_subtree; // || node->hasFlags(nf_UPDATE_SUBTREE);
-
-      //      if (update_subtree)
-      //        printf("update_subtree\n");
+      update_subtree = shared_mem.work_item_cache[constants.work_index].update_subtree;
 
       lastLevel = node->hasStatus(ns_LAST_LEVEL);
       insert_top_down_work_item = !lastLevel & is_top_down_mode & node->hasStatus(ns_PART)
@@ -234,7 +234,7 @@ public:
 
 #ifdef PROPAGATE_BOTTOM_UP
     // handle InnerNodes for bottom-up step
-    if (variables.is_active & (lastLevel | !is_top_down_mode)) // & (shared_mem.work_item_cache[constants.work_index].level < 4))
+    if (variables.is_active & (lastLevel | !is_top_down_mode))
     {
       const uint32_t is_ready_votes = __ballot(!node->hasFlags(nf_NEEDS_UPDATE));
       const uint8_t my_is_ready_votes = (is_ready_votes

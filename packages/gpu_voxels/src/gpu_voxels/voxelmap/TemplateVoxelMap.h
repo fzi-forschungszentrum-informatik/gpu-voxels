@@ -105,16 +105,29 @@ public:
     return (void*) m_dev_data;
   }
 
-  //! get pointer to specific voxel on device given the coordinates
-  Voxel* getDeviceVoxelPtr(uint32_t x, uint32_t y, uint32_t z)
+  //! gets an offset in pointer arithmetics
+  Voxel* getVoxelPtrOffset(const Vector3ui &coordinates)
   {
-    return (Voxel*) ((m_dev_data + (z * m_dim.x * m_dim.y + y * m_dim.x + x)));
+    return (Voxel*) (coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x);
+  }
+
+  //! gets an offset in pointer arithmetics
+  Voxel* getVoxelPtrOffset(uint32_t x, uint32_t y, uint32_t z)
+  {
+    return (Voxel*) (z * m_dim.x * m_dim.y + y * m_dim.x + x);
   }
 
   //! get pointer to specific voxel on device given the coordinates
-  Voxel* getDeviceVoxelPtr(Vector3ui coordinates)
+  Voxel* getDeviceVoxelPtr(uint32_t x, uint32_t y, uint32_t z)
   {
-    return getDeviceVoxelPtr(coordinates.x, coordinates.y, coordinates.z);
+    return (Voxel*) (m_dev_data + (z * m_dim.x * m_dim.y + y * m_dim.x + x));
+  }
+
+  //! get pointer to specific voxel on device given the coordinates
+  Voxel* getDeviceVoxelPtr(const Vector3ui &coordinates)
+  {
+    return (Voxel*) (m_dev_data +
+                     (coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x));
   }
 
   //! get the number of bytes that is required for the voxelmap
@@ -142,11 +155,6 @@ public:
     return &m_visualization_data_available;
   }
 
-  //! get info about the dimensions of the voxelmap
-  inline virtual Vector3ui getDimensions()
-  {
-    return m_dim;
-  }
   //! get the side length of the voxels.
   inline virtual float getVoxelSideLength() const
   {
@@ -203,6 +211,9 @@ public:
   template< class OtherVoxel, class Collider>
   uint32_t collisionCheckWithCounter(TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider());
 
+  template< class OtherVoxel, class Collider>
+  uint32_t collisionCheckWithCounterRelativeTransform(TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
+
 //  __host__
 //  bool collisionCheckBoundingBox(uint8_t threshold, VoxelMap* other, uint8_t other_threshold,
 //                        Vector3ui bounding_box_start, Vector3ui bounding_box_end);
@@ -241,13 +252,27 @@ public:
   // ------ BEGIN Global API functions ------
   virtual void insertGlobalData(const std::vector<Vector3f> &point_cloud, VoxelType voxelType);
 
+  /**
+   * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map.
+   * @param meta_point_cloud The MetaPointCloud to insert
+   * @param voxel_type Voxel type of all voxels
+   */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, VoxelType voxelType);
 
-  virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0);
+  virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
+  /**
+   * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map. Each pointcloud
+   * inside the MetaPointCloud will get it's own voxel type as given in the voxel_types
+   * parameter. The number of pointclouds in the MetaPointCloud and the size of voxel_types
+   * have to be identical.
+   * @param meta_point_cloud The MetaPointCloud to insert
+   * @param voxel_types Vector with voxel types
+   */
+  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<VoxelType>& voxel_types);
 
-  virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0);
+  virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0, const Vector3ui &offset = Vector3ui());
 
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  types_in_collision, float coll_threshold = 1.0);
+  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  types_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
 
   // insertRobotConfiguration ==> See below at rob specific functions
 
@@ -259,6 +284,10 @@ public:
   virtual void writeToDisk(const std::string path);
 
   virtual bool readFromDisk(const std::string path);
+
+  virtual Vector3ui getDimensions();
+
+  virtual Vector3f getMetricDimensions();
 
   // ------ END Global API functions ------
 

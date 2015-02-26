@@ -33,6 +33,7 @@ ICMAKER_ADD_HEADERS(
   SharedMemoryManager.h
   SharedMemoryManagerOctrees.h
   SharedMemoryManagerVoxelMaps.h
+  SharedMemoryManagerPrimitiveArrays.h
   SharedMemoryManagerVisualizer.h
   )
 
@@ -44,6 +45,7 @@ ICMAKER_ADD_SOURCES(
   logging/logging_visualization.cpp
   SharedMemoryManagerOctrees.cpp
   SharedMemoryManagerVoxelMaps.cpp
+  SharedMemoryManagerPrimitiveArrays.cpp
   SharedMemoryManagerVisualizer.cpp
   )
 

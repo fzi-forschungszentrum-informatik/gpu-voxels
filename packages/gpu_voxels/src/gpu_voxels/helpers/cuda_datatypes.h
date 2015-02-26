@@ -54,6 +54,36 @@ struct Vector3i
   int32_t x;
   int32_t y;
   int32_t z;
+
+  __device__ __host__
+  inline Vector3i& operator+=(const Vector3i& b)
+  {
+    x += b.x;
+    y += b.y;
+    z += b.z;
+    return *this;
+  }
+
+  __device__ __host__
+  inline Vector3i& operator-=(const Vector3i& b)
+  {
+    x -= b.x;
+    y -= b.y;
+    z -= b.z;
+    return *this;
+  }
+
+  __device__ __host__
+  inline bool operator==(const Vector3i& b) const
+  {
+    return (x == b.x && y == b.y && z == b.z);
+  }
+
+  __device__ __host__
+  inline bool operator!=(const Vector3i& b) const
+  {
+    return (x != b.x || y != b.y || z != b.z);
+  }
 };
 
 struct Vector3ui
@@ -76,6 +106,36 @@ struct Vector3ui
   uint32_t x;
   uint32_t y;
   uint32_t z;
+
+  __device__ __host__
+  inline Vector3ui& operator+=(const Vector3ui& b)
+  {
+    x += b.x;
+    y += b.y;
+    z += b.z;
+    return *this;
+  }
+
+  __device__ __host__
+  inline Vector3ui& operator-=(const Vector3ui& b)
+  {
+    x -= b.x;
+    y -= b.y;
+    z -= b.z;
+    return *this;
+  }
+
+  __device__ __host__
+  inline bool operator==(const Vector3ui& b) const
+  {
+    return (x == b.x && y == b.y && z == b.z);
+  }
+
+  __device__ __host__
+  inline bool operator!=(const Vector3ui& b) const
+  {
+    return (x != b.x || y != b.y || z != b.z);
+  }
 };
 
 struct Vector3f
@@ -106,6 +166,23 @@ struct Vector3f
     return out;
   }
 
+  __device__ __host__
+  inline Vector3f& operator+=(const Vector3f& b)
+  {
+    x += b.x;
+    y += b.y;
+    z += b.z;
+    return *this;
+  }
+
+  __device__ __host__
+  inline Vector3f& operator-=(const Vector3f& b)
+  {
+    x -= b.x;
+    y -= b.y;
+    z -= b.z;
+    return *this;
+  }
 };
 
 struct Vector3d
@@ -124,6 +201,24 @@ struct Vector3d
   double x;
   double y;
   double z;
+
+  __device__ __host__
+  inline Vector3d& operator+=(const Vector3d& b)
+  {
+    x += b.x;
+    y += b.y;
+    z += b.z;
+    return *this;
+  }
+
+  __device__ __host__
+  inline Vector3d& operator-=(const Vector3d& b)
+  {
+    x -= b.x;
+    y -= b.y;
+    z -= b.z;
+    return *this;
+  }
 };
 
 struct Vector4i

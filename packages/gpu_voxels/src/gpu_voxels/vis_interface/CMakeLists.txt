@@ -17,11 +17,13 @@ ICMAKER_ADD_HEADERS(
   VisualizerInterface.h
   VisProvider.h
   VisVoxelMap.h
+  VisPrimitiveArray.h
   )
 
 ICMAKER_ADD_SOURCES(
   VisProvider.cpp
   VisVoxelMap.cpp
+  VisPrimitiveArray.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(

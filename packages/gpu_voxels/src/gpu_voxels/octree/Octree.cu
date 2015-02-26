@@ -15,7 +15,6 @@
 #include "VoxelTypeFlags.h"
 #include "VoxelList.h"
 #include "NTree.hpp"
-#include <gpu_voxels/octree/VisNTree.hpp> // include only here since it contains device code
 #include <gpu_voxels/octree/GvlNTree.hpp>
 #include <gpu_voxels/voxelmap/VoxelMap.hpp>
 
@@ -62,9 +61,6 @@ InstantiateNTree(BRANCHING_FACTOR, 9, Environment::InnerNodeProb, Environment::L
 InstantiateNTree(BRANCHING_FACTOR, LEVEL_COUNT, Environment::InnerNode, Environment::LeafNode)
 // NTree used for tests
 InstantiateNTree(BRANCHING_FACTOR, 9, Environment::InnerNode, Environment::LeafNode)
-
-template class VisNTree<Environment::InnerNodeProb, Environment::LeafNodeProb>;
-template class VisNTree<Environment::InnerNode, Environment::LeafNode>;
 
 template class GvlNTree<BRANCHING_FACTOR, LEVEL_COUNT, Environment::InnerNodeProb, Environment::LeafNodeProb>;
 template class GvlNTree<BRANCHING_FACTOR, LEVEL_COUNT, Environment::InnerNode, Environment::LeafNode>;

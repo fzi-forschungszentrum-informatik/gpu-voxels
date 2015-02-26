@@ -32,13 +32,10 @@ Visualizer::Visualizer()
 {
   setMaxMem(0);
   m_cur_mem = 0;
-  m_d_positions = NULL;
-  m_number_of_primitives = 0;
-  m_type_primitive = primitive_INITIAL_VALUE;
-  m_vbo_primitives_pos = 0;
   m_default_prim = NULL;
   m_shm_manager_octrees = NULL;
   m_shm_manager_voxelmaps = NULL;
+  m_shm_manager_primitive_arrays = NULL;
   m_shm_manager_visualizer = NULL;
   m_window_title = "visualizer";
 }
@@ -49,8 +46,9 @@ Visualizer::~Visualizer()
   delete m_interpreter;
   delete m_default_prim;
   delete m_shm_manager_octrees;
-  delete m_shm_manager_visualizer;
   delete m_shm_manager_voxelmaps;
+  delete m_shm_manager_primitive_arrays;
+  delete m_shm_manager_visualizer;
   for (std::vector<Primitive*>::iterator it = m_primitives.begin(); it != m_primitives.end(); ++it)
   {
     delete *it;
@@ -396,14 +394,14 @@ void Visualizer::createFocusPointVBO()
   ExitOnGLError("Error! Couldn't generate the focus point VBO.");
 }
 
-void Visualizer::createSphere(glm::vec3 pos, float radius, glm::vec4 color)
+void Visualizer::createHelperSphere(glm::vec3 pos, float radius, glm::vec4 color)
 {
   Sphere* s = new Sphere(color, pos, radius, 16);
   s->create(m_cur_context->m_lighting);
   m_primitives.push_back(s);
 }
 
-void Visualizer::createCuboid(glm::vec3 pos, glm::vec3 side_length, glm::vec4 color)
+void Visualizer::createHelperCuboid(glm::vec3 pos, glm::vec3 side_length, glm::vec4 color)
 {
   Cuboid* c = new Cuboid(color, pos, side_length);
   c->create(m_cur_context->m_lighting);
@@ -418,7 +416,7 @@ void Visualizer::registerOctree(uint32_t index, std::string map_name)
     try
     {
       m_shm_manager_octrees = new SharedMemoryManagerOctrees();
-    } catch (boost::interprocess::interprocess_exception& e)
+    } catch (std::exception& e)
     {
       LOGGING_ERROR_C(
           Visualization,
@@ -457,7 +455,7 @@ void Visualizer::registerVoxelMap(voxelmap::AbstractVoxelMap* map, uint32_t inde
     try
     {
       m_shm_manager_voxelmaps = new SharedMemoryManagerVoxelMaps();
-    } catch (boost::interprocess::interprocess_exception& e)
+    } catch (std::exception& e)
     {
       LOGGING_ERROR_C(
           Visualization,
@@ -486,6 +484,33 @@ void Visualizer::registerVoxelMap(voxelmap::AbstractVoxelMap* map, uint32_t inde
     createFocusPointVBO();
   }
   m_cur_context->m_voxel_maps.push_back(con);
+  distributeMaxMemory();
+}
+
+void Visualizer::registerPrimitiveArray(uint32_t index, std::string prim_array_name)
+{
+  if (m_shm_manager_primitive_arrays == NULL)
+  {
+    try
+    {
+      m_shm_manager_primitive_arrays = new SharedMemoryManagerPrimitiveArrays();
+    } catch (std::exception& e)
+    {
+      LOGGING_ERROR_C(
+          Visualization,
+          Visualizer,
+          "Registering the Primitive Array with index " << index << " failed! Couldn't open the shared memory segment!" << endl);
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  PrimitiveArrayContext* con = new PrimitiveArrayContext(prim_array_name);
+  if (!m_interpreter->getPrimitiveArrayContext(con, index))
+  {
+    LOGGING_WARNING_C(Visualization, Visualizer,
+                      "No context found for Primitive Array " << prim_array_name << ". Using the default context." << endl);
+  }
+  m_cur_context->m_prim_arrays.push_back(con);
   distributeMaxMemory();
 }
 
@@ -1015,7 +1040,7 @@ void Visualizer::drawFocusPoint()
   }
 }
 
-void Visualizer::drawPrimitives()
+void Visualizer::drawHelperPrimitives()
 {
   mat4 MVP = m_cur_context->m_camera->getProjectionMatrix() * m_cur_context->m_camera->getViewMatrix();
   glUniformMatrix4fv(m_vpID, 1, GL_FALSE, glm::value_ptr(MVP));
@@ -1045,128 +1070,139 @@ void Visualizer::drawPrimitives()
 
 void Visualizer::drawPrimitivesFromSharedMem()
 {
-// only read the buffer again if it has changed
-  if (m_shm_manager_visualizer != NULL && m_shm_manager_visualizer->hasPrimitiveBufferChanged())
+  if (m_shm_manager_primitive_arrays != NULL)
   {
-    PrimitiveTypes old_type = m_type_primitive;
-    if (m_shm_manager_visualizer->getPrimitivePositions(m_d_positions, m_number_of_primitives,
-                                                        m_type_primitive))
+    for(size_t prim_array_num = 0; prim_array_num < m_cur_context->m_prim_arrays.size(); prim_array_num++)
     {
-// generate new buffer after deleting the old one.
-      glDeleteBuffers(1, &m_vbo_primitives_pos);
-      glGenBuffers(1, &m_vbo_primitives_pos);
-      glBindBuffer(GL_ARRAY_BUFFER, m_vbo_primitives_pos);
-      glBufferData(GL_ARRAY_BUFFER, m_number_of_primitives * SIZE_OF_TRANSLATION_VECTOR, 0, GL_STATIC_DRAW);
-      glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-// copy the data from the list into the OpenGL buffer
-      struct cudaGraphicsResource* cuda_res;
-      HANDLE_CUDA_ERROR(
-          cudaGraphicsGLRegisterBuffer(&cuda_res, m_vbo_primitives_pos,
-                                       cudaGraphicsRegisterFlagsWriteDiscard));
-      glm::vec4 *vbo_ptr;
-      size_t num_bytes;
-      HANDLE_CUDA_ERROR(cudaGraphicsMapResources(1, &(cuda_res), 0));
-      HANDLE_CUDA_ERROR(cudaGraphicsResourceGetMappedPointer((void ** )&vbo_ptr, &num_bytes, cuda_res));
-
-      cudaMemcpy(vbo_ptr, m_d_positions, m_number_of_primitives * SIZE_OF_TRANSLATION_VECTOR,
-                 cudaMemcpyDeviceToDevice);
-
-      cudaIpcCloseMemHandle(m_d_positions);
-      HANDLE_CUDA_ERROR(cudaGraphicsUnmapResources(1, &cuda_res, 0));
-      HANDLE_CUDA_ERROR(cudaGraphicsUnregisterResource(cuda_res));
-// update the changed variable in the shared memory
-      m_shm_manager_visualizer->setPrimitiveBufferChangedToFalse();
-    }
-    else
-      // if it was not possible to load data from shared memory
-      return;
-
-// if the used type has changed generate the corresponding default primitive
-    if (old_type != m_type_primitive)
-    {
-      if (m_type_primitive == primitive_Sphere)
+      PrimitiveArrayContext* con = m_cur_context->m_prim_arrays[prim_array_num];
+      // only read the buffer again if it has changed
+      if(m_shm_manager_primitive_arrays->hasPrimitiveBufferChanged(prim_array_num))
       {
-        Sphere* sphere;
-        m_interpreter->getDefaultSphere(sphere);
-        m_default_prim = sphere;
-        // m_default_prim = new Sphere(glm::vec4(1, 0, 0, 1), glm::vec3(0, 0, 0), 1.f, 16);
-        m_default_prim->create(m_cur_context->m_lighting);
+        glm::vec4* dev_ptr_positions;
+        primitive_array::PrimitiveType tmp_prim_type = primitive_array::primitive_INITIAL_VALUE;
+        if (m_shm_manager_primitive_arrays->getPrimitivePositions(prim_array_num, (Vector4f**)&dev_ptr_positions, con->m_total_num_voxels,
+                                                            tmp_prim_type))
+        {
+          if(con->m_cur_vbo_size != con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR)
+          {
+            con->m_cur_vbo_size = con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR;
+            // generate new buffer after deleting the old one.
+            glDeleteBuffers(1, &(con->m_vbo));
+            glGenBuffers(1, &(con->m_vbo));
+            glBindBuffer(GL_ARRAY_BUFFER, con->m_vbo);
+            glBufferData(GL_ARRAY_BUFFER, con->m_cur_vbo_size, 0, GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+          }
+          // copy the data from the list into the OpenGL buffer
+          struct cudaGraphicsResource* cuda_res;
+          HANDLE_CUDA_ERROR(
+              cudaGraphicsGLRegisterBuffer(&cuda_res, con->m_vbo,
+                                           cudaGraphicsRegisterFlagsWriteDiscard));
+          glm::vec4 *vbo_ptr;
+          size_t num_bytes;
+          HANDLE_CUDA_ERROR(cudaGraphicsMapResources(1, &(cuda_res), 0));
+          HANDLE_CUDA_ERROR(cudaGraphicsResourceGetMappedPointer((void ** )&vbo_ptr, &num_bytes, cuda_res));
+
+          cudaMemcpy(vbo_ptr, dev_ptr_positions, con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR,
+                     cudaMemcpyDeviceToDevice);
+
+          cudaIpcCloseMemHandle(dev_ptr_positions);
+          HANDLE_CUDA_ERROR(cudaGraphicsUnmapResources(1, &cuda_res, 0));
+          HANDLE_CUDA_ERROR(cudaGraphicsUnregisterResource(cuda_res));
+          // update the changed variable in the shared memory
+          m_shm_manager_primitive_arrays->setPrimitiveBufferChangedToFalse(prim_array_num);
+
+          // generate the corresponding default primitive type if it was not set before
+          if(con->m_prim_type != tmp_prim_type)
+          {
+            con->m_prim_type = tmp_prim_type;
+            if (con->m_prim_type == primitive_array::primitive_Sphere)
+            {
+              Sphere* sphere;
+              m_interpreter->getDefaultSphere(sphere);
+              con->m_default_prim = sphere;
+              con->m_default_prim->create(m_cur_context->m_lighting);
+            }
+            else if (con->m_prim_type == primitive_array::primitive_Cuboid)
+            {
+              Cuboid* cuboid;
+              m_interpreter->getDefaultCuboid(cuboid);
+              con->m_default_prim = cuboid;
+              con->m_default_prim->create(m_cur_context->m_lighting);
+            }
+            else
+            {
+              LOGGING_WARNING_C(Visualization, Visualizer,
+                                "Primitive type not supported yet ... add it here." << endl);
+            }
+          }
+        }else{
+          // if it was not possible to load data from shared memory
+          LOGGING_ERROR_C(Visualization, Visualizer,
+                            "It was not possible to load primitive data from shared memory." << endl);
+          return;
+        }
       }
-      else if (m_type_primitive == primitive_Cuboid)
+      if (con->m_default_prim != NULL)
       {
-        Cuboid* cuboid;
-        m_interpreter->getDefaultCuboid(cuboid);
-        m_default_prim = cuboid;
-        //m_default_prim = new Cuboid(glm::vec4(1, 0, 0, 1), glm::vec3(0, 0, 0), glm::vec3(1.f));
-        m_default_prim->create(m_cur_context->m_lighting);
-      }
-      else
-      {
-        LOGGING_WARNING_C(Visualization, Visualizer,
-                          "Primitive type not supported yet ... add it here." << endl);
+        GLuint color_id;
+        mat4 V = m_cur_context->m_camera->getViewMatrix();
+        mat4 VP = m_cur_context->m_camera->getProjectionMatrix() * V;
+        if (m_cur_context->m_lighting)
+        { // set up the correct variables for the shader with lighting
+          glUseProgram(m_lighting_programID);
+          mat4 V_inv_trans = transpose(inverse(V));
+          vec3 lightpos_world = m_cur_context->m_camera->getCameraPosition()
+              + vec3(1.f) * m_cur_context->m_camera->getCameraRight();
+          vec3 light_intensity = vec3(m_cur_context->m_light_intensity);
+
+          glUniformMatrix4fv(m_light_vpID, 1, GL_FALSE, value_ptr(VP));
+          glUniformMatrix4fv(m_light_vID, 1, GL_FALSE, value_ptr(V));
+          glUniformMatrix4fv(m_light_v_inv_transID, 1, GL_FALSE, value_ptr(V_inv_trans));
+
+          glUniform3fv(m_light_lightposID, 1, glm::value_ptr(lightpos_world));
+          glUniform3fv(m_light_light_intensity, 1, glm::value_ptr(light_intensity));
+          glUniform1i(m_light_interpolationID, GL_FALSE);
+
+          color_id = m_light_startColorID;
+        }
+        else
+        {
+          // set up the correct variables for the shader without lighting
+          glUseProgram(m_programID);
+          glUniformMatrix4fv(m_vpID, 1, GL_FALSE, value_ptr(VP));
+          glUniform1i(m_interpolationID, GL_FALSE);
+          color_id = m_startColorID;
+        }
+        ExitOnGLError("ERROR! Couldn't load variables to shader for the primitives from shared mem.");
+        glBindBuffer(GL_ARRAY_BUFFER, con->m_vbo);
+        glEnableVertexAttribArray(2);
+        glVertexAttribDivisor(2, 1);
+        glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*) 0);
+
+        if (m_cur_context->m_draw_filled_triangles)
+        {
+          glUniform4fv(color_id, 1, glm::value_ptr(con->m_default_prim->getColor()));
+          glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+          con->m_default_prim->draw(con->m_total_num_voxels, m_cur_context->m_lighting);
+        }
+        ExitOnGLError("ERROR! Couldn't draw the filled triangles of the primitives.");
+        if (m_cur_context->m_draw_edges_of_triangels)
+        {
+          glPolygonOffset(-1.f, -1.f);
+          glEnable(GL_POLYGON_OFFSET_LINE);
+          glm::vec4 c = con->m_default_prim->getColor() * 0.5f;
+          glUniform4fv(color_id, 1, glm::value_ptr(c));
+          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+          con->m_default_prim->draw(con->m_total_num_voxels, m_cur_context->m_lighting);
+          glDisable(GL_POLYGON_OFFSET_LINE);
+        }
+        ExitOnGLError("ERROR! Couldn't draw the edges of the primitives.");
 
       }
-    }
-  }
-  if (m_default_prim != NULL)
-  {
-    GLuint color_id;
-    mat4 V = m_cur_context->m_camera->getViewMatrix();
-    mat4 VP = m_cur_context->m_camera->getProjectionMatrix() * V;
-    if (m_cur_context->m_lighting)
-    { // set up the correct variables for the shader with lighting
-      glUseProgram(m_lighting_programID);
-      mat4 V_inv_trans = transpose(inverse(V));
-      vec3 lightpos_world = m_cur_context->m_camera->getCameraPosition()
-          + vec3(1.f) * m_cur_context->m_camera->getCameraRight();
-      vec3 light_intensity = vec3(m_cur_context->m_light_intensity);
-
-      glUniformMatrix4fv(m_light_vpID, 1, GL_FALSE, value_ptr(VP));
-      glUniformMatrix4fv(m_light_vID, 1, GL_FALSE, value_ptr(V));
-      glUniformMatrix4fv(m_light_v_inv_transID, 1, GL_FALSE, value_ptr(V_inv_trans));
-
-      glUniform3fv(m_light_lightposID, 1, glm::value_ptr(lightpos_world));
-      glUniform3fv(m_light_light_intensity, 1, glm::value_ptr(light_intensity));
-      glUniform1i(m_light_interpolationID, GL_FALSE);
-
-      color_id = m_light_startColorID;
-    }
-    else
-    {
-      // set up the correct variables for the shader without lighting
-      glUseProgram(m_programID);
-      glUniformMatrix4fv(m_vpID, 1, GL_FALSE, value_ptr(VP));
-      glUniform1i(m_interpolationID, GL_FALSE);
-      color_id = m_startColorID;
-    }
-    ExitOnGLError("ERROR! Couldn't load variables to shader for the primitives from shared mem.");
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo_primitives_pos);
-    glEnableVertexAttribArray(2);
-    glVertexAttribDivisor(2, 1);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*) 0);
-
-    if (m_cur_context->m_draw_filled_triangles)
-    {
-      glUniform4fv(color_id, 1, glm::value_ptr(m_default_prim->getColor()));
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      m_default_prim->draw(m_number_of_primitives, m_cur_context->m_lighting);
-    }
-    ExitOnGLError("ERROR! Couldn't draw the filled triangles of the primitives.");
-    if (m_cur_context->m_draw_edges_of_triangels)
-    {
-      glPolygonOffset(-1.f, -1.f);
-      glEnable(GL_POLYGON_OFFSET_LINE);
-      glm::vec4 c = m_default_prim->getColor() * 0.5f;
-      glUniform4fv(color_id, 1, glm::value_ptr(c));
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      m_default_prim->draw(m_number_of_primitives, m_cur_context->m_lighting);
-      glDisable(GL_POLYGON_OFFSET_LINE);
-    }
-    ExitOnGLError("ERROR! Couldn't draw the edges of the primitives.");
-
-  }
-// reset used stuff...
+    } // end for each prim array
+  } // endif (m_shm_manager_primitive_arrays != NULL)
+  // reset used stuff...
   glVertexAttribDivisor(2, 0);
   glDisableVertexAttribArray(2);
   glUseProgram(0);
@@ -1201,7 +1237,7 @@ void Visualizer::renderFunction(void)
     drawFocusPoint();
     drawGrid();
   }
-  drawPrimitives();
+  drawHelperPrimitives();
 
 // set some of the unfirom shader variables for the data contexts
   mat4 VP = m_cur_context->m_camera->getProjectionMatrix() * m_cur_context->m_camera->getViewMatrix();
@@ -1856,12 +1892,14 @@ __inline__ uint8_t Visualizer::typeToColorIndex(uint8_t type)
   return type;
 }
 /**
- * Distributes the maximum usable memory on all voxel maps
+ * Distributes the maximum usable memory on all data structures
  */
 void Visualizer::distributeMaxMemory()
 {
-  uint32_t num_data_structures = m_cur_context->m_voxel_maps.size() + m_cur_context->m_octrees.size();
-
+  // as a quick hack, the maps will get 4 times the memory than the primitive arrays
+  uint32_t num_data_structures = (4 * m_cur_context->m_voxel_maps.size()) +
+                                 (4 * m_cur_context->m_octrees.size()) +
+                                 (1 * m_cur_context->m_prim_arrays.size());
   if (num_data_structures == 0)
   {
     return;
@@ -1870,12 +1908,17 @@ void Visualizer::distributeMaxMemory()
 
   for (uint32_t i = 0; i < m_cur_context->m_voxel_maps.size(); i++)
   {
-    m_cur_context->m_voxel_maps[i]->m_max_vbo_size = mem_per_data_structure;
+    m_cur_context->m_voxel_maps[i]->m_max_vbo_size = 4 * mem_per_data_structure;
   }
 
   for (uint32_t i = 0; i < m_cur_context->m_octrees.size(); i++)
   {
-    m_cur_context->m_octrees[i]->m_max_vbo_size = mem_per_data_structure;
+    m_cur_context->m_octrees[i]->m_max_vbo_size = 4 * mem_per_data_structure;
+  }
+
+  for (uint32_t i = 0; i < m_cur_context->m_prim_arrays.size(); i++)
+  {
+    m_cur_context->m_prim_arrays[i]->m_max_vbo_size = 1 * mem_per_data_structure;
   }
 
 }

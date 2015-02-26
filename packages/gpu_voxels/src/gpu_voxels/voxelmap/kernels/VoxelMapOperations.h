@@ -546,6 +546,12 @@ __global__
 void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *meta_point_cloud,
                                 VoxelType voxelType, const Vector3ui *map_dim, const float voxel_side_length);
 
+template<class Voxel>
+__global__
+void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *meta_point_cloud,
+                                VoxelType* voxel_types, const Vector3ui *map_dim,
+                                const float voxel_side_length);
+
 } // end of namespace voxelmap
 } // end of namespace gpu_voxels
 #endif

@@ -32,22 +32,32 @@ GpuVoxelsMap::~GpuVoxelsMap()
 {
 }
 
-void GpuVoxelsMap::translateContent(int32_t x, int32_t y, int32_t z)
-{
-}
-
-size_t GpuVoxelsMap::collideWithRelativeTransform(const GpuVoxelsMapSharedPtr other, float coll_threshold, int32_t x, int32_t y, int32_t z)
-{
-  return 0;
-}
-
-bool GpuVoxelsMap::insertPCD(const std::string path, VoxelType voxel_type, const bool shift_to_zero, const Vector3f &offset_XYZ)
+bool GpuVoxelsMap::insertPointcloudFromFile(const std::string path, VoxelType voxel_type, const bool shift_to_zero, const Vector3f &offset_XYZ)
 {
   std::vector<Vector3f> points;
   //load the points into the vector
-  if (!pcd_handling::loadPointCloud(path, points, shift_to_zero, offset_XYZ))
+  std::size_t found = path.find(std::string("xyz"));
+  if (found!=std::string::npos)
   {
-    return false;
+    if (!pcd_handling::loadPointCloud(path, points, shift_to_zero, offset_XYZ))
+    {
+      return false;
+    }
+  }else{
+    // is the file a binvox file?
+    std::size_t found = path.find(std::string("binvox"));
+    if (found!=std::string::npos)
+    {
+      if (!binvox_handling::loadPointCloud(path, points, shift_to_zero, offset_XYZ))
+      {
+        return false;
+      }
+    }else{
+      LOGGING_ERROR_C(
+          Gpu_voxels_helpers,
+          GpuVoxelsMap,
+          path << " has no known file format." << endl);
+    }
   }
   insertGlobalData(points, voxel_type);
   return true;

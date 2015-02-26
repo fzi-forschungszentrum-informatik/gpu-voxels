@@ -51,6 +51,7 @@ protected:
   uint32_t* m_shm_superVoxelSize;
   uint32_t* m_shm_numCubes;
   bool* m_shm_bufferSwapped;
+  bool m_internal_buffer_1;
 };
 }
 

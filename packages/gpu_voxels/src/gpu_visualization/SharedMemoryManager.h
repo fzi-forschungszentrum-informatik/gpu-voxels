@@ -65,10 +65,13 @@ public:
     return m_segment_name;
   }
 
-protected:
-  boost::interprocess::managed_shared_memory m_segment;
+  boost::interprocess::managed_shared_memory& getMemSegment()
+  {
+    return m_segment;
+  }
 private:
   std::string m_segment_name;
+  boost::interprocess::managed_shared_memory m_segment;
 }
 ;
 

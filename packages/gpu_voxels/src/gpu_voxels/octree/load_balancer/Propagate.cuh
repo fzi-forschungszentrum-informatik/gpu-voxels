@@ -67,12 +67,14 @@ bool Propagate<branching_factor, level_count, InnerNode, LeafNode>::doPreparatio
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode>
 void Propagate<branching_factor, level_count, InnerNode, LeafNode>::doWork()
 {
+  // Passing of template types needed by the kernel function through the helper struct KernelConfig
   typedef PropagateKernelConfig<RunConfig::NUM_TRAVERSAL_THREADS,
       branching_factor,
       InnerNode,
       LeafNode,
       level_count> KernelConfig;
 
+  // Parameters for the kernel function required for the load balancing concept.
   const typename KernelConfig::AbstractKernelParameters abstract_parameters(
         Base::m_dev_work_stacks1,
         Base::m_dev_work_stacks1_item_count,
@@ -80,8 +82,10 @@ void Propagate<branching_factor, level_count, InnerNode, LeafNode>::doWork()
         Base::m_dev_tasks_idle_count,
         Base::getIdleCountThreshold());
 
+  // Specific parameters for the kernel function.
   typename KernelConfig::KernelParams kernel_params(abstract_parameters);
 
+  // Call the templated kernel function. It's behavior is defined by the given KernelConfig.
   kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS>>>(kernel_params);
 }
 

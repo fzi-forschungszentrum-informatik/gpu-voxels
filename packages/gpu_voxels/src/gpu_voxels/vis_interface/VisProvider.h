@@ -39,6 +39,9 @@
 
 namespace gpu_voxels {
 
+class VisProvider;
+typedef boost::shared_ptr<VisProvider> VisProviderSharedPtr;
+
 /**
  * @brief VisProvider Superclass to handle the visualization of different map types
  * with gpu_visualization through shared memory

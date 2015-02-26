@@ -119,6 +119,7 @@ SET(PACKAGE_VERSION "${ICMAKER_VERSION}")
 # ===================================================
 SET(ICMAKER_VERBOSE OFF CACHE BOOL "Verbose IcMaker status messages")
 SET(ICMAKER_USE_DEPRECATED_MACROS OFF CACHE BOOL "Allow usage of deprecated macros")
+SET(ICMAKER_USE_TCMALLOC OFF CACHE BOOL "Link everything against tcmalloc from Google's perftools")
 
 # Detect GNU version:
 # ===================================================
@@ -592,5 +593,9 @@ MESSAGE(STATUS "    Build type:                    ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "")
 MESSAGE(STATUS "    Install path:                  ${CMAKE_INSTALL_PREFIX}")
 MESSAGE(STATUS "")
+IF(ICMAKER_USE_TCMALLOC AND Tcmalloc_FOUND)
+  MESSAGE(STATUS "    Linking against tcmalloc:      ${Tcmalloc_LIBRARY}")
+  MESSAGE(STATUS "")
+ENDIF()
 MESSAGE(STATUS "---- Scanning packages -------------------------------------------------------------")
 MESSAGE(STATUS "")

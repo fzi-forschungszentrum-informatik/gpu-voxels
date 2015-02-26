@@ -126,7 +126,8 @@ endmacro(libfind_library)
 # "-D_IC_BUILDER_<name>_" is set.
 #
 # Usage: libfind_lib_with_pkg_config(
-#          name pkgconfig-name
+#          name
+#          pkgconfig-name
 #          HEADERS hdr1 hdr2 ...
 #          LIBRARIES lib1 lib2 ...
 #          EXECUTABLES exec1 exec2 ...
@@ -171,9 +172,8 @@ macro(libfind_lib_with_pkg_config)
     "HEADERS;LIBRARIES;EXECUTABLES;HINTS;HEADER_PATHS;LIBRARY_PATHS;EXECUTABLE_PATHS;DEFINE"
     ""
     ${ARGN})
-  car(NAME ${LIBFIND_DEFAULT_ARGS})
-  cdr(LIBFIND_DEFAULT_ARGS ${LIBFIND_DEFAULT_ARGS})
-  car(PKGCONF_NAME ${LIBFIND_DEFAULT_ARGS})
+  list(GET LIBFIND_DEFAULT_ARGS 0 NAME)
+  list(GET LIBFIND_DEFAULT_ARGS 1 PKGCONF_NAME)
   list(APPEND LIBFIND_HINTS /usr /usr/local)
   list(REMOVE_DUPLICATES LIBFIND_HINTS)
   foreach (p ${LIBFIND_HINTS})
@@ -221,8 +221,9 @@ macro(libfind_lib_with_pkg_config)
     list(REMOVE_DUPLICATES LIBFIND_EXECUTABLE_PATHS)
   endif ()
 
-  # Now check for headers.  Note that we expect each header to reside
-  # in the same location.
+  # Now check for headers.
+  unset(LIBFIND_FOUND_INCLUDE_DIRS)
+  unset(LIBFIND_FOUND_INCLUDE_DIRS CACHE)
   foreach (h ${LIBFIND_HEADERS})
     unset(LIBFIND_INCLUDE_DIR)
     unset(LIBFIND_INCLUDE_DIR CACHE)
@@ -230,13 +231,15 @@ macro(libfind_lib_with_pkg_config)
       NAMES ${h}
       PATHS ${LIBFIND_HEADER_PATHS})
     if (LIBFIND_INCLUDE_DIR)
-      set(LIBFIND_HEADER_PATHS ${LIBFIND_INCLUDE_DIR})
+      list(APPEND LIBFIND_FOUND_INCLUDE_DIRS ${LIBFIND_INCLUDE_DIR})
     else ()
       message(STATUS "${NAME}: Could not find required header file ${h}.")
       return ()
     endif ()
   endforeach ()
-  set(LIBFIND_FOUND_INCLUDE_DIR ${LIBFIND_INCLUDE_DIR})
+  if (LIBFIND_FOUND_INCLUDE_DIRS)
+    list(REMOVE_DUPLICATES LIBFIND_FOUND_INCLUDE_DIRS)
+  endif ()
 
   # Now check for libraries.  Note that we expect each library to
   # reside in the same location.
@@ -277,8 +280,8 @@ macro(libfind_lib_with_pkg_config)
   endforeach ()
 
   # Everything seems to be OK.  Set the relevant variables.
-  if (LIBFIND_FOUND_INCLUDE_DIR)
-    set(${NAME}_PROCESS_INCLUDES LIBFIND_FOUND_INCLUDE_DIR)
+  if (LIBFIND_FOUND_INCLUDE_DIRS)
+    set(${NAME}_PROCESS_INCLUDES LIBFIND_FOUND_INCLUDE_DIRS)
   endif ()
   if (LIBFIND_FOUND_LIBRARIES)
     set(${NAME}_PROCESS_LIBS LIBFIND_FOUND_LIBRARIES)
@@ -286,8 +289,11 @@ macro(libfind_lib_with_pkg_config)
   libfind_process(${NAME})
 
   if (${NAME}_FOUND)
-    set(${NAME}_LIBRARY_DIRS ${${NAME}_PKGCONF_LIBRARY_DIRS} CACHE INTERNAL "")
-    set(${NAME}_LDFLAGS ${${NAME}_PKGCONF_LDFLAGS} CACHE INTERNAL "")
+    set(${NAME}_LIBRARY_DIRS ${${NAME}_PKGCONF_LIBRARY_DIRS} ${LIBFIND_LIBRARY_PATHS} CACHE INTERNAL "")
+    set(${NAME}_LDFLAGS ${${NAME}_PKGCONF_LDFLAGS} ${LIBFIND_LDFLAGS} CACHE INTERNAL "")
+    foreach (l ${LIBFIND_LIBRARY_PATHS})
+      list(APPEND ${NAME}_LDFLAGS "-L${l}")
+    endforeach ()
     set(${NAME}_LDFLAGS_OTHER ${${NAME}_PKGCONF_LDFLAGS_OTHER} CACHE INTERNAL "")
     set(${NAME}_CFLAGS ${${NAME}_PKGCONF_CFLAGS} CACHE INTERNAL "")
     set(${NAME}_CFLAGS_OTHER ${${NAME}_PKGCONF_CFLAGS_OTHER} CACHE INTERNAL "")

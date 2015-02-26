@@ -25,10 +25,17 @@ template class BitVoxelMap<BIT_VECTOR_LENGTH>;
 template class BitVoxel<BIT_VECTOR_LENGTH>;
 // ##################################################################################
 
-// ############################### ProbVoxelMap ######################################
-// Explicitly instantiate template method
+// ############################### TemplateVoxelMap ######################################
+// Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects
+template uint32_t TemplateVoxelMap<ProbabilisticVoxel>::collisionCheckWithCounter<ProbabilisticVoxel, DefaultCollider>(
+                                                                TemplateVoxelMap<ProbabilisticVoxel>*, DefaultCollider);
+
+// ############################### ProbVoxelMap (inherits from TemplateVoxelMap) ######################################
+// Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects
 template void ProbVoxelMap::insertSensorData<BIT_VECTOR_LENGTH>(const Vector3f*, const bool, const bool,
                                                                 const uint32_t, BitVoxel<BIT_VECTOR_LENGTH>*);
+
+
 // ##################################################################################
 
 } // end of namespace

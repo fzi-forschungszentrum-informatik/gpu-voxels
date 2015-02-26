@@ -259,7 +259,15 @@ void MetaPointCloud::syncToDevice()
   // copy all clouds to the device
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_dev_ptrs_to_addrs[0], m_point_clouds_local->clouds_base_addresses[0],
-                 sizeof(Vector3f) * m_accumulated_pointcloud_size, cudaMemcpyHostToDevice));
+      sizeof(Vector3f) * m_accumulated_pointcloud_size, cudaMemcpyHostToDevice));
+}
+
+void MetaPointCloud::syncToHost()
+{
+  // copy all clouds to the host
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(m_point_clouds_local->clouds_base_addresses[0], m_dev_ptrs_to_addrs[0],
+      sizeof(Vector3f) * m_accumulated_pointcloud_size, cudaMemcpyDeviceToHost));
 }
 
 void MetaPointCloud::syncToDevice(uint16_t cloud)

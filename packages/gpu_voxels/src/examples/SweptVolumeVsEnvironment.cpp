@@ -23,6 +23,8 @@
 #include <cstdlib>
 #include <signal.h>
 
+#include <icl_core_config/Config.h>
+
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
@@ -54,9 +56,15 @@ int main(int argc, char* argv[])
   signal(SIGINT, ctrlchandler);
   signal(SIGTERM, killhandler);
 
+  icl_core::config::GetoptParameter ident_parameter("device-identifier:", "id",
+                                                    "Identifer of the kinect device");
+  icl_core::config::addParameter(ident_parameter);
   icl_core::logging::initialize(argc, argv);
 
-  Kinect* kinect = new Kinect();
+
+  std::string identifier = icl_core::config::Getopt::instance().paramOpt("device-identifier");
+
+  Kinect* kinect = new Kinect(identifier);
 
   /*!
    * First, we generate an API class, which defines the
@@ -288,12 +296,10 @@ int main(int argc, char* argv[])
 
    // gvl->getMap("myEnvironmentMap")->insertGlobalData(kinect->getDataPtr(), eVT_OCCUPIED);
 
+    size_t num_cols = 0;
     voxelmap::BitVectorVoxel collision_types;
-    LOGGING_INFO(
-        Gpu_voxels,
-        "Collsions: "
-            << gvl->getMap("myEnvironmentMap")->collideWithTypes(gvl->getMap("myRobotMap"), collision_types,
-                                                                 1.0f) << endl);
+    num_cols = gvl->getMap("myEnvironmentMap")->collideWithTypes(gvl->getMap("myRobotMap"), collision_types, 1.0f);
+    LOGGING_INFO(Gpu_voxels, "Collsions: " << num_cols << endl);
 
     printf("Voxel types in collision:\n");
     DrawTypes draw_types;

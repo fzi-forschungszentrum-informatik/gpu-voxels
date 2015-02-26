@@ -30,8 +30,9 @@
 
 namespace gpu_voxels {
 
-Kinect::Kinect() :
-     m_running(false)
+Kinect::Kinect(std::string identifier) :
+     m_running(false),
+     m_identifier(identifier)
 {
   //m_viewer("Sensor Data Viewer");
   m_data = new std::vector<Vector3f>(640*480);
@@ -90,7 +91,7 @@ void Kinect::cloud_callback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr &clou
 void Kinect::run()
 {
   LOGGING_INFO_C(Gpu_voxels_helpers, Kinect, "Kinect: starting capture interface." << endl);
-  m_interface = new pcl::OpenNIGrabber();
+  m_interface = new pcl::OpenNIGrabber(m_identifier);
 
   boost::function<void(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr&)> f_cb =
       boost::bind(&Kinect::cloud_callback, this, _1);

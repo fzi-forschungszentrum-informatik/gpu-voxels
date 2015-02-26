@@ -34,8 +34,20 @@ class DefaultCollider;
 
 namespace LoadBalancer {
 
-typedef RunConfig<128> IntersectVMapRunConfig; // Experimental founding
+typedef RunConfig<128> IntersectVMapRunConfig; // Number of threads due to experimental founding
 
+/**
+ * @brief Load balanced collision check between \code NTree \endcode and \code VoxelMap \endcode
+ *
+ * @tparam branching_factor Branching factor of the corresponding \code NTree \endcode
+ * @tparam level_count Number of levels of the corresponding \code NTree \endcode
+ * @tparam InnerNode Inner node type of the corresponding \code NTree \endcode
+ * @tparam LeafNode Leaf node type of the corresponding \code NTree \endcode
+ * @tparam vft_size Size parameter to use for \code VoxelTypeFlags \endcode template. Defines the size in Byte of the voxel-type bit-vector.
+ * @tparam set_collision_flag \code true \endcode to set the collision flag if necessary
+ * @tparam compute_voxelTypeFlags \code true \endcode to compute the voxel type flags. Each bit of this vector indicates whether a voxel of the corresponsing type caused a collision.
+ * @tparam VoxelType The type of a voxel of the corresponsing \code VoxelMap \endcode
+ */
 template<std::size_t branching_factor,
     std::size_t level_count,
     class InnerNode,
@@ -52,6 +64,14 @@ public:
   typedef IntersectVMapRunConfig RunConfig;
   typedef AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, WorkItem, RunConfig> Base;
 
+   /**
+   * @brief IntersectVMap constructor
+   * @param ntree The \code NTree \endcode to collide with.
+   * @param voxel_map The \code VoxelMap \endcode to collide the \code NTree \endcode with.
+   * @param voxel_map_dim Dimensions of the \code VoxelMap \endcode in voxel.
+   * @param offset An offset to shift the voxelmap in relation to the \code NTree \endcode
+   * @param min_level Traverse the tree down to this level for collision checking if necessary. Defines the resolution of this collision check.
+   */
   IntersectVMap(NTree<branching_factor, level_count, InnerNode, LeafNode>* ntree,
                 const VoxelType* voxel_map,
                 const gpu_voxels::Vector3ui voxel_map_dim,
@@ -70,12 +90,12 @@ protected:
 
 protected:
   /**
-   * Holds the number of detected collisions.
+   * @brief Holds the number of detected collisions.
    */
   std::size_t* m_dev_num_collisions;
 
   /**
-   * Holds the vector of voxel types in collision.
+   * @brief Holds the vector of voxel types in collision.
    */
   VoxelTypeFlags<vft_size>* m_dev_result_voxelTypeFlags;
 
@@ -87,12 +107,12 @@ protected:
 
 public:
   /**
-   * Holds the number of detected collisions.
+   * @brief Holds the number of detected collisions.
    */
   std::size_t m_num_collisions;
 
   /**
-   * Holds the vector of voxel types in collision.
+   * @brief Holds the vector of voxel types in collision.
    */
   VoxelTypeFlags<vft_size> m_result_voxelTypeFlags;
 };

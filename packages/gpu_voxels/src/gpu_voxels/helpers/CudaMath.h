@@ -24,6 +24,7 @@
 #define GPU_VOXELS_CUDAMATH_H_INCLUDED
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
+#include <vector>
 
 namespace gpu_voxels {
 
@@ -80,7 +81,6 @@ public:
   void transform(unsigned int nr_of_transformations, Matrix4f& base, const Matrix4f* relatives,
                  Matrix4f* absolutes, bool invert_base);
 
-
   /*! Interpolate linear between the values \a value1 and \a value2 using the given \a ratio.
    *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
    *  middle.
@@ -110,6 +110,10 @@ public:
    */
   static std::vector<double> interpolateLinear(const std::vector<double>& joint_state1,
                                                const std::vector<double>& joint_state2, double ratio);
+
+  /*! Transform each point of the point cloud by multiplication of \a matrix with that point.
+   */
+  static void transform(std::vector<Vector3f> &host_point_cloud, Matrix4f matrix);
 
 private:
   const unsigned int m_max_nr_of_devices;

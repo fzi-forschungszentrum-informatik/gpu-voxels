@@ -1,7 +1,7 @@
 // this is a -*- C++ -*- file
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
-// This file is part of the GPU Voxels Software Library.
+// This file is part of the IC Workspace.
 //
 // This program is free software licensed under the CDDL
 // (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
@@ -10,6 +10,7 @@
 //
 // © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
 //
+
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------

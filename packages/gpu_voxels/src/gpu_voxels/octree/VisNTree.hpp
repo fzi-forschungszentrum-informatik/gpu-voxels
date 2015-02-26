@@ -31,13 +31,13 @@
 namespace gpu_voxels {
 namespace NTree {
 
-thrust::device_vector<Cube> cubes_buffer_1(1);
-thrust::device_vector<Cube> cubes_buffer_2(1);
+thrust::device_vector<Cube> *d_cubes_1 = NULL;
+thrust::device_vector<Cube> *d_cubes_2 = NULL;
 
 template<typename InnerNode, typename LeafNode>
 VisNTree<InnerNode, LeafNode>::VisNTree(MyNTree* ntree, std::string map_name) :
     VisProvider(shm_segment_name_octrees, map_name), m_ntree(ntree), m_shm_memHandle(NULL), m_min_level(
-        UINT_MAX), m_shm_superVoxelSize(NULL), m_shm_numCubes(NULL), m_shm_bufferSwapped(NULL)
+        UINT_MAX), m_shm_superVoxelSize(NULL), m_shm_numCubes(NULL), m_shm_bufferSwapped(NULL), m_internal_buffer_1(false)
 {
 
 }
@@ -86,16 +86,30 @@ bool VisNTree<InnerNode, LeafNode>::visualize(const bool force_repaint)
   }
 
   uint32_t tmp = *m_shm_superVoxelSize - 1;
+  // m_shm_bufferSwapped tells, if visualizer already rendered the frame
+  // m_internal_buffer tells, which buffer should be used
   if (*m_shm_bufferSwapped == false && (tmp != m_min_level || force_repaint))
   {
     m_min_level = tmp;
-    Cube* ptr = NULL;
-    uint32_t used_size = m_ntree->extractCubes(cubes_buffer_1, NULL, m_min_level);
-    ptr = D_PTR(cubes_buffer_1);
-    cubes_buffer_1.swap(cubes_buffer_2);
 
-    HANDLE_CUDA_ERROR(cudaIpcGetMemHandle(m_shm_memHandle, ptr));
-    *m_shm_numCubes = used_size;
+    uint32_t cube_buffer_size;
+    Cube *d_cubes_buffer;
+
+    if(m_internal_buffer_1)
+    {
+      // extractCubes() allocates memory for the d_cubes_1, if the pointer is NULL
+      cube_buffer_size = m_ntree->extractCubes(d_cubes_1, NULL, m_min_level);
+      d_cubes_buffer = thrust::raw_pointer_cast(d_cubes_1->data());
+      m_internal_buffer_1 = false;
+    }else{
+      // extractCubes() allocates memory for the d_cubes_2, if the pointer is NULL
+      cube_buffer_size = m_ntree->extractCubes(d_cubes_2, NULL, m_min_level);
+      d_cubes_buffer = thrust::raw_pointer_cast(d_cubes_2->data());
+      m_internal_buffer_1 = true;
+    }
+
+    HANDLE_CUDA_ERROR(cudaIpcGetMemHandle(m_shm_memHandle, d_cubes_buffer));
+    *m_shm_numCubes = cube_buffer_size;
     *m_shm_bufferSwapped = true;
 
     return true;
@@ -112,7 +126,7 @@ uint32_t VisNTree<InnerNode, LeafNode>::getResolutionLevel()
     return 0;
 }
 
-}
-}
+} // end of ns
+} // end of ns
 
 #endif

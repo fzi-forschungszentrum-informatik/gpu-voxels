@@ -197,12 +197,14 @@ public:
   }
 
   __host__
-  void processSensorData(const DepthData* h_sensor_data, thrust::device_vector<Voxel>& d_free_space_voxel, thrust::device_vector<Voxel>& d_object_voxel);
+  void processSensorData(const DepthData* h_sensor_data,
+                         thrust::device_vector<Voxel> *&d_free_space_voxel,
+                         thrust::device_vector<Voxel> *&d_object_voxel);
 
   __host__
   void processSensorData(Vector3f* h_points,
-                                 thrust::device_vector<Voxel>& d_free_space_voxel,
-                                 thrust::device_vector<Voxel>& d_object_voxel);
+                                 thrust::device_vector<Voxel> *&d_free_space_voxel,
+                                 thrust::device_vector<Voxel> *&d_object_voxel);
 
 private:
   __host__

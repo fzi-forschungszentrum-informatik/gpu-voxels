@@ -29,8 +29,15 @@ namespace gpu_voxels {
 namespace NTree {
 namespace LoadBalancer {
 
-typedef RunConfig<128> PropagateRunConfig; // Experimental founding
+typedef RunConfig<128> PropagateRunConfig; // Number of threads due to experimental founding
 
+/**
+ * @brief Load balancing propagate to fix the NTree properties after after modifications of the NTree. This is necessary e.g. after the insertion of new voxel data.
+ * @tparam branching_factor Branching factor of the corresponding \code NTree \endcode
+ * @tparam level_count Number of levels of the corresponding \code NTree \endcode
+ * @tparam InnerNode Inner node type of the corresponding \code NTree \endcode
+ * @tparam LeafNode Leaf node type of the corresponding \code NTree \endcode
+ */
 template<std::size_t branching_factor,
     std::size_t level_count,
     class InnerNode,
@@ -43,7 +50,13 @@ public:
   typedef PropagateRunConfig RunConfig;
   typedef AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, WorkItem, RunConfig> Base;
 
+   /**
+   * @brief Propagate constructor.
+   * @param ntree The NTree to apply the propagate operations to.
+   * @param num_tasks The number of tasks the propagate work is split into. More tasks means higher degree of parallelism. Default value is \code 1024 \endcode, which performs quite well for the experiments.
+   */
   Propagate(NTree<branching_factor, level_count, InnerNode, LeafNode>* ntree, const uint32_t num_tasks = 1024);
+
   virtual ~Propagate();
 
 protected:

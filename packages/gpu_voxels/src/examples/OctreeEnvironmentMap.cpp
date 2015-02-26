@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
   std::string pcd_file = argv[1];
   LOGGING_INFO(Gpu_voxels, "Creating octree from file '" << pcd_file.c_str() << "' ..." << endl);
 
-  if (!gvl->getMap("myEnvironmentMap")->insertPCD(pcd_file, eVT_SWEPT_VOLUME_START, true, Vector3f(0, 0, 0)))
+  if (!gvl->getMap("myEnvironmentMap")->insertPointcloudFromFile(pcd_file, eVT_SWEPT_VOLUME_START, true, Vector3f(0, 0, 0)))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
   }

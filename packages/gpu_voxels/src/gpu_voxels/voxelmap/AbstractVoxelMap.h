@@ -45,9 +45,6 @@ public:
   //! get pointer to data array on device
   virtual void* getVoidDeviceDataPtr() = 0;
 
-  //! get info about the dimensions of the voxelmap
-  virtual Vector3ui getDimensions() = 0;
-
   //! get the side length of the voxels.
   virtual float getVoxelSideLength() const = 0;
 

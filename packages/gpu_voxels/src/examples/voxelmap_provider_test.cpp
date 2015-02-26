@@ -57,31 +57,28 @@ int main(int argc, char* argv[])
 
   icl_core::logging::initialize(argc, argv);
 
-  bfs::path model_path;
-   if (!file_handling::getGpuVoxelsPath(model_path))
-   {
-     LOGGING_WARNING(
-         Gpu_voxels,
-         "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
-     model_path = boost::filesystem::path("/home/mwagner/punktwolken");
-   }
+  gvl = new GpuVoxels(500, 500, 500, 0.02);
 
-  gvl = new GpuVoxels(500, 500, 500, 0.05);
-
-  gvl->addMap(MT_PROBAB_VOXELMAP, "myFirstMap");
+  gvl->addMap(MT_OCTREE, "myFirstMap");
   gvl->addMap(MT_PROBAB_VOXELMAP, "mySeconMap");
 
+  bfs::path model_path;
+  if (!file_handling::getGpuVoxelsPath(model_path))
+  {
+    LOGGING_ERROR(Gpu_voxels, "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
+    return -1; // exit here.
+  }
 
-  bfs::path pcd_file_0 = bfs::path(model_path / "pc_file5.pcd");
-  bfs::path pcd_file_1 = bfs::path(model_path / "pc_file4.pcd");
+  bfs::path pc_file_0 = bfs::path(model_path / "hollie_plain_left_arm_2_link.xyz");
+  bfs::path pc_file_1 = bfs::path(model_path / "helmet1_3.binvox");
 
-  if (!gvl->getMap("myFirstMap")->insertPCD(pcd_file_0.generic_string(), eVT_OCCUPIED, true,
-                                                  Vector3f(1, 1, 0)))
+  if (!gvl->getMap("myFirstMap")->insertPointcloudFromFile(pc_file_0.generic_string(), eVT_OCCUPIED, true,
+                                                  Vector3f(0.2, 0.2, 0)))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
   }
-  if (!gvl->getMap("mySeconMap")->insertPCD(pcd_file_1.generic_string(), eVT_OCCUPIED, true,
-                                                  Vector3f(5, 1, 0)))
+  if (!gvl->getMap("mySeconMap")->insertPointcloudFromFile(pc_file_1.generic_string(), eVT_OCCUPIED, true,
+                                                  Vector3f(0.1, 0.1, 0)))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
   }
@@ -89,10 +86,11 @@ int main(int argc, char* argv[])
   gvl->visualizeMap("myFirstMap");
   gvl->visualizeMap("mySeconMap");
 
+  size_t num_cols = 0;
   std::string exit = "";
   while (true)
   {
-    std::cout << "To quit the program enter \"exit\"" << std::endl;
+    std::cout << "To quit the program enter \"exit\", to run the test enter \"t\"" << std::endl;
     std::cin >> exit;
     if (exit.compare("exit") == 0)
     {
@@ -102,7 +100,9 @@ int main(int argc, char* argv[])
     {
       size_t i = 0;
       while(i < 50) {
-        i++;
+        i++;        
+        num_cols = gvl->getMap("myFirstMap")->collideWith(gvl->getMap("mySeconMap"), 0.0f, Vector3ui(i,0,0));
+        std::cout << "Num Cols: " << num_cols << std::endl;
         gvl->visualizeMap("myFirstMap");
         gvl->visualizeMap("mySeconMap");
         usleep(100000);

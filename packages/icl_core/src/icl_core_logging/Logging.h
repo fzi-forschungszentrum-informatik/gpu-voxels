@@ -1,7 +1,7 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
-// This file is part of the GPU Voxels Software Library.
+// This file is part of the IC Workspace.
 //
 // This program is free software licensed under the CDDL
 // (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
@@ -10,6 +10,7 @@
 //
 // © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
 //
+
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -199,6 +200,10 @@ void ICL_CORE_LOGGING_IMPORT_EXPORT initialize();
 void ICL_CORE_LOGGING_IMPORT_EXPORT shutdown();
 
 boost::shared_ptr<LifeCycle> ICL_CORE_LOGGING_IMPORT_EXPORT autoStart(int &argc, char *argv[]);
+
+//! Set a global log level for all streams.
+void ICL_CORE_LOGGING_IMPORT_EXPORT setLogLevel(icl_core::logging::LogLevel log_level);
+
 
 ////////////// DEPRECATED VERSIONS //////////////
 #ifdef _IC_BUILDER_DEPRECATED_STYLE_

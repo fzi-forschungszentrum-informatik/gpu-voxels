@@ -76,6 +76,21 @@ uint32_t getNumberOfVoxelmapsFromSharedMem()
   return res;
 }
 
+uint32_t getNumberOfPrimitiveArraysFromSharedMem()
+{
+  uint32_t res = 0;
+  try
+  {
+    SharedMemoryManagerPrimitiveArrays shm_manager_prim_arrays;
+    res = shm_manager_prim_arrays.getNumberOfPrimitiveArraysToDraw();
+  } catch (interprocess_exception& e)
+  {
+    LOGGING_DEBUG(Visualization, "Couldn't open the shared memory segment of the Primitive Arrays!" << endl);
+    return 0;
+  }
+  return res;
+}
+
 void registerVoxelmapFromSharedMemory(uint32_t index)
 {
   try
@@ -165,6 +180,21 @@ void registerOctreeFromSharedMemory(uint32_t index)
   }
 }
 
+void registerPrimitiveArrayFromSharedMemory(uint32_t index)
+{
+  try
+  {
+    SharedMemoryManagerPrimitiveArrays shm_manager_prim_arrays;
+    std::string prim_array_name = shm_manager_prim_arrays.getNameOfPrimitiveArray(index);
+    LOGGING_INFO(Visualization, "Providing a Primitive Array called \""<< prim_array_name << "\"." << endl);
+    vis->registerPrimitiveArray(index, prim_array_name);
+  } catch (interprocess_exception& e)
+  {
+    LOGGING_DEBUG(Visualization, "Couldn't open the shared memory segment of the Primitive Arrays!" << endl);
+    return;
+  }
+}
+
 int32_t main(int32_t argc, char* argv[])
 {
 // Initialize the logging
@@ -185,6 +215,13 @@ int32_t main(int32_t argc, char* argv[])
   for (uint32_t i = 0; i < num_octrees; i++)
   {
     registerOctreeFromSharedMemory(i);
+  }
+
+  uint32_t num_prim_arrays = getNumberOfPrimitiveArraysFromSharedMem();
+  LOGGING_INFO(Visualization, "Number of Primitive Arrays that will be drawn: " << num_prim_arrays << endl);
+  for (uint32_t i = 0; i < num_prim_arrays; i++)
+  {
+    registerPrimitiveArrayFromSharedMemory(i);
   }
 
   runVisualisation(&argc, argv);

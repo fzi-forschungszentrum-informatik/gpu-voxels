@@ -1,43 +1,70 @@
-# this is for emacs file handling -*- mode: cmake; indent-tabs-mode: nil -*-
+# - Try to find CarMaker
+# Once done this will define
+#  CarMaker_FOUND - System has CarMaker
+#  CarMaker_INCLUDE_DIRS - The CarMaker include directories
+#  CarMaker_LIBRARIES - The libraries needed to use CarMaker
+#  CarMaker_BIN_DIR - The bin dir of carmaker (used for pre-build steps)
 
-# -- BEGIN LICENSE BLOCK ----------------------------------------------
-# -- END LICENSE BLOCK ------------------------------------------------
+IF( CarMaker_FOUND )
+  SET( CarMaker_FIND_QUIETLY TRUE )
+ENDIF( CarMaker_FOUND )
 
-#----------------------------------------------------------------------
-# \file
-#
-# \author  Jan Oberlaender <oberlaender@fzi.de>
-# \date    2014-08-13
-#
-# Try to find CarMaker.  Once done, this will define:
-#  CarMaker_FOUND:          System has CarMaker
-#  CarMaker_INCLUDE_DIRS:   The '-I' preprocessor flags (w/o the '-I')
-#  CarMaker_LIBRARY_DIRS:   The paths of the libraries (w/o the '-L')
-# Variables defined if pkg-config was employed:
-#  CarMaker_DEFINITIONS:    Preprocessor definitions.
-#  CarMaker_LIBRARIES:      only the libraries (w/o the '-l')
-#  CarMaker_LDFLAGS:        all required linker flags
-#  CarMaker_LDFLAGS_OTHER:  all other linker flags
-#  CarMaker_CFLAGS:         all required cflags
-#  CarMaker_CFLAGS_OTHER:   the other compiler flags
-#  CarMaker_VERSION:        version of the module
-#  CarMaker_PREFIX:         prefix-directory of the module
-#  CarMaker_INCLUDEDIR:     include-dir of the module
-#  CarMaker_LIBDIR:         lib-dir of the module
-#----------------------------------------------------------------------
+INCLUDE(PrintLibraryStatus)
+INCLUDE(LibFindMacros)
+FIND_PACKAGE( LibUSB )
 
-include(PrintLibraryStatus)
-include(LibFindMacros)
+# Use pkg-config to get hints about paths
+libfind_pkg_check_modules(CarMaker_PKGCONF carmaker)
 
-find_package(LibUSB)
+# Include dir
+find_path(CarMaker_INCLUDE_DIR
+  NAMES CarMaker.h
+  PATHS ${CarMaker_PKGCONF_INCLUDE_DIRS} "/opt/ipg/hil/linux/include"
+)
 
-if (LibUSB_FOUND)
-  libfind_lib_with_pkg_config(CarMaker carmaker
-    HEADERS CarMaker.h
-    LIBRARIES carmaker car ipgdriver ipgroad tametire
-    EXECUTABLES CreateCarMakerAppInfo
-    HINTS /opt/ipg/hil/linux
-    DEFINE _IC_BUILDER_CARMAKER_
-    )
-endif ()
+find_path(CarMaker_BIN_DIR
+  NAMES CreateCarMakerAppInfo
+  PATHS ${CarMaker_PKGCONF_INCLUDE_DIRS} "/opt/ipg/hil/linux/bin"
+)
+
+# Libraries
+find_library(CarMaker_CM_LIBRARY
+  NAMES carmaker
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+)
+find_library(CarMaker_C_LIBRARY
+  NAMES car
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+)
+find_library(CarMaker_D_LIBRARY
+  NAMES ipgdriver
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+)
+find_library(CarMaker_R_LIBRARY
+  NAMES ipgroad
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+)
+find_library(CarMaker_T_LIBRARY
+  NAMES tametire
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+)
+
+# Set the include dir variables and the libraries and let libfind_process do the rest.
+# NOTE: Singular variables for this library, plural for libraries this this lib depends on.
+
+set(CarMaker_PROCESS_INCLUDES CarMaker_INCLUDE_DIR LibUSB_INCLUDE_DIRS )
+set(CarMaker_PROCESS_LIBS CarMaker_C_LIBRARY CarMaker_CM_LIBRARY CarMaker_D_LIBRARY CarMaker_R_LIBRARY CarMaker_T_LIBRARY LibUSB_LIBRARIES )
+libfind_process(CarMaker)
+
+PRINT_LIBRARY_STATUS(CarMaker
+  DETAILS "[${CarMaker_LIBRARIES}][${CarMaker_INCLUDE_DIRS}]"
+)
+
+if( LibUSB_FOUND )
+  if(CarMaker_FOUND)
+    set(CarMaker_DEFINITIONS "-D_IC_BUILDER_CARMAKER_")
+  endif()
+elseif()
+  SET( CarMaker_FOUND ) #Unsets CarMaker_FOUND
+endif()
 

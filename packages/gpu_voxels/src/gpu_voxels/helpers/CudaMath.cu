@@ -17,6 +17,9 @@
 #include <cstdio>
 #include <iostream>
 
+#include <thrust/device_vector.h>
+#include <thrust/transform.h>
+
 
 namespace gpu_voxels {
 
@@ -227,6 +230,30 @@ std::vector<double> CudaMath::interpolateLinear(const std::vector<double>& joint
 
   }
   return result;
+}
+
+struct TransformPointWithMatrix4f
+{
+	Matrix4f m_matrix;
+
+  __host__ __device__
+  TransformPointWithMatrix4f(Matrix4f matrix) : m_matrix(matrix)
+  {
+    printf("ERROR: Function TransformPointWithMatrix4f is not yet implemented!");
+  }
+
+  __host__ __device__
+  Vector3f operator()(Vector3f x)
+  {
+    return m_matrix * x;
+  }
+};
+
+void CudaMath::transform(std::vector<Vector3f>& host_point_cloud, Matrix4f matrix)
+{
+	thrust::device_vector<Vector3f> device_point_cloud(host_point_cloud);
+	thrust::transform(device_point_cloud.begin(), device_point_cloud.end(), device_point_cloud.begin(), TransformPointWithMatrix4f(matrix));
+    HANDLE_CUDA_ERROR(cudaMemcpy(&host_point_cloud[0], thrust::raw_pointer_cast(device_point_cloud.data()), host_point_cloud.size() * sizeof(Vector3f), cudaMemcpyDeviceToHost));
 }
 
 

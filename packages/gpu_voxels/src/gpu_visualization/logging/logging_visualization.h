@@ -30,6 +30,8 @@ namespace visualization {
 
 DECLARE_LOG_STREAM(Visualization)
 DECLARE_LOG_STREAM(Shader)
+DECLARE_LOG_STREAM(SharedMemManager)
+DECLARE_LOG_STREAM(Context)
 
 using icl_core::logging::endl;
 }

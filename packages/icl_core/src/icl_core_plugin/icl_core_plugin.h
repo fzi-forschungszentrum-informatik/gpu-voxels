@@ -1,7 +1,7 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
-// This file is part of the GPU Voxels Software Library.
+// This file is part of the IC Workspace.
 //
 // This program is free software licensed under the CDDL
 // (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
@@ -10,6 +10,7 @@
 //
 // © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
 //
+
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -30,7 +31,6 @@
 #endif
 
 #include <boost/filesystem.hpp>
-#include <ltdl.h>
 #include <icl_core/icl_core.h>
 
 #include "icl_core_plugin/Plugin.h"

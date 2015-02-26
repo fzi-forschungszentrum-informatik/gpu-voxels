@@ -112,9 +112,12 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
 
 __host__
 void Sensor::processSensorData(Vector3f* h_points,
-                               thrust::device_vector<Voxel>& d_free_space_voxel,
-                               thrust::device_vector<Voxel>& d_object_voxel)
+                               thrust::device_vector<Voxel> *&d_free_space_voxel,
+                               thrust::device_vector<Voxel> *&d_object_voxel)
 {
+
+  if(!d_free_space_voxel) d_free_space_voxel = new thrust::device_vector<Voxel>;
+  if(!d_object_voxel) d_object_voxel = new thrust::device_vector<Voxel>;
 
   thrust::device_vector<gpu_voxels::Vector3f> d_points_free(data_width * data_height);
   thrust::device_vector<gpu_voxels::Vector3f> d_points_object(data_width * data_height);
@@ -123,7 +126,7 @@ void Sensor::processSensorData(Vector3f* h_points,
   HANDLE_CUDA_ERROR(cudaMemcpy(D_PTR(d_points_object), h_points, d_points_free.size() * sizeof(gpu_voxels::Vector3f), cudaMemcpyHostToDevice));
 
   d_points_free = d_points_object;
-  _processSensorData(d_points_free, d_points_object, d_free_space_voxel, d_object_voxel);
+  _processSensorData(d_points_free, d_points_object, *d_free_space_voxel, *d_object_voxel);
 }
 
 __host__
@@ -216,13 +219,16 @@ void Sensor::_processSensorData(thrust::device_vector<Vector3f>& d_free_space_po
 
 __host__
 void Sensor::processSensorData(const DepthData* h_sensor_data,
-                               thrust::device_vector<Voxel>& d_free_space_voxel,
-                               thrust::device_vector<Voxel>& d_object_voxel)
+                               thrust::device_vector<Voxel> *&d_free_space_voxel,
+                               thrust::device_vector<Voxel> *&d_object_voxel)
 {
+  if(!d_free_space_voxel) d_free_space_voxel = new thrust::device_vector<Voxel>;
+  if(!d_object_voxel) d_object_voxel = new thrust::device_vector<Voxel>;
+
   thrust::device_vector<Vector3f> d_free_space_points;
   thrust::device_vector<Vector3f> d_object_points;
   _processDepthImage(h_sensor_data, d_free_space_points, d_object_points);
-  _processSensorData(d_free_space_points, d_object_points, d_free_space_voxel, d_object_voxel);
+  _processSensorData(d_free_space_points, d_object_points, *d_free_space_voxel, *d_object_voxel);
 
 //  const string prefix = __FUNCTION__;
 //  const string temp_timer = prefix + "_temp";

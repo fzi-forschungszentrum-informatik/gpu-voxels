@@ -96,10 +96,19 @@ bool IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size,
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,
      int vft_size, bool set_collision_flag, bool compute_voxelTypeFlags, class VoxelType>
 void IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size, set_collision_flag, compute_voxelTypeFlags, VoxelType>::doWork()
-{
-  typedef IntersectVMapKernelConfig<RunConfig::NUM_TRAVERSAL_THREADS, branching_factor, InnerNode, LeafNode,
-            vft_size, set_collision_flag, compute_voxelTypeFlags, VoxelType> KernelConfig;
+{    
+  // Passing of template types needed by the kernel function through the helper struct KernelConfig
+  typedef IntersectVMapKernelConfig<
+            RunConfig::NUM_TRAVERSAL_THREADS,
+            branching_factor,
+            InnerNode,
+            LeafNode,
+            vft_size,
+            set_collision_flag,
+            compute_voxelTypeFlags,
+            VoxelType> KernelConfig;
 
+  // Parameters for the kernel function required for the load balancing concept.
   const typename KernelConfig::AbstractKernelParameters abstract_parameters(
       Base::m_dev_work_stacks1,
       Base::m_dev_work_stacks1_item_count,
@@ -107,6 +116,7 @@ void IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size,
       Base::m_dev_tasks_idle_count,
       Base::getIdleCountThreshold());
 
+  // Specific parameters for the kernel function.
   typename KernelConfig::KernelParams kernel_params(abstract_parameters,
     m_dev_num_collisions,
     m_offset,
@@ -115,6 +125,8 @@ void IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size,
     m_min_level,
     m_dev_result_voxelTypeFlags);
 
+
+  // Call the templated kernel function. It's behavior is defined by the given KernelConfig.
   kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS>>>(kernel_params);
 }
 

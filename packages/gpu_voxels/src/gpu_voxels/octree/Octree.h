@@ -29,7 +29,6 @@
 #include <gpu_voxels/octree/EnvNodesProbabilistic.h>
 #include <gpu_voxels/octree/NTree.h>
 #include <gpu_voxels/octree/DefaultCollider.h>
-#include <gpu_voxels/octree/VisNTree.h>
 #include <gpu_voxels/octree/GvlNTree.h>
 #include <gpu_voxels/voxelmap/BitVoxelMap.h>
 #include <gpu_voxels/voxelmap/ProbVoxelMap.h>

@@ -119,6 +119,7 @@ struct Provider_Parameter
    };
 
   std::string pcd_file;
+  std::string kinect_id;
   std::vector<Vector3f> points;
   uint32_t num_points;
   Mode mode;
@@ -153,6 +154,7 @@ struct Provider_Parameter
   Provider_Parameter()
   {
     pcd_file.clear();
+    kinect_id.clear();
     points = std::vector<Vector3f>();
     num_points = 0;
     mode = MODE_NONE;
@@ -201,6 +203,7 @@ struct Provider_Parameter
     printf("   -m #: (load_pcd, kinect_live, ptu_live, kinect_playback, ros, deserialize) Mode of the application\n");
     printf("   -fps #: (0-30) Frames per second for a mode which uses the Kinect. Default 1 fps\n");
     printf("   -f #: (file name) File to use for 'load_pcd' or 'kinect_playback' mode.\n");
+    printf("   -id #: (identifier) Identifer string for the OpenNIGrabber.\n");
     printf(
         "   -resTree #: (1-x) Voxel side length in mm for the smallest voxel of the NTree. Default 10 mm\n");
     printf(

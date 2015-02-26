@@ -47,31 +47,34 @@
   public:                                       \
   virtual std::string Identifier() const;       \
 
-#define ICL_CORE_PLUGIN_REGISTER_PLUGIN(base, derived, plugin_identifier) \
+#define ICL_CORE_PLUGIN_REGISTER_PLUGIN_IMPORT_EXPORT(decl, base, derived, plugin_identifier) \
   std::string derived::Identifier() const                               \
   {                                                                     \
     return plugin_identifier;                                           \
   }                                                                     \
                                                                         \
-  extern "C" ICL_CORE_PLUGIN_LINKAGE const char * identifier()          \
+  extern "C" ICL_CORE_PLUGIN_LINKAGE decl const char * identifier()          \
   {                                                                     \
     return plugin_identifier;                                           \
   }                                                                     \
                                                                         \
-  extern "C" ICL_CORE_PLUGIN_LINKAGE const char * basetype()            \
+  extern "C" ICL_CORE_PLUGIN_LINKAGE decl const char * basetype()            \
   {                                                                     \
     return typeid(base).name();                                         \
   }                                                                     \
                                                                         \
-  extern "C" ICL_CORE_PLUGIN_LINKAGE base* load_plugin()                \
+  extern "C" ICL_CORE_PLUGIN_LINKAGE decl base* load_plugin()                \
   {                                                                     \
     return new derived;                                                 \
   }                                                                     \
                                                                         \
-  extern "C" ICL_CORE_PLUGIN_LINKAGE void unload_plugin(derived* p)     \
+  extern "C" ICL_CORE_PLUGIN_LINKAGE decl void unload_plugin(derived* p)     \
   {                                                                     \
     delete p;                                                           \
   }
+
+#define ICL_CORE_PLUGIN_REGISTER_PLUGIN(base, derived, plugin_identifier) \
+  ICL_CORE_PLUGIN_REGISTER_PLUGIN_IMPORT_EXPORT(, base, derived, plugin_identifier)
 
 #define ICL_CORE_PLUGIN_MANAGER_DEFINITION(name, interface, directory)  \
   name : public icl_core::plugin::PluginManager<interface, directory> { \

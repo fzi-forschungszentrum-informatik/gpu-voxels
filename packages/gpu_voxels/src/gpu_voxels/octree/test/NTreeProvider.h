@@ -102,6 +102,11 @@ protected:
   ros::Subscriber* m_subscriber_front;
   ros::Subscriber* m_subscriber_back;
   tf::TransformListener* m_tf_listener;
+  thrust::device_vector<Voxel> *d_free_space_voxel;
+  thrust::device_vector<Voxel> *d_object_voxel;
+  thrust::device_vector<Voxel> *d_free_space_voxel2;
+  thrust::device_vector<Voxel> *d_object_voxel2;
+  bool m_internal_buffer_1;
 };
 
 }

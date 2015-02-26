@@ -38,7 +38,18 @@ public:
 };
 
 /**
- * Abstract template class for all load balancing problems of the NTree. These are traversal, intersection, data extraction etc.
+ * @brief This abstract template class manages the workflow of the load balancing concept.
+ * The general workflow consists of:
+ * 1. Preparations like memory allocations (\code doPreparations() \endcode)
+ * 2. Do load balanced kernel calls till work is done (\code doPreparations() \endcode)
+ * 3. Clean-up like memory frees and collecting of results (\code doCleanup() doPostCalculations() \endcode)
+ *
+ * @tparam branching_factor Branching factor of the corresponding \code NTree \endcode
+ * @tparam level_count Number of levels of the corresponding \code NTree \endcode
+ * @tparam InnerNode Inner node type of the corresponding \code NTree \endcode
+ * @tparam LeafNode Leaf node type of the corresponding \code NTree \endcode
+ * @tparam WorkItem Work item type to use for the stack items
+ * @tparam RunConfig Run configuration which defines the number of threads to use.
  */
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,
     class WorkItem, typename RunConfig>
@@ -47,84 +58,90 @@ class AbstractLoadBalancer
 protected:
   static const float DEFAULT_IDLE_THESHOLD = 2.0f/3.0f;
 public:
+  /**
+   * @brief AbstractLoadBalancer constructor. Default parameters choosen by resulting in good performance of experimental evaluations for GTX Titan.
+   * @param idle_threshold Defines when to do a load balancing step by the percentage of idle tasks.
+   * @param num_tasks Number of tasks to use.
+   */
   AbstractLoadBalancer(const float idle_threshold = DEFAULT_IDLE_THESHOLD, const uint32_t num_tasks = 2688);
 
   virtual ~AbstractLoadBalancer();
 
   /**
-   * Run the load balancer and do the work.
+   * @brief Run the load balancer and do the work.
    */
   virtual void run();
 
+  /**
+   * @brief getIdleCountThreshold
+   * @return Returns the number of idle tasks when a load balancing step is introduced.
+   */
   uint32_t getIdleCountThreshold();
 
 protected:
   /**
-   * Preparations like malloc etc. necessary before doing the load balanced work.
+   * @brief Preparations like malloc etc. necessary before doing the load balanced work.
+   * @return Returns true on success, false otherwise.
    */
   virtual bool doPreparations();
 
   /**
-   * Do parallel work till there is a load imbalance.
+   * @brief Do parallel work till there is a load imbalance.
    */
   virtual void doWork() = 0;
 
   /**
-   * Balance the work.
+   * @brief Balance the work.
    * @return Returns the total number of work items in all stacks.
    */
   virtual std::size_t doBalance();
 
   /**
-   * Do some final calculations before clean-up after all load balancing work is done.
+   * @brief Do some final calculations before clean-up after all load balancing work is done.
    */
   virtual void doPostCalculations() = 0;
 
   /**
-   * Clean-up allocated memory of \code doPreparations()
+   * @brief Clean-up allocated memory of \code doPreparations() \endcode
    */
   virtual void doCleanup();
 
 protected:
-
-//  /**
-//   * Good performing parameters of experimental evaluation for GTX Titan
-//   */
-//  static const uint32_t NUM_BALANCE_TASKS = 2688;
-//  static const uint32_t NUM_BALANCE_THREADS = 128;
-
   /**
-   * Number of stack items per task. Some reasonable value.
+   * @brief Number of stack items per task. Some reasonable value.
    */
   static const std::size_t STACK_SIZE_PER_TASK = 700;
 
   // -------------------- Host -----------------------------
   /**
-   * Threshold of idle tasks when the load balance should occur.
+   * @brief Threshold of idle tasks when the load balance should occur.
    */
   const float IDLE_THESHOLD;
 
+  /**
+   * @brief Number of tasks to use.
+   */
   const uint32_t NUM_TASKS;
 
   /**
-   * First work item to start the work with.
+   * @brief First work item to start the work with.
    */
   WorkItem m_init_work_item;
 
   // -------------------- Device ----------------------------
   /**
-   * Two arrays of stacks for swapping the work items for load balancing.
+   * @brief Two arrays of stacks for swapping the work items for load balancing.
    */
   WorkItem* m_dev_work_stacks1;
   WorkItem* m_dev_work_stacks2;
 
   /**
-   * Number of work items in each stack.
+   * @brief Number of work items in each stack.
    */
   uint32_t* m_dev_work_stacks1_item_count;
 
   /**
-   * Number of tasks that idle.
+   * @brief Number of tasks that idle.
    */
   uint32_t* m_dev_tasks_idle_count;
 

@@ -33,8 +33,20 @@ class DefaultCollider;
 
 namespace LoadBalancer {
 
-typedef RunConfig<128> IntersectRunConfig; // Experimental founding
+typedef RunConfig<128> IntersectRunConfig; // Number of threads due to experimental founding
 
+/**
+ * @brief Load balanced collision check between two \code NTree \endcode
+ *
+ * @tparam branching_factor Branching factor of the corresponding \code NTree \endcode
+ * @tparam level_count Number of levels of the corresponding \code NTree \endcode
+ * @tparam InnerNode Inner node type of the corresponding first \code NTree \endcode
+ * @tparam LeafNode Leaf node type of the corresponding first \code NTree \endcode
+ * @tparam InnerNode2 Inner node type of the corresponding second \code NTree \endcode
+ * @tparam LeafNode2 Leaf node type of the corresponding second \code NTree \endcode
+ * @tparam Collider Type of collider which defines a collision
+ * @tparam mark_collisions \code true \endcode to set the collision flag if necessary
+ */
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,
     class InnerNode2, class LeafNode2, class Collider, bool mark_collisions>
 class Intersect : public AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode,
@@ -45,6 +57,13 @@ public:
   typedef IntersectRunConfig RunConfig;
   typedef AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, WorkItem, RunConfig> Base;
 
+   /**
+   * @brief Intersect constructor.
+   * @param ntree_a First \code NTree \endcode to collide with.
+   * @param ntree_b Second \code NTree \endcode to collide with.
+   * @param min_level Traverse the tree down to this level for collision checking if necessary. Defines the resolution of this collision check.
+   * @param collider Collider object which defines what is a collision.
+   */
   Intersect(
       NTree<branching_factor, level_count, InnerNode, LeafNode>* ntree_a,
       NTree<branching_factor, level_count, InnerNode2, LeafNode2>* ntree_b,
@@ -63,12 +82,12 @@ protected:
 
 protected:
   /**
-   * Holds the number of detected collisions.
+   * @brief Holds the number of detected collisions.
    */
   std::size_t* m_dev_num_collisions;
 
   /**
-   * Object which defines collisions between the different node types.
+   * @brief Object which defines collisions between the different node types.
    */
   const Collider m_collider;
 
@@ -79,9 +98,9 @@ protected:
 
   public:
   /**
-   * Holds the number of detected collisions.
-   */
-    std::size_t m_num_collisions;
+    * @brief Holds the number of detected collisions.
+    */
+   std::size_t m_num_collisions;
 };
 
 }

@@ -1,7 +1,7 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
-// This file is part of the GPU Voxels Software Library.
+// This file is part of the IC Workspace.
 //
 // This program is free software licensed under the CDDL
 // (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
@@ -10,6 +10,7 @@
 //
 // © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
 //
+
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -69,7 +70,7 @@
   { wrapped.assign(count, value); }                                     \
   template <class TInputIterator>                                       \
   void assign(TInputIterator first, TInputIterator last)                \
-  { wrapped.assign<TInputIterator>(first, last); }                      \
+  { wrapped.template assign<TInputIterator>(first, last); }                      \
   allocator_type get_allocator() const                                  \
   { return wrapped.get_allocator(); }                                   \
                                                                         \
@@ -105,7 +106,7 @@
   { wrapped.insert(pos, count, value); }                                \
   template <class TInputIterator>                                       \
   void insert(iterator pos, TInputIterator first, TInputIterator last)  \
-  { wrapped.insert<TInputIterator>(pos, first, last); }                 \
+  { wrapped.template insert<TInputIterator>(pos, first, last); }                 \
                                                                         \
   iterator erase(iterator pos) { return wrapped.erase(pos); }           \
   iterator erase(iterator first, iterator last)                         \
@@ -113,7 +114,7 @@
   void push_back(const value_type& value) { wrapped.push_back(value); } \
   void pop_back() { wrapped.pop_back(); }                               \
   void resize(size_type count, value_type value = value_type())         \
-  { resize(count, value); }                                             \
+  { wrapped.resize(count, value); }                                     \
   void swap(TWrapper& other) { wrapped.swap(other.wrapped); }           \
 access:                                                                 \
   TVector wrapped

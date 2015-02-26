@@ -62,6 +62,13 @@ void check_border(const gpu_voxels::Vector3ui& ntree_min, const gpu_voxels::Vect
   is_inside = voxelmap_min <= ntree_min && ntree_max <= voxelmap_max;
 }
 
+/**
+ * @brief This struct defines the shared memory, variables, kernel functions etc. needed to do a collision check between an \code NTree \endcode and a \code VoxelMap \endcode with help of the load balancing concept.
+ * @tparam vft_size Size parameter to use for \code VoxelTypeFlags \endcode template. Defines the size in Byte of the voxel-type bit-vector.
+ * @tparam set_collision_flag \code true \endcode to set the collision flag if necessary
+ * @tparam compute_voxelTypeFlags \code true \endcode to compute the voxel type flags. Each bit of this vector indicates whether a voxel of the corresponsing type caused a collision.
+ * @tparam VoxelType The type of a voxel of the corresponsing \code VoxelMap \endcode
+ */
 template<std::size_t num_threads,
   std::size_t branching_factor,
   typename InnerNode,

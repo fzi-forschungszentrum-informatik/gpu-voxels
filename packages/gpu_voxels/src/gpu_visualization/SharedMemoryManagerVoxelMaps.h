@@ -24,7 +24,6 @@
 #ifndef GPU_VOXELS_VISUALIZATION_SHAREDMEMORYMANAGERVOXELMAPS_H_INCLUDED
 #define GPU_VOXELS_VISUALIZATION_SHAREDMEMORYMANAGERVOXELMAPS_H_INCLUDED
 
-#include <gpu_visualization/SharedMemoryManager.h>
 #include <boost/lexical_cast.hpp>
 #include <cuda_runtime.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
@@ -34,14 +33,13 @@
 
 namespace gpu_voxels {
 namespace visualization {
-class SharedMemoryManagerVoxelMaps: public SharedMemoryManager
+
+class SharedMemoryManager;
+
+class SharedMemoryManagerVoxelMaps
 {
 public:
-  SharedMemoryManagerVoxelMaps() :
-      SharedMemoryManager(shm_segment_name_voxelmaps, true)
-  {
-
-  }
+  SharedMemoryManagerVoxelMaps();
   uint32_t getNumberOfVoxelMapsToDraw();
 
   bool getDevicePointer(void*& handler, const uint32_t index);
@@ -53,7 +51,7 @@ public:
   bool getVoxelMapType(MapType& type ,const uint32_t index);
 
 private:
-
+  SharedMemoryManager* shmm;
 }
 ;
 } //end of namespace visualization
