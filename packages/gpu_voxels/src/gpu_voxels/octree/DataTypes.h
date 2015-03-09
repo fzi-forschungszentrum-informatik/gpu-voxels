@@ -34,7 +34,6 @@
 #include <math.h>
 #include <sys/utsname.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
-#include "PerformanceMonitor.h"
 
 namespace gpu_voxels {
 namespace NTree {

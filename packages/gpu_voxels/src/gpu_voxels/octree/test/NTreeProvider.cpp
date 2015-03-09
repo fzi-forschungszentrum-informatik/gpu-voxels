@@ -29,6 +29,8 @@
 #include <gpu_voxels/helpers/cuda_handling.h>
 #include <gpu_voxels/octree/test/Helper.h>
 
+#include <icl_core_performance_monitor/PerformanceMonitor.h>
+
 #include <thrust/device_vector.h>
 
 // CUDA
@@ -313,8 +315,8 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
 
   const string prefix = __FUNCTION__;
   const string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
   gpu_voxels::Matrix4f orientation;
   orientation.setIdentity();
@@ -336,8 +338,7 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
   // processSensorData() will allcate space for d_free_space_voxel and d_object_voxel if they are NULL
   m_sensor.processSensorData(h_depth_data, d_free_space_voxel, d_object_voxel);
 
-  PerformanceMonitor::stop(temp_timer, prefix, "processSensorData");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "processSensorData", prefix);
 
   // convert sensor origin in discrete coordinates of the NTree
   gpu_voxels::Vector3ui sensor_origin = gpu_voxels::Vector3ui(
@@ -348,8 +349,7 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
   m_ntree->insertVoxel(*d_free_space_voxel, *d_object_voxel, sensor_origin, m_parameter->resolution_free,
                        m_parameter->resolution_occupied);
 
-  PerformanceMonitor::stop(temp_timer, prefix, "insertVoxel");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "insertVoxel", prefix);
 
 //  if (m_ntree->checkTree())
 //    exit(0);
@@ -370,11 +370,11 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
   {
     m_collide_with->lock();
 
-    PerformanceMonitor::start(temp_timer);
+    PERF_MON_START(temp_timer);
 
     collide_wo_locking();
 
-    PerformanceMonitor::stop(temp_timer, prefix, "Collide");
+    PERF_MON_PRINT_INFO_P(temp_timer, "Collide", prefix);
 
     m_collide_with->unlock();
   }
@@ -382,7 +382,7 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
   m_changed = true;
   ++m_fps_rebuild;
 
-  PerformanceMonitor::stop(prefix, prefix, "");
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
 
   m_mutex.unlock();
 
@@ -457,7 +457,7 @@ void NTreeProvider::collide_wo_locking()
       m_changed = true;
       m_collide_with->setChanged(true);
     }
-    PerformanceMonitor::addData(prefix, "NumCollisions", num_collisions);
+    PERF_MON_ADD_DATA_NONTIME_P("NumCollisions", num_collisions, prefix);
   }
 }
 
@@ -526,8 +526,8 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
   {
     const string prefix = "newSensorData";
     const string temp_timer = prefix + "_temp";
-    PerformanceMonitor::start(prefix);
-    PerformanceMonitor::start(temp_timer);
+    PERF_MON_START(prefix);
+    PERF_MON_START(temp_timer);
 
     std::size_t size = msg->height * msg->width;
     Vector3f points[size];
@@ -584,8 +584,7 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
     m_ntree->insertVoxel(*d_free_space_voxel2, *d_object_voxel2, sensor_origin, m_parameter->resolution_free,
                          m_parameter->resolution_occupied);
 
-    PerformanceMonitor::stop(temp_timer, prefix, "insertVoxel");
-    PerformanceMonitor::start(temp_timer);
+    PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "insertVoxel", prefix);
 
     //  if (m_ntree->checkTree())
     //    exit(0);
@@ -610,11 +609,11 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
     {
       m_collide_with->lock();
 
-      PerformanceMonitor::start(temp_timer);
+      PERF_MON_START(temp_timer);
 
       collide_wo_locking();
 
-      PerformanceMonitor::stop(temp_timer, prefix, "Collide");
+      PERF_MON_PRINT_INFO_P(temp_timer, "Collide", prefix);
 
       m_collide_with->unlock();
     }
@@ -622,7 +621,7 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
     m_changed = true;
     ++m_fps_rebuild;
 
-    PerformanceMonitor::stop(prefix, prefix, "");
+    PERF_MON_PRINT_INFO_P(prefix, "", prefix);
   }
   m_mutex.unlock();
 }

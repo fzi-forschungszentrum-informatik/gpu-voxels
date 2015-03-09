@@ -10,6 +10,12 @@
 #
 #----------------------------------------------------------------------
 
+# Used in IcWorkspace's doc/doxyfile.in to set the title of all pages.
+SET(IC_WORKSPACE_DOXYGEN_PROJECT_NAME "GPU-Voxels" CACHE INTERNAL "")
+# Used in IcWorkspace's doc/doxyfile.in to overwrite configs
+# from individual CMakeLists.txt files
+#SET(IC_WORKSPACE_DOXYGEN_CONFIG_OVERRIDES "gpuvoxels" CACHE INTERNAL "")
+
 #------------- anounce basic libs ----------------------------
 ADD_SUBDIRECTORY(logging)
 ADD_SUBDIRECTORY(helpers)

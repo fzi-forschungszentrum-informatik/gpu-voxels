@@ -32,8 +32,7 @@
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/cuda_handling.hpp>
-#include <gpu_voxels/helpers/pcd_handling.h>
-#include <gpu_voxels/helpers/binvox_handling.h>
+#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 #include <gpu_voxels/helpers/kernels/MetaPointCloudOperations.h>
 
 #include <gpu_voxels/logging/logging_gpu_voxels_helpers.h>
@@ -160,6 +159,8 @@ private:
   Vector3f** m_dev_ptrs_to_addrs;
   uint32_t *m_dev_ptr_to_cloud_sizes;
   Vector3f** m_dev_ptr_to_clouds_base_addresses;
+
+  file_handling::PointcloudFileHandler pointcloud_file_handler;
 };
 
 }

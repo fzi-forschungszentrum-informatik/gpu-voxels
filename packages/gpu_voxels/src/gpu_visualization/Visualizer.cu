@@ -38,6 +38,7 @@ Visualizer::Visualizer()
   m_shm_manager_primitive_arrays = NULL;
   m_shm_manager_visualizer = NULL;
   m_window_title = "visualizer";
+  m_use_external_draw_type_triggers = true;
 }
 
 Visualizer::~Visualizer()
@@ -362,18 +363,18 @@ void Visualizer::createGridVBO()
   for (float i = 0; i <= x_max; i += distance)
   {/*Insert the lines along the x axis*/
     glm::vec3 p1 = glm::vec3(i, 0, 0);
-    glm::vec3 p2 = glm::vec3(i, 0, y_max);
+    glm::vec3 p2 = glm::vec3(i, y_max, 0);
     data.push_back(p1);
     data.push_back(p2);
   }
   for (float i = 0; i <= y_max; i += distance)
-  {/*Insert the lines along the z axis*/
-    glm::vec3 p1 = glm::vec3(0, 0, i);
-    glm::vec3 p2 = glm::vec3(x_max, 0, i);
+  {/*Insert the lines along the y axis*/
+    glm::vec3 p1 = glm::vec3(0, i, 0);
+    glm::vec3 p2 = glm::vec3(x_max, i, 0);
     data.push_back(p1);
     data.push_back(p2);
   }
-  size_t size = 2.f * ((y_max + x_max) / distance + 2); // two points per line and one line for each x and z value
+  size_t size = 2.f * ((y_max + x_max) / distance + 2); // two points per line and one line for each x and y value
   assert(data.size() == size);
   size_t size_in_byte = size * sizeof(glm::vec3);
 
@@ -1004,9 +1005,9 @@ void Visualizer::drawGrid()
     size_t number_line_points = 2.f * ((y_max + x_max) / distance + 2); // two points per line and one line for each x and z value
 
     glEnable(GL_LINE_SMOOTH);
+    glUniform4f(m_startColorID, 0, 1, 0, 1); // draw the Y-axis with green
+    glDrawArrays(GL_LINES, 0, 2); // << == this draws the Y axis
     glUniform4f(m_startColorID, 1, 0, 0, 1); // draw the x-axis with red
-    glDrawArrays(GL_LINES, 0, 2);
-    glUniform4f(m_startColorID, 0, 1, 0, 1); // draw the y-axis with green
     glDrawArrays(GL_LINES, 2 * (x_max / distance + 1), 2);
     glUniform4fv(m_startColorID, 1, glm::value_ptr(m_cur_context->m_grid_color));
     glDrawArrays(GL_LINES, 2, number_line_points);
@@ -1270,7 +1271,8 @@ void Visualizer::renderFunction(void)
 //////////////////////////////////////////////draw all registered voxel maps/////////////////////////////////////////
   bool set_view_to_false = true;
 
-  if (m_shm_manager_visualizer != NULL)
+  // if this option is enabled, provider programs can trigger which maps should be drawn
+  if (m_use_external_draw_type_triggers && (m_shm_manager_visualizer != NULL))
   {
     DrawTypes d = m_shm_manager_visualizer->getDrawTypes();
     bool changed = false;
@@ -1295,6 +1297,7 @@ void Visualizer::renderFunction(void)
       copyDrawTypeToDevice();
     }
   }
+
   for (uint32_t i = 0; i < m_cur_context->m_voxel_maps.size(); i++)
   {
     if (m_cur_context->m_voxel_maps[i]->m_voxelMap != NULL && m_cur_context->m_voxel_maps[i]->m_draw_context)
@@ -1371,7 +1374,7 @@ void Visualizer::mouseMotionFunction(int32_t xpos, int32_t ypos)
 {
 
   int32_t modi = glutGetModifiers();
-  if (modi == (GLUT_ACTIVE_CTRL | GLUT_ACTIVE_ALT))
+  if (modi == GLUT_ACTIVE_CTRL)
   {
     m_cur_context->m_camera->moveFocusPointFromMouseInput(xpos, ypos);
     createFocusPointVBO();
@@ -1469,6 +1472,9 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
       break;
     case 'n':
       cuPrintDeviceMemoryInfo();
+      break;
+    case 'o':
+      flipExternalVisibilityTrigger();
       break;
     case 'p':
       m_cur_context->m_camera->printCameraPosDirR();
@@ -1698,6 +1704,18 @@ void Visualizer::flipDrawOctree(uint32_t index)
   }
 }
 
+void Visualizer::flipExternalVisibilityTrigger()
+{
+  if(m_use_external_draw_type_triggers)
+  {
+    m_use_external_draw_type_triggers = false;
+    LOGGING_INFO_C(Visualization, Visualizer, "External visibility trigger of Swept Volume subtypes deactivated" << endl);
+  }else{
+    m_use_external_draw_type_triggers = true;
+    LOGGING_INFO_C(Visualization, Visualizer, "External visibility trigger of Swept Volume subtypes activated" << endl);
+  }
+}
+
 void Visualizer::flipDrawType(VoxelType type)
 {
   if (m_cur_context->m_draw_types[type])
@@ -1770,7 +1788,7 @@ void Visualizer::printPositionOfVoxelUnderMouseCurser(int32_t xpos, int32_t ypos
   bool found_in_voxelmap = false;
   bool found_in_octree = false;
   Vector3ui n_pos;
-  uint32_t data_index;
+  uint32_t data_index = 0;
   float distance = FLT_MAX;
 
   for (uint32_t i = 0; i < m_cur_context->m_voxel_maps.size(); i++)
@@ -1982,6 +2000,7 @@ void Visualizer::printHelp()
   std::cout << "---->Keyboard" << std::endl;
   std::cout << "h: print this help." << std::endl;
   std::cout << "v: print view info." << std::endl;
+  std::cout << "o: overwrite providers possibility to trigger visibility of swept volumes" << std::endl;
   std::cout << "p: print camera position." << std::endl;
   std::cout << "m: print total VBO size." << std::endl;
   std::cout << "n: print device memory info." << std::endl;

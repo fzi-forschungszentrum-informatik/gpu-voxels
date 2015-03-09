@@ -18,6 +18,11 @@
  * \author  Andreas Hermann
  * \date    2014-06-08
  *
+ *
+ * This example program shows a simple collision check
+ * between an animated Robot and a Static Map.
+ * Be sure to press g in the viewer to draw the whole map.
+ *
  */
 //----------------------------------------------------------------------
 #include <cstdlib>
@@ -29,11 +34,9 @@
 #include <boost/filesystem/path.hpp>
 
 #include <gpu_voxels/GpuVoxels.h>
-#include <gpu_voxels/helpers/Kinect.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
-#include <gpu_voxels/helpers/file_handling.h>
+#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
-#include <gpu_voxels/helpers/binvox_handling.h>
 
 using namespace gpu_voxels;
 namespace bfs = boost::filesystem;
@@ -56,16 +59,9 @@ int main(int argc, char* argv[])
   signal(SIGINT, ctrlchandler);
   signal(SIGTERM, killhandler);
 
-  icl_core::config::GetoptParameter ident_parameter("device-identifier:", "id",
-                                                    "Identifer of the kinect device");
-  icl_core::config::addParameter(ident_parameter);
   icl_core::logging::initialize(argc, argv);
 
-  std::string identifier = icl_core::config::Getopt::instance().paramOpt("device-identifier");
-
-  Kinect* kinect = new Kinect(identifier);
-
-  /*!
+  /*
    * First, we generate an API class, which defines the
    * volume of our space and the resolution.
    * Be careful here! The size is limited by the memory
@@ -74,21 +70,15 @@ int main(int argc, char* argv[])
    */
   gvl = new GpuVoxels(200, 200, 200, 0.01);
 
-  /*!
+  /*
    * Now we add a map, that will represent the robot.
    * The robot is inserted with deterministic poses,
    * so a deterministic map is sufficient here.
    */
-  //gvl->addMap(MT_PROBAB_VOXELMAP, "myRobotMap");
+  gvl->addMap(MT_BIT_VOXELMAP, "myRobotMap");
 
-  /*!
-   * As we also want to plan the mobile platform,
-   * we add another map, consisting only of a list
-   * of voxels, that represent the robot
-   */
-  //gvl->addMap(eGVL_VOXELMAP, "myPlanningMap");
 
-  /*!
+  /*
    * A second map will represent the environment.
    * As it is captured by a sensor, this map is probabilistic.
    * We also have an a priori static map file in a PCD, so we
@@ -100,7 +90,6 @@ int main(int argc, char* argv[])
    * a offset to the loaded pointcloud.
    */
   gvl->addMap(MT_OCTREE, "myEnvironmentMap");
-  gvl->addMap(MT_OCTREE, "myEnvironmentMap2");
 
   bfs::path model_path;
   if (!file_handling::getGpuVoxelsPath(model_path))
@@ -110,25 +99,20 @@ int main(int argc, char* argv[])
   }
 
   bfs::path pcd_file = bfs::path(model_path / "pointcloud_0002.pcd");
-  if (!gvl->getMap("myEnvironmentMap2")->insertPointcloudFromFile(pcd_file.generic_string(), eVT_OCCUPIED,
-                                                  true, Vector3f(1, 1, 0)))
+  if (!gvl->getMap("myEnvironmentMap")->insertPointcloudFromFile(pcd_file.generic_string(), eVT_OCCUPIED,
+                                                  true, Vector3f(-6, -7.3, 0)))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
   }
 
-  /*!
-   * To get environment data, we register a callback from
-   * a RGBD camera to insert pointcloud data into the map.
-   */
-  //kinect::registerCallback(gvl->InsertNewCamData("myEnvironmentMap"));
-  /*!
+  /*
    * Of course, we need a robot. At this point, it would be helpful
    * to e.g. rely on KDL or something to parse DH params and be consistent
    * to your robot description.
    * In this example, we simply hardcode a robot:
    */
 
-  // First, we load the robot geometry which contains 7 links:
+  // First, we load the robot geometry which contains 6 links:
   LOGGING_INFO(Gpu_voxels, "Search path of the models is: " << model_path.generic_string() << endl);
 
 
@@ -143,11 +127,6 @@ int main(int argc, char* argv[])
   paths_to_pointclouds[6] = bfs::path(model_path / "hollie_plain_left_arm_6_link.xyz").generic_string();
   MetaPointCloud myRobotCloud(paths_to_pointclouds);
 
-  // then we add another link, that contains data from an onboard sensor:
-  rob_dim++;
-  std::vector<Vector3f> kinect_frame(640*480, 0.0);
-  myRobotCloud.addCloud(kinect_frame); // this allocates mem for a kinect frame
-
   std::vector<KinematicLink::DHParameters> dh_params(rob_dim);
                                           // _d,_theta,_a,_alpha,_value
   dh_params[0] = KinematicLink::DHParameters(0.0, 0.0, 0.0,     1.5708, 0.0); // build an arm from 6 segments
@@ -156,42 +135,11 @@ int main(int argc, char* argv[])
   dh_params[3] = KinematicLink::DHParameters(0.0,  0.0, 0.365, -1.5708, 0.0); //
   dh_params[4] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0); //
   dh_params[5] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); //
-  dh_params[6] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); // this represents the angle to the kinect pointcloud CS
-  // the last dh param was initialized with 0
+  dh_params[6] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); //
 
   gvl->addRobot("myRobot", dh_params, myRobotCloud);
 
-  // ============ BEGIN TESTING =============
-  gvl->addMap(MT_PROBAB_VOXELMAP, "mySecondRobotMap");
-
-//  if(!gvl->getMap("mySecondRobotMap")->insertPCD("/home/hermann/pcdrobotiklabor/pc_file5.pcd", eVT_OCCUPIED, true))
-//  {
-//    std::cout << "Could not insert the PCD file..." << std::endl;
-//  }
-
-//  if(!gvl->getMap("myRobotMap")->insertPCD("/home/hermann/pcdrobotiklabor/pc_file5.pcd", eVT_OCCUPIED, true, Vector3f(1,1,0)))
-//  {
-//    std::cout << "Could not insert the PCD file..." << std::endl;
-//  }
-
-//  std::cout << "Collsions: " << gvl->getMap("myRobotMap")->collideWith(gvl->getMap("mySecondRobotMap")) << std::endl;
-
-  paths_to_pointclouds.clear();
-  paths_to_pointclouds.resize(1);
-  paths_to_pointclouds[0] = bfs::path(model_path / "helmet1_3.binvox").generic_string();
-  MetaPointCloud myBinvoxCloud(paths_to_pointclouds);
-  gvl->getMap("mySecondRobotMap")->insertMetaPointCloud(myBinvoxCloud, eVT_OCCUPIED);
-
-
-  //myRobotCloud.syncToDevice();
-  //myRobotCloud.debugPointCloud();
-  //gvl->getMap("mySecondRobotMap")->insertMetaPointCloud(myRobotCloud, eVT_SWEPT_VOLUME_END);
-
-  // ============ END TESTING =============
-
-  /*!
-   * Now we enter "normal" operation
-   */
+  // define a position for the robot
   gpu_voxels::Matrix4f new_base_pose;
   new_base_pose.a11 = 1;
   new_base_pose.a22 = 1;
@@ -204,48 +152,36 @@ int main(int argc, char* argv[])
 
   std::vector<float> myRobotJointValues(rob_dim, 0.0);
 
-  // start the Kinect
-  kinect->run();
-
-  //LOGGING_INFO(Gpu_voxels, "Updating robot part different size..." << endl);
-  //std::vector<Vector3f> test_frame(123*234, 0.0);
-  //gvl->updateRobotPart("myRobot", rob_dim-1, test_frame);
-
-
   // initialize the joint interpolation
   std::vector<float> min_joint_values(rob_dim, -1.0);
   std::vector<float> max_joint_values(rob_dim, 1.5);
   std::size_t counter = 0;
-  const float ratio_delta = 0.1;
+  const float ratio_delta = 0.01;
 
-
+  /*
+   * Now we enter "normal" operation
+   * and make the robot move.
+   */
   while(true)
   {
-    /*!
+    /*
      * The robot moves and changes it's pose, so we "voxelize"
      * the links in every step and update the robot map.
      */
-
     LOGGING_INFO(Gpu_voxels, "Updating robot pose..." << endl);
 
     myRobotJointValues = gpu_voxels::CudaMath::interpolateLinear(min_joint_values, max_joint_values, ratio_delta * counter++);
 
+    // we could also make it drive around:
     //new_base_pose.a14 += 0.02;
     //new_base_pose.a24 += 0.02;
     //new_base_pose.a34 += 0.00;
 
-    gvl->updateRobotPart("myRobot", rob_dim-1, kinect->getDataPtr());
     gvl->updateRobotPose("myRobot", myRobotJointValues, &new_base_pose);
 
-    //gvl->insertRobotIntoMap("myRobot", "myRobotMap", eVT_OCCUPIED);
-    gvl->insertRobotIntoMap("myRobot", "myEnvironmentMap", eVT_OCCUPIED);
+    gvl->insertRobotIntoMap("myRobot", "myRobotMap", eVT_OCCUPIED);
 
-    /*!
-     * While the robot moves, we have to update its cam pose:
-     */
-//    vector6f myCamPose();
-//    gvl->updateCameraPose("myEnvironmentMap", myCamPose);
-    /*!
+    /*
      * When the updates of the robot and the environment are
      * done, we can collide the maps and check for collisions.
      * The order of the maps is important here! The "smaller"
@@ -258,20 +194,16 @@ int main(int argc, char* argv[])
      */
     LOGGING_INFO(
         Gpu_voxels,
-        "Collsions: " << gvl->getMap("myEnvironmentMap")->collideWith(gvl->getMap("mySecondRobotMap")) << endl);
+        "Collsions: " << gvl->getMap("myEnvironmentMap")->collideWith(gvl->getMap("myRobotMap")) << endl);
 
     // visualize both maps
     gvl->visualizeMap("myRobotMap");
-    //gvl->visualizeMap("myPlanningMap");
     gvl->visualizeMap("myEnvironmentMap");
-    gvl->visualizeMap("myEnvironmentMap2");
-    gvl->visualizeMap("mySecondRobotMap");
 
     usleep(100000);
 
-    // We assume that the robot will be updated in the next loop
-    //gvl->clearMap("myRobotMap");
-    gvl->clearMap("myEnvironmentMap");
+    // We assume that the robot will be updated in the next loop, so we clear the map.
+    gvl->clearMap("myRobotMap");
   }
 
 }

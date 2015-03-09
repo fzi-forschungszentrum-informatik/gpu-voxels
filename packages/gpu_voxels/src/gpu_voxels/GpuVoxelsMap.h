@@ -33,7 +33,7 @@
 #include <stdint.h> // for fixed size datatypes
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
-#include <gpu_voxels/helpers/pcd_handling.h>
+#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 
 #include <gpu_voxels/helpers/common_defines.h>
 
@@ -119,7 +119,7 @@ public:
    * \return true if succeeded, false otherwise
    */
   bool insertPointcloudFromFile(const std::string path, VoxelType voxel_type, const bool shift_to_zero = false,
-                 const Vector3f &offset_XYZ = Vector3f());
+                 const Vector3f &offset_XYZ = Vector3f(), const float scaling = 1.0);
 
   // Maintanance functions
   /*!
@@ -192,6 +192,7 @@ public:
 
 protected:
   MapType m_map_type;
+  file_handling::PointcloudFileHandler pointcloud_file_handler;
 };
 
 } // end of namespace

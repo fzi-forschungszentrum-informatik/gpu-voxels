@@ -15,6 +15,7 @@ ADD_SUBDIRECTORY (src/icl_core_thread)
 ADD_SUBDIRECTORY (src/icl_core_testsuite)
 ADD_SUBDIRECTORY (src/icl_core_dispatch)
 ADD_SUBDIRECTORY (src/icl_core_crypt)
+ADD_SUBDIRECTORY (src/icl_core_performance_monitor)
 
 ADD_SUBDIRECTORY (src/uls)
 

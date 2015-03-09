@@ -16,6 +16,8 @@
 #include <gpu_voxels/helpers/cuda_handling.h>
 #include "kernels/kernel_PointCloud.h"
 
+#include <icl_core_performance_monitor/PerformanceMonitor.h>
+
 using namespace std;
 
 namespace gpu_voxels {
@@ -28,8 +30,8 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
 {
   const string prefix = "processSensorData";
   const string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
   const uint32_t num_threads = 128;
   const uint32_t num_blocks = data_width*data_height / num_threads / 4;
@@ -55,8 +57,7 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
   // wait for copy to complete
   //HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-  PerformanceMonitor::stop(temp_timer, prefix, "Memcpy");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Memcpy", prefix);
 
   //printf("Memcpy depth image(): %f ms\n", timeDiff(time, getCPUTime()));
 
@@ -78,8 +79,7 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
     (D_PTR(d_depth_image), data_width, data_height, object_data);
   }
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  PerformanceMonitor::stop(temp_timer, prefix, "Preprocessing");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Preprocessing", prefix);
 
   // transform depth image to point cloud in sensor coordinate system
   thrust::device_vector<Sensor> d_sensor(1, *this);
@@ -101,8 +101,7 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
         object_data.m_invalid_measure);
   }
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  PerformanceMonitor::stop(temp_timer, prefix, "ToPointCloud");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ToPointCloud", prefix);
 
   if (data_equals && free_space_data.m_process_data)
   {
@@ -137,8 +136,8 @@ void Sensor::_processSensorData(thrust::device_vector<Vector3f>& d_free_space_po
 {
   const string prefix = "processSensorData";
   const string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
   const uint32_t num_threads = 128;
   const uint32_t num_blocks = data_width*data_height / num_threads / 4;
@@ -157,8 +156,7 @@ void Sensor::_processSensorData(thrust::device_vector<Vector3f>& d_free_space_po
     removeInvalidPoints(d_object_points);
   }
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  PerformanceMonitor::stop(temp_timer, prefix, "RemoveInvalidPoints");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "RemoveInvalidPoints", prefix);
 
   std::size_t n_free = 0, n_object = 0;
   if (process_free_space_data)
@@ -166,8 +164,8 @@ void Sensor::_processSensorData(thrust::device_vector<Vector3f>& d_free_space_po
   if (process_object_data)
     n_object = d_object_points.size();
 
-  PerformanceMonitor::addData(prefix, "FreeSpacePoints", n_free);
-  PerformanceMonitor::addData(prefix, "ObjectPoints", n_object);
+  PERF_MON_ADD_DATA_NONTIME_P("FreeSpacePoints", n_free, prefix);
+  PERF_MON_ADD_DATA_NONTIME_P("ObjectPoints", n_object, prefix);
 
   if (process_free_space_data)
   {
@@ -205,16 +203,16 @@ void Sensor::_processSensorData(thrust::device_vector<Vector3f>& d_free_space_po
     d_free_space_voxel = d_object_voxel;
   }
 
-  PerformanceMonitor::stop(temp_timer, prefix, "transformKinectPointCloud_simple");
+  PERF_MON_PRINT_INFO_P(temp_timer, "transformKinectPointCloud_simple", prefix);
 
   n_free = n_object = 0;
   if (process_free_space_data)
     n_free = d_free_space_voxel.size();
   if (process_object_data)
     n_object = d_object_voxel.size();
-  PerformanceMonitor::addData(prefix, "FreeSpaceVoxel", n_free);
-  PerformanceMonitor::addData(prefix, "ObjectVoxel", n_object);
-  PerformanceMonitor::stop(prefix, prefix, "");
+  PERF_MON_ADD_DATA_NONTIME_P("FreeSpaceVoxel", n_free, prefix);
+  PERF_MON_ADD_DATA_NONTIME_P("ObjectVoxel", n_object, prefix);
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
 }
 
 __host__
@@ -232,8 +230,8 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 
 //  const string prefix = __FUNCTION__;
 //  const string temp_timer = prefix + "_temp";
-//  PerformanceMonitor::start(prefix);
-//  PerformanceMonitor::start(temp_timer);
+//  PERF_MON_START(prefix);
+//  PERF_MON_START(temp_timer);
 //
 //  const uint32_t num_threads = 128;
 //  const uint32_t num_blocks = data_width*data_height / num_threads / 4;
@@ -260,8 +258,7 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //  // wait for copy to complete
 //  //HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //
-//  PerformanceMonitor::stop(temp_timer, prefix, "Memcpy");
-//  PerformanceMonitor::start(temp_timer);
+//  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Memcpy", prefix);
 //
 //  //printf("Memcpy depth image(): %f ms\n", timeDiff(time, getCPUTime()));
 //
@@ -283,8 +280,7 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //    (D_PTR(d_depth_image), data_width, data_height, object_data);
 //  }
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-//  PerformanceMonitor::stop(temp_timer, prefix, "Preprocessing");
-//  PerformanceMonitor::start(temp_timer);
+//  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Preprocessing", prefix);
 //
 //  // transform depth image to point cloud in sensor coordinate system
 //  thrust::device_vector<Sensor> d_sensor(1, *this);
@@ -306,8 +302,7 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //        object_data.m_invalid_measure);
 //  }
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-//  PerformanceMonitor::stop(temp_timer, prefix, "ToPointCloud");
-//  PerformanceMonitor::start(temp_timer);
+//  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ToPointCloud", prefix);
 //
 //
 //  // finally remove the invalid data from the point cloud
@@ -320,8 +315,7 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //    removeInvalidPoints(object_points);
 //  }
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-//  PerformanceMonitor::stop(temp_timer, prefix, "RemoveInvalidPoints");
-//  PerformanceMonitor::start(temp_timer);
+//  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "RemoveInvalidPoints", prefix);
 //
 //  std::size_t n_free = 0, n_object = 0;
 //  if (process_free_space_data)
@@ -329,8 +323,8 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //  if (process_object_data)
 //    n_object = object_points.size();
 //
-//  PerformanceMonitor::addData(prefix, "FreeSpacePoints", n_free);
-//  PerformanceMonitor::addData(prefix, "ObjectPoints", n_object);
+//  PERF_MON_ADD_DATA_NONTIME_P("FreeSpacePoints", n_free, prefix);
+//  PERF_MON_ADD_DATA_NONTIME_P("ObjectPoints", n_object, prefix);
 //
 //  if (process_free_space_data)
 //  {
@@ -368,16 +362,16 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //    d_free_space_voxel = d_object_voxel;
 //  }
 //
-//  PerformanceMonitor::stop(temp_timer, prefix, "transformKinectPointCloud_simple");
+//  PERF_MON_PRINT_INFO_P(temp_timer, "transformKinectPointCloud_simple", prefix);
 //
 //  n_free = n_object = 0;
 //  if (process_free_space_data)
 //    n_free = d_free_space_voxel.size();
 //  if (process_object_data)
 //    n_object = d_object_voxel.size();
-//  PerformanceMonitor::addData(prefix, "FreeSpaceVoxel", n_free);
-//  PerformanceMonitor::addData(prefix, "ObjectVoxel", n_object);
-//  PerformanceMonitor::stop(prefix, prefix, "");
+//  PERF_MON_ADD_DATA_NONTIME_P("FreeSpaceVoxel", n_free, prefix);
+//  PERF_MON_ADD_DATA_NONTIME_P("ObjectVoxel", n_objec, prefixt);
+//  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
 }
 
 }

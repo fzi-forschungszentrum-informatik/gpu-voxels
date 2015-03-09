@@ -26,7 +26,6 @@
 #define GPU_VOXELS_VISUALIZATION_SHAREDMEMORYMANAGEROCTREES_H_INCLUDED
 
 #include <boost/lexical_cast.hpp>
-#include <glm/glm.hpp>
 #include <gpu_voxels/vis_interface/VisualizerInterface.h>
 
 namespace gpu_voxels {

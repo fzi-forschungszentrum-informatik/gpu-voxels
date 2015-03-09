@@ -18,6 +18,11 @@
  * \author  Andreas Hermann
  * \date    2014-11-27
  *
+ * This little example program shows how to use the primitive_array
+ * datatype.
+ * It also collides different maps with each other and loads
+ * a scaled coordinate system.
+ *
  */
 //----------------------------------------------------------------------
 #include <cstdlib>
@@ -53,7 +58,7 @@ int main(int argc, char* argv[])
 
   icl_core::logging::initialize(argc, argv);
 
-  /*!
+  /*
    * First, we generate an API class, which defines the
    * volume of our space and the resolution.
    * Be careful here! The size is limited by the memory
@@ -62,16 +67,19 @@ int main(int argc, char* argv[])
    */
   gvl = new GpuVoxels(200, 200, 200, 0.01);
 
+  // Now we add some maps
   gvl->addMap(MT_PROBAB_VOXELMAP, "myProbabVoxmap");
   gvl->addMap(MT_BIT_VOXELMAP, "myBitmapVoxmap");
   gvl->addMap(MT_OCTREE, "myOctree");
+  gvl->addMap(MT_PROBAB_VOXELMAP, "myCoordinateSystemMap");
 
+  // And two different primitive types
   gvl->addPrimitives(primitive_array::primitive_Sphere, "myPrims");
   gvl->addPrimitives(primitive_array::primitive_Cuboid, "mySecondPrims");
-
   std::vector<Vector4f> prim_positions(1000);
   std::vector<Vector4f> prim_positions2(1000);
 
+  // These coordinates are used for three boxes that are inserted into the maps
   Vector3f center1_min(0.5,0.5,0.5);
   Vector3f center1_max(0.6,0.6,0.6);
   Vector3f center2_min(0.5,0.5,0.5);
@@ -85,10 +93,29 @@ int main(int argc, char* argv[])
   Vector3f corner2_max;
   Vector3f corner3_max;
 
+  // We load the model of a coordinate system.
+  bfs::path model_path;
+  if (!file_handling::getGpuVoxelsPath(model_path))
+  {
+    LOGGING_ERROR(Gpu_voxels, "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
+    return -1; // exit here.
+  }
+  bfs::path cs_file = bfs::path(model_path / "coordinate_system_100.binvox");
+
+  if (!gvl->getMap("myCoordinateSystemMap")->insertPointcloudFromFile(cs_file.generic_string(), eVT_OCCUPIED,
+                                                  true, Vector3f(0, 0, 0),0.010))
+  {
+    LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
+  }
+
+  /*
+   * Now we start the main loop, that will animate and the scene.
+   */
   float t = 0.0;
   int j = 0;
   while(true)
   {
+    // Calculate new positions for the boxes
     float x = sin(t);
     float y = cos(t);
     t += 0.03;
@@ -102,31 +129,35 @@ int main(int argc, char* argv[])
     corner3_max = center3_max + Vector3f(0.2 * x, 0.0, 0.2 * y);
     gvl->insertBoxIntoMap(corner2_min, corner2_max, "myOctree", eVT_OCCUPIED, 2);
 
+    // generate info on the occuring collisions:
+    LOGGING_INFO(
+        Gpu_voxels, "Collsions myProbabVoxmap + myBitmapVoxmap: " << gvl->getMap("myProbabVoxmap")->collideWith(gvl->getMap("myBitmapVoxmap")) << endl <<
+        "Collsions myOctree + myBitmapVoxmap: " << gvl->getMap("myOctree")->collideWith(gvl->getMap("myBitmapVoxmap")) << endl <<
+        "Collsions myOctree + myProbabVoxmap: " << gvl->getMap("myOctree")->collideWith(gvl->getMap("myProbabVoxmap")) << endl);
 
-//    LOGGING_INFO(
-//        Gpu_voxels,
-    std::cout << "Collsions myProbabVoxmap + myBitmapVoxmap: " << gvl->getMap("myProbabVoxmap")->collideWith(gvl->getMap("myBitmapVoxmap")) << std::endl;
-    std::cout << "Collsions myOctree + myBitmapVoxmap: " << gvl->getMap("myOctree")->collideWith(gvl->getMap("myBitmapVoxmap")) << std::endl;
-    std::cout << "Collsions myOctree + myProbabVoxmap: " << gvl->getMap("myOctree")->collideWith(gvl->getMap("myProbabVoxmap")) << std::endl;
-    //visualize both maps
+    // tell the visualier that the maps have changed
     gvl->visualizeMap("myProbabVoxmap");
     gvl->visualizeMap("myBitmapVoxmap");
     gvl->visualizeMap("myOctree");
+    gvl->visualizeMap("myCoordinateSystemMap");
 
+    // update the primitves:
     for(size_t i = 0; i < prim_positions.size(); i++)
     {
       // x, y, z, size
-      prim_positions[i] = Vector4f(i / 10.0, sin(i/5.0), sin(j++ / 5.0), 0.4);
-      prim_positions2[i] = Vector4f(sin(i/5.0), sin(j++ / 5.0), i / 10.0, 0.4);
+      prim_positions[i] = Vector4f(100.0 + (i / 10.0), 100.0 + sin(i/5.0), sin(j++ / 5.0), 0.4);
+      prim_positions2[i] = Vector4f(100.0 + (sin(i/5.0)), 100.0 + sin(j++ / 5.0), i / 10.0, 0.4);
     }
     gvl->modifyPrimitives("myPrims", prim_positions);
     gvl->modifyPrimitives("mySecondPrims", prim_positions2);
 
+    // tell the visualizier that the data has changed:
     gvl->visualizePrimitivesArray("myPrims");
     gvl->visualizePrimitivesArray("mySecondPrims");
 
     usleep(30000);
 
+    // Reset the maps:
     gvl->clearMap("myProbabVoxmap");
     gvl->clearMap("myBitmapVoxmap");
     gvl->clearMap("myOctree");

@@ -288,7 +288,7 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
     }
     else
     {
-      printf("Point (%u,%u,%u) is not in the range of the voxel map \n",
+      printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
              meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
              meta_point_cloud->clouds_base_addresses[0][i].z);
     }
@@ -331,7 +331,7 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
     }
     else
     {
-      printf("Point (%u,%u,%u) is not in the range of the voxel map \n",
+      printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
              meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
              meta_point_cloud->clouds_base_addresses[0][i].z);
     }

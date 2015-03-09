@@ -60,6 +60,7 @@
 #include <thrust/count.h>
 #include <thrust/scan.h>
 
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -219,6 +220,7 @@ private:
   void flipDrawVoxelmap(uint32_t index);
   void flipDrawOctree(uint32_t index);
   void flipDrawType(VoxelType type);
+  void flipExternalVisibilityTrigger();
   void copyDrawTypeToDevice();
   void updateTypesSegmentMapping(DataContext* context);
   __inline__ uint8_t typeToColorIndex(uint8_t type);
@@ -235,6 +237,9 @@ private:
 /////////////////////////////////////////member variables//////////////////////////////////////////
   // the current context of the visualizer
   VisualizerContext* m_cur_context;
+
+  // if enabled, provider programs can trigger which maps should be drawn
+  bool m_use_external_draw_type_triggers;
 
   // the title of the visualizer window
   std::string m_window_title;

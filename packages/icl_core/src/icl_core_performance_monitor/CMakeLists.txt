@@ -1,0 +1,44 @@
+# this is for emacs file handling -*- mode: cmake; indent-tabs-mode: nil -*-
+ICMAKER_SET("icl_core_performance_monitor" IDE_FOLDER ${ICL_CORE_IDE_FOLDER})
+
+ICMAKER_ADD_SOURCES(
+  PerformanceMonitor.cpp
+  logging_performance_monitor.cpp
+  )
+
+ICMAKER_ADD_HEADERS(
+  PerformanceMonitor.h
+  logging_performance_monitor.h
+  )
+
+ICMAKER_LOCAL_CPPDEFINES(-DICL_CORE_PERFORMANCE_MONITOR_EXPORT_SYMBOLS)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_ICL_CORE_PERFORMANCE_MONITOR_)
+
+ICMAKER_INCLUDE_DIRECTORIES(${ICL_CORE_INCLUDE_DIRS})
+
+ICMAKER_DEPENDENCIES(EXPORT
+  icl_core
+  icl_core_logging
+)
+
+ICMAKER_BUILD_LIBRARY()
+ICMAKER_INSTALL_HEADERS(${icmaker_target})
+
+
+
+
+
+ICMAKER_SET("icl_core_performance_monitor_example" IDE_FOLDER ${ICL_CORE_IDE_FOLDER})
+
+ICMAKER_ADD_SOURCES(
+  example_usage.cpp
+)
+
+ICMAKER_LOCAL_CPPDEFINES(-DICL_CORE_PERFORMANCE_MONITOR_EXPORT_SYMBOLS)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_ICL_CORE_PERFORMANCE_MONITOR_)
+
+ICMAKER_INTERNAL_DEPENDENCIES(
+  icl_core_performance_monitor
+)
+
+ICMAKER_BUILD_PROGRAM()

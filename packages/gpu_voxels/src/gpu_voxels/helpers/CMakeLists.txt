@@ -18,13 +18,14 @@ ICMAKER_ADD_HEADERS(
   GlobalLock.h
   cuda_datatypes.h
   common_defines.h
-  file_handling.h
   Kinect.h
   cuda_handling.h
   CudaMath.h
   cuda_handling.hpp
-  pcd_handling.h
-  binvox_handling.h
+  PointcloudFileHandler.h
+  BinvoxFileReader.h
+  PcdFileReader.h
+  XyzFileReader.h
   MetaPointCloud.h
   BitVector.h
   BitVector.hpp
@@ -35,8 +36,10 @@ ICMAKER_ADD_SOURCES(
   GlobalLock.cpp
   cuda_datatypes.cpp
   Kinect.cpp
-  pcd_handling.cpp
-  binvox_handling.cpp
+  PointcloudFileHandler.cpp
+  BinvoxFileReader.cpp
+  PcdFileReader.cpp
+  XyzFileReader.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(

@@ -12,6 +12,13 @@
 //
 // -- END LICENSE BLOCK ------------------------------------------------
 
+
+// This is used for Doxygens index page:
+/*! 
+ * \mainpage GPU-Voxels
+ * \htmlinclude gvl_doxygen_intro.html
+ */
+
 //----------------------------------------------------------------------
 /*!\file
  *
@@ -230,6 +237,18 @@ public:
    * \return pointer to \code VisProvider of the map with the given name.
    */
   VisProvider* getVisualization(const std::string &map_name);
+
+  
+  /**
+   * @brief Gets the dimensions and sidelength of voxel space
+   * 
+   * @param dim_x [out] number of voxels in x_dimension
+   * @param dim_y [out] number of voxels in y_dimension
+   * @param dim_z [out] number of voxels in z_dimension
+   * @param voxel_side_length [out] sidelength of voxels
+   * @return void
+   */
+  void getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z, float& voxel_side_length);
 
 private:
 

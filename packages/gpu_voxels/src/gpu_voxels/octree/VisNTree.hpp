@@ -73,7 +73,7 @@ bool VisNTree<InnerNode, LeafNode>::visualize(const bool force_repaint)
     std::stringstream id;
     id << shared_mem_id;
     m_shm_superVoxelSize = m_segment.find_or_construct<uint32_t>(shm_variable_name_super_voxel_size.c_str())(
-        5);
+        1);
     m_shm_memHandle = m_segment.find_or_construct<cudaIpcMemHandle_t>(
         std::string(shm_variable_name_octree_handler_dev_pointer + id.str()).c_str())(cudaIpcMemHandle_t());
     m_shm_numCubes = m_segment.find_or_construct<uint32_t>(

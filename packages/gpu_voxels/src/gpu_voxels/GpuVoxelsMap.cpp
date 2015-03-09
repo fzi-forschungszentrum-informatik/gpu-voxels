@@ -32,35 +32,17 @@ GpuVoxelsMap::~GpuVoxelsMap()
 {
 }
 
-bool GpuVoxelsMap::insertPointcloudFromFile(const std::string path, VoxelType voxel_type, const bool shift_to_zero, const Vector3f &offset_XYZ)
+bool GpuVoxelsMap::insertPointcloudFromFile(const std::string path, VoxelType voxel_type, const bool shift_to_zero, const Vector3f &offset_XYZ, const float scaling)
 {
-  std::vector<Vector3f> points;
   //load the points into the vector
-  std::size_t found = path.find(std::string("xyz"));
-  if (found!=std::string::npos)
+  std::vector<Vector3f> points;
+
+  if(pointcloud_file_handler.loadPointCloud(path, points, shift_to_zero, offset_XYZ, scaling))
   {
-    if (!pcd_handling::loadPointCloud(path, points, shift_to_zero, offset_XYZ))
-    {
-      return false;
-    }
-  }else{
-    // is the file a binvox file?
-    std::size_t found = path.find(std::string("binvox"));
-    if (found!=std::string::npos)
-    {
-      if (!binvox_handling::loadPointCloud(path, points, shift_to_zero, offset_XYZ))
-      {
-        return false;
-      }
-    }else{
-      LOGGING_ERROR_C(
-          Gpu_voxels_helpers,
-          GpuVoxelsMap,
-          path << " has no known file format." << endl);
-    }
+    insertGlobalData(points, voxel_type);
+    return true;
   }
-  insertGlobalData(points, voxel_type);
-  return true;
+  return false;
 }
 
 void GpuVoxelsMap::generateVisualizerData()

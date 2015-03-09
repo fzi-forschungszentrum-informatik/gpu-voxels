@@ -12,6 +12,9 @@
 
 ICMAKER_SET("gpu_voxels_octree")
 
+# enable performance monitor
+add_definitions(-DIC_PERFORMANCE_MONITOR)
+
 ICMAKER_ADD_HEADERS(
   load_balancer/AbstractLoadBalancer.h
   load_balancer/Extract.h
@@ -35,7 +38,6 @@ ICMAKER_ADD_HEADERS(
   Voxel.h
   VoxelList.h
   VoxelTypeFlags.h
-  PerformanceMonitor.h
   DefaultCollider.h
   VisNTree.h
   GvlNTree.h
@@ -43,7 +45,6 @@ ICMAKER_ADD_HEADERS(
 
 ICMAKER_ADD_SOURCES(
   Dummy.cpp
-  PerformanceMonitor.cpp
   VisNTree.cpp
   )
 
@@ -106,6 +107,8 @@ ICMAKER_INTERNAL_DEPENDENCIES(
   gpu_voxels_core
   gpu_voxels_voxelmap # REMOVE THIS LATER
   gpu_voxels_vis_interface
+
+  icl_core_performance_monitor
   )
 
 ICMAKER_EXTERNAL_DEPENDENCIES(

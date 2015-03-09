@@ -29,7 +29,8 @@
 #include "NTreeProvider.h"
 #include "VoxelMapProvider.h"
 #include "OctomapProvider.h"
-#include <gpu_voxels/octree/PerformanceMonitor.h>
+
+#include <icl_core_performance_monitor/PerformanceMonitor.h>
 #include "Helper.h"
 
 using namespace gpu_voxels::NTree;
@@ -39,10 +40,9 @@ using namespace gpu_voxels::NTree::Provider;
 Bech_Parameter parameter;
 std::vector<Provider::Provider*> provider;
 const int num_names = 1000, num_events = 1000;
-PerformanceMonitor* perfMon = PerformanceMonitor::getInstance();
 SensorData* sensor_data = NULL;
 
-void build(ofstream& log)
+void build()
 {
   bool build_mode = false;
   int runs = 1;
@@ -50,10 +50,10 @@ void build(ofstream& log)
   {
     build_mode = true;
     runs = parameter.runs;
-    perfMon->enable("build");
-    perfMon->enable("propagate");
-    perfMon->enable("lb_propagate");
-    perfMon->enable("Octomap::init");
+    PERF_MON_ENABLE("build");
+    PERF_MON_ENABLE("propagate");
+    PERF_MON_ENABLE("lb_propagate");
+    PERF_MON_ENABLE("Octomap::init");
 
     bool first_pass = true;
     for (int res = parameter.resolution_from; res <= parameter.resolution_to;
@@ -61,13 +61,11 @@ void build(ofstream& log)
     {
       for (int b = parameter.blocks_from; b <= parameter.blocks_to; b += parameter.blocks_step)
       {
-        if (b != parameter.blocks_from)
-          log << std::endl; // start a new line to have blocks of lines for the same blocksize
 
         for (int t = parameter.threads_from; t <= parameter.threads_to; t += parameter.threads_step)
         {
-          perfMon->addStaticData("build", "BLOCKS", b);
-          perfMon->addStaticData("build", "THREADS", t);
+          PERF_MON_ADD_STATIC_DATA_P("BLOCKS", b, "build");
+          PERF_MON_ADD_STATIC_DATA_P("THREADS", t, "build");
 
           for (int r = 0; r < runs; ++r)
           {
@@ -106,7 +104,7 @@ void build(ofstream& log)
                 my_parameter->num_threads = t;
               }
 
-              perfMon->addStaticData("build", "RESOLUTION", my_parameter->resolution_tree);
+              PERF_MON_ADD_STATIC_DATA_P("RESOLUTION", my_parameter->resolution_tree, "build");
               provider[i]->init(*my_parameter);
 
               if (build_mode)
@@ -119,14 +117,9 @@ void build(ofstream& log)
           if (build_mode)
           {
             // performance logging
-            if (first_pass)
-            {
-              perfMon->printHeader(log);
-              first_pass = false;
-            }
 
-            perfMon->printSummary(log);
-            perfMon->init(num_names, num_events);
+            PERF_MON_SUMMARY_ALL_INFO;
+            PERF_MON_INITIALIZE(num_names, num_events);
           }
           else
             break;
@@ -143,7 +136,7 @@ void build(ofstream& log)
 void collideRun()
 {
   // generate new robot plans
-  perfMon->enable("build");
+  PERF_MON_ENABLE("build");
   std::vector<std::vector<gpu_voxels::Vector3f> > points_backup;
   for (size_t i = 0; i < parameter.provider_parameter.size(); ++i)
   {
@@ -174,12 +167,12 @@ void collideRun()
       points_backup.push_back(my_parameter->points);
       my_parameter->points.swap(rand_plan);
 
-      perfMon->addStaticData("collideRun", "NumPlanPoints", my_parameter->points.size());
+      PERF_MON_ADD_STATIC_DATA_P("NumPlanPoints", my_parameter->points.size(), "collideRun");
 
       provider[i]->init(*my_parameter);
     }
   }
-  perfMon->disable("build");
+  PERF_MON_DISABLE("build");
 
   // replays of collide with same robot plan
   for (int w = 0; w < parameter.replay; ++w)
@@ -208,7 +201,7 @@ void collideRun()
   }
 }
 
-void insert_collide(ofstream& log)
+void insert_collide()
 {
   bool run = false;
 
@@ -219,40 +212,36 @@ void insert_collide(ofstream& log)
   else if (parameter.mode == Bech_Parameter::MODE_COLLIDE_LIVE || parameter.mode == Bech_Parameter::MODE_COLLIDE)
   {
     run = true;
-    perfMon->enable("collideRun");
-    perfMon->enable("collide_wo_locking");
-    perfMon->enable("intersect_load_balance");
-    perfMon->enable("VoxelMapProvider::collide_wo_locking");
-    perfMon->enable("VoxelMap::intersect_load_balance");
-    perfMon->enable("intersect_sparse");
+    PERF_MON_ENABLE("collideRun");
+    PERF_MON_ENABLE("collide_wo_locking");
+    PERF_MON_ENABLE("intersect_load_balance");
+    PERF_MON_ENABLE("VoxelMapProvider::collide_wo_locking");
+    PERF_MON_ENABLE("VoxelMap::intersect_load_balance");
+    PERF_MON_ENABLE("intersect_sparse");
   }
 
   if (run)
   {
-    perfMon->enable("insert");
-    perfMon->enable("newSensorData");
-    perfMon->enable("insertVoxel");
-    perfMon->enable("packVoxel_Map");
-    perfMon->enable("computeFreeSpaceViaRayCast");
-    perfMon->enable("processSensorData");
-    perfMon->enable("transformKinectPointCloud_simple");
-    perfMon->enable("lb_propagate");
-    perfMon->enable("propagate");
-    //perfMon->enable("rebuild"); // TODO: handle case where so rebuild occurs but data is needed for correct column alignment
-    perfMon->enable("Octomap::newSensorData");
+    PERF_MON_ENABLE("insert");
+    PERF_MON_ENABLE("newSensorData");
+    PERF_MON_ENABLE("insertVoxel");
+    PERF_MON_ENABLE("packVoxel_Map");
+    PERF_MON_ENABLE("computeFreeSpaceViaRayCast");
+    PERF_MON_ENABLE("processSensorData");
+    PERF_MON_ENABLE("transformKinectPointCloud_simple");
+    PERF_MON_ENABLE("lb_propagate");
+    PERF_MON_ENABLE("propagate");
+    //PERF_MON_ENABLE("rebuild"); // TODO: handle case where so rebuild occurs but data is needed for correct column alignment
+    PERF_MON_ENABLE("Octomap::newSensorData");
 
     int runs = parameter.runs;
     int replays = parameter.replay;
 
-    bool first_pass = true;
     for (int res = parameter.resolution_from; res <= parameter.resolution_to;
         res = ceil(res * parameter.resolution_scaling))
     {
       for (int b = parameter.blocks_from; b <= parameter.blocks_to; b += parameter.blocks_step)
       {
-        if (b != parameter.blocks_from)
-          log << std::endl; // start a new line to have blocks of lines for the same blocksize
-
         for (int t = parameter.threads_from; t <= parameter.threads_to; t += parameter.threads_step)
         {
           // use same seed for comparison of results for different resolutions etc.
@@ -328,10 +317,10 @@ void insert_collide(ofstream& log)
           for (int clevel = parameter.collision_level_from; clevel <= parameter.collision_level_to; clevel +=
               parameter.collision_level_step)
           {
-            perfMon->addStaticData("insert", "BLOCKS", b);
-            perfMon->addStaticData("insert", "THREADS", t);
-            perfMon->addStaticData("insert", "CollisionLevel", clevel);
-            perfMon->addStaticData("newSensorData", "RESOLUTION", res);
+            PERF_MON_ADD_STATIC_DATA_P("BLOCKS", b, "insert");
+            PERF_MON_ADD_STATIC_DATA_P("THREADS", t, "insert");
+            PERF_MON_ADD_STATIC_DATA_P("CollisionLevel", clevel, "insert");
+            PERF_MON_ADD_STATIC_DATA_P("RESOLUTION", res, "newSensorData");
 
             // start sensor
             if (sensor_data != NULL)
@@ -358,13 +347,8 @@ void insert_collide(ofstream& log)
               if (parameter.log_runs || r == runs - 1)
               {
                 // performance logging
-                if (first_pass)
-                {
-                  perfMon->printHeader(log);
-                  first_pass = false;
-                }
-                perfMon->printSummary(log);
-                perfMon->init(num_names, num_events);
+                PERF_MON_SUMMARY_ALL_INFO;
+                PERF_MON_INITIALIZE(num_names, num_events);
                 printf("Interation done\n");
               }
             }
@@ -416,12 +400,11 @@ void run()
   log << "############## HEADER ################" << std::endl;
   log << std::endl;
 
-  perfMon->init(num_names, num_events);
-  perfMon->m_print_addData = perfMon->m_print_stop = false;
+  PERF_MON_INITIALIZE(num_names, num_events);
 
-  build(log);
+  build();
 
-  insert_collide(log);
+  insert_collide();
 
   log.close();
 }

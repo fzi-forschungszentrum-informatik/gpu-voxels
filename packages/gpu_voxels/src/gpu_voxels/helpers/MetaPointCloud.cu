@@ -108,24 +108,11 @@ MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_file
 
   for (size_t i = 0; i < _point_cloud_files.size(); i++)
   {
-    // is the file a PCD file?
-    std::size_t found = _point_cloud_files.at(i).find(std::string("xyz"));
-    if (found!=std::string::npos)
+    if(!pointcloud_file_handler.loadPointCloud(_point_cloud_files.at(i), point_clouds->at(i)))
     {
-      pcd_handling::loadPointCloud(_point_cloud_files.at(i), point_clouds->at(i));
-    }else{
-
-      // is the file a binvox file?
-      std::size_t found = _point_cloud_files.at(i).find(std::string("binvox"));
-      if (found!=std::string::npos)
-      {
-        binvox_handling::loadPointCloud(_point_cloud_files.at(i), point_clouds->at(i));
-      }else{
-        LOGGING_ERROR_C(
-            Gpu_voxels_helpers,
-            MetaPointCloud,
-            _point_cloud_files.at(i) << " has no known file format." << endl);
-      }
+      LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud,
+                      "Could not read file " << _point_cloud_files.at(i) << icl_core::logging::endl);
+      return;
     }
   }
 

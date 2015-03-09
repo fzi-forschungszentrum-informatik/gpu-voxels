@@ -19,6 +19,9 @@
  * \date    2013-12-2
  *
  *  \brief Camera class for the voxel map visualizer on GPU
+ * This class uses a right hand coordinate system.
+ * In the world the Z axis points upwards.
+ * The camera looks into the direction of positive X. Z points upwards.
  *
  */
 //----------------------------------------------------------------------
@@ -38,9 +41,9 @@
 #include <GL/freeglut.h>
 #endif
 
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/transform.hpp>
 
 namespace gpu_voxels {
 namespace visualization {
@@ -51,12 +54,12 @@ public:
   struct CameraContext
   {
     CameraContext()
-      : camera_position(0.f, 10.f, 0.f),
+      : camera_position(-10.f, -10.f, 10.f),
         h_angle(0.5f),
         v_angle(0.f),
-        foV(60.0f)
+        foV(M_PI/3)
     {
-      camera_target = glm::vec3(250.f, 0, 250.f);
+      camera_target = glm::vec3(250.f, 250.f, 0);
     }
 
     CameraContext(glm::vec3 cam_pos, glm::vec3 cam_focus,
@@ -78,8 +81,9 @@ public:
     // the point where the camera is looking in orbit mode
     glm::vec3 camera_target;
 
-    // the horizontal, vertical angle and field of view
-    float h_angle, v_angle, foV;
+    float h_angle; // the horizontal angle (panning)
+    float v_angle; // vertical angle (tilting)
+    float foV;     // field of view (RAD)
   };
 
   Camera_gpu(float window_width, float window_height, CameraContext context);
@@ -89,14 +93,52 @@ public:
   void resetToInitialValues();
   void resizeWindow(float width, float height);
   ///////////////////////////////////// functions for camera movement /////////////////////////////////
+
+  /*!
+   * \brief moveAlongDirection
+   * Moves the camera along the view vector
+   * \param factor Use negative factor to move in negative direction.
+   */
   void moveAlongDirection(float factor);
+
+  /*!
+   * \brief moveAlongRight
+   * Moves the camera along the camera's right vector.
+   * Is disabled in orbit mode.
+   * \param factor Use negative factor to move in negative direction.
+   */
   void moveAlongRight(float factor);
+
+  /*!
+   * \brief moveAlongUp
+   * Move the camera along the camera's up vector.
+   * Is disabled in orbit mode.
+   * \param factor Use negative factor to move in negative direction.
+   */
   void moveAlongUp(float factor);
 
+  /*!
+   * \brief moveFocusPointFromMouseInput
+   * Moves the center point around which the Oribt mode rotates
+   * \param xpos Mouse X Position
+   * \param ypos Mouse Y Position
+   */
   void moveFocusPointFromMouseInput(int32_t xpos, int32_t ypos);
 
+  /*!
+   * \brief updateViewMatrixFromMouseInput
+   * Update the view matrix.
+   * Call this function if the camera's right or direction vector
+   * or the camera position have changed.
+   * \param xpos Mouse X Position
+   * \param ypos Mouse Y Position
+   */
   void updateViewMatrixFromMouseInput(int32_t xpos, int32_t ypos);
 
+  /*!
+   * \brief toggleCameraMode
+   * Switches between Orbit and Free flight mode
+   */
   void toggleCameraMode();
 
   bool hasViewChanged()
@@ -217,5 +259,5 @@ private:
 };
 
 } // end of namespace visualization
-} //end of namespace gpu_voxels
+} // end of namespace gpu_voxels
 #endif

@@ -25,3 +25,15 @@ V 0.3 (2015-02-26):
 - Added Example program to demonstrate the insertion of IBEO Sensor Pointclouds
 - Added missing config file for example program that intersects live Kinect data with a robot model (RobotVsEnvironment)
 - Open Issues: Flickering colors in Visualization
+
+V 0.4 (2015-03-09):
+===================
+- Fixed coordinate system in the Viewer
+- Improved Viewer XML Config parser
+- Added possibility to control visibility of SweptVolume subvolumes from a provider program
+- Improved pointcloud file loader (new datatype, scaling)
+- Improved example programs, added viwer configfile for them
+- Added missing pointcloud filess for the examples
+- Moved performance monitor to icl_core
+- Some smaller fixes regarding RAD / DEG
+- Removed compiler warnings

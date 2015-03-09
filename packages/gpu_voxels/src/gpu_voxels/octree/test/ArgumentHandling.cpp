@@ -22,6 +22,7 @@
 //----------------------------------------------------------------------
 
 #include "ArgumentHandling.h"
+#include "gpu_voxels/helpers/PointcloudFileHandler.h"
 
 // PCL
 #include <pcl/io/pcd_io.h>
@@ -534,29 +535,20 @@ bool parseArguments(Bech_Parameter& parameter, int argc, char **argv, bool repor
 namespace Test {
 
 bool readPCD(string file_name, vector<Vector3f>& points, uint32_t& num_points, bool swap_x_z)
-{
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-
-  if (pcl::io::loadPCDFile < pcl::PointXYZ > (file_name, *cloud) == -1) //* load the file
-  {
-    PCL_ERROR(("Couldn't read file " + file_name + "\n").c_str());
-    return true;
-  }
-
-  std::cout << "Loaded " << cloud->width * cloud->height << " data points from " << file_name << std::endl;
-
-  num_points = cloud->points.size();
-  printf("num_points %u\n", num_points);
+{ 
   points.resize(num_points);
+  file_handling::PointcloudFileHandler my_file_handler;
+  my_file_handler.loadPointCloud(file_name, points);
+
   if (swap_x_z)
   {
     for (size_t i = 0; i < num_points; ++i)
-      points[i] = Vector3f(cloud->points[i].z, cloud->points[i].y, cloud->points[i].x);
+      points[i] = Vector3f(points[i].z, points[i].y, points[i].x);
   }
   else
   {
     for (size_t i = 0; i < num_points; ++i)
-      points[i] = Vector3f(cloud->points[i].x, cloud->points[i].y, cloud->points[i].z);
+      points[i] = Vector3f(points[i].x, points[i].y, points[i].z);
   }
   return false;
 }

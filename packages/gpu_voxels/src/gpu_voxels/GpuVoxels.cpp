@@ -178,6 +178,12 @@ bool GpuVoxels::delMap(const std::string &map_name)
 
 GpuVoxelsMapSharedPtr GpuVoxels::getMap(const std::string &map_name)
 {
+  ManagedMapsIterator it = m_managed_maps.find(map_name);
+  if (it == m_managed_maps.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Map with name '" << map_name << "' not found." << endl);
+    return GpuVoxelsMapSharedPtr();
+  }
   return m_managed_maps.find(map_name)->second.map_shared_ptr;
 }
 
@@ -393,5 +399,12 @@ VisProvider* GpuVoxels::getVisualization(const std::string &map_name)
 //  unlock();
 //}
 
+void GpuVoxels::getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z, float& voxel_side_length)
+{
+  dim_x = m_dim_x;
+  dim_y = m_dim_y;
+  dim_z = m_dim_z;
+  voxel_side_length = m_voxel_side_length;
 }
 
+}

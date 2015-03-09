@@ -64,9 +64,10 @@
 #include <gpu_voxels/octree/PointCloud.h>
 #include <gpu_voxels/octree/Morton.h>
 #include <gpu_voxels/octree/VoxelList.h>
-#include <gpu_voxels/octree/PerformanceMonitor.h>
 #include <gpu_voxels/octree/Octree.h>
 #include <gpu_voxels/voxelmap/TemplateVoxelMap.hpp>
+
+#include <icl_core_performance_monitor/PerformanceMonitor.h>
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/cuda_handling.h>
@@ -388,7 +389,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
   const std::string prefix = __FUNCTION__;
   const std::string temp_timer = prefix + "_temp";
   const std::string temp2_timer = prefix + "_temp2";
-  PerformanceMonitor::start(prefix);
+  PERF_MON_START(prefix);
 
 //  this->sideLengthInVoxel = sideLengthInVoxel;
 //  this->voxelSideLength = voxelSideLength;
@@ -414,7 +415,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
   // #################################################
   // transform points into morton code
   // throughput ~ 3.8 GB/s
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(temp_timer);
   thrust::device_vector<VoxelID> d_voxels(num_points);
   kernel_toMortonCode<<<num_blocks, num_threads_per_block>>>(D_PTR(d_points), num_points, D_PTR(d_voxels));
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
@@ -432,9 +433,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
   //    h_voxel[i] = morton_code60(h_points[i].x, h_points[i].y, h_points[i].z);
   //  voxel = h_voxel;
   //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  PerformanceMonitor::stop(temp_timer, prefix, "ToMorton");
-  PerformanceMonitor::addStaticData("build", "Voxel", num_points);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ToMorton", prefix);
+  PERF_MON_ADD_STATIC_DATA_P("Voxel", num_points, "build");
 
 // #################################################
 //                       Step 1
@@ -485,9 +485,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
   }
 #endif
 
-  PerformanceMonitor::stop(temp_timer, prefix, "Sort");
-  PerformanceMonitor::start(temp_timer);
-  PerformanceMonitor::start(temp2_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Sort", prefix);
+  PERF_MON_START(temp2_timer);
 
   VoxelID biggest_value = d_voxels.back();
   if(biggest_value >= (VoxelID) pow(branching_factor, level_count - 1))
@@ -631,8 +630,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
       d_voxels.swap(nodeIds);
       childNodes = nodes;
       num_points = numNodes;
-      PerformanceMonitor::stop(temp_timer, prefix, "Build_L" + to_string(level, "%02d"));
-      PerformanceMonitor::start(temp_timer);
+      PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Build_L" + to_string(level, "%02d"), prefix);
     }
   m_root = (InnerNode*) childNodes;
   InnerNode k;
@@ -641,12 +639,12 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
   k.setStatus(k.getStatus() | ns_STATIC_MAP);
   HANDLE_CUDA_ERROR(cudaMemcpy(m_root, &k, sizeof(InnerNode), cudaMemcpyHostToDevice));
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  PerformanceMonitor::stop(temp2_timer, prefix, "Build_L_ALL");
+  PERF_MON_PRINT_INFO_P(temp2_timer, "Build_L_ALL", prefix);
 
   if (free_bounding_box)
     this->free_bounding_box(d_points);
 
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(temp_timer);
 
 #ifdef LOAD_BALANCING_PROPAGATE
   propagate(total_num_voxel);
@@ -656,12 +654,13 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
 
   m_has_data = true; // indicate that the NTree holds some data
 
-  PerformanceMonitor::stop(temp_timer, prefix, "Propagate");
+  PERF_MON_PRINT_INFO_P(temp_timer, "Propagate", prefix);
 
-  PerformanceMonitor::addStaticData("build", "InnerNodes", allocInnerNodes);
-  PerformanceMonitor::addStaticData("build", "LeafNodes", allocLeafNodes);
-  PerformanceMonitor::addStaticData("build", "Mem", getMemUsage());
-  PerformanceMonitor::stop(prefix, prefix, "");
+  PERF_MON_ADD_STATIC_DATA_P("InnerNodes", allocInnerNodes, "build");
+  PERF_MON_ADD_STATIC_DATA_P("LeafNodes", allocLeafNodes, "build");
+  PERF_MON_ADD_STATIC_DATA_P("Mem", getMemUsage(), "build");
+
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
 #undef SORT_WITH_CUB
 }
 
@@ -781,7 +780,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
 ////      (use_VoxelFlags && result_voxelTypeFlags != NULL) || (!use_VoxelFlags && result_voxelTypeFlags == NULL));
 //
 //  const std::string prefix = __FUNCTION__;
-//  PerformanceMonitor::start(prefix);
+//  PERF_MON_START(prefix);
 //
 //  thrust::device_vector<voxel_count> d_num_collisions(numBlocks);
 //  thrust::device_vector<VoxelTypeFlags<VTF_SIZE> > d_voxelTypeFlags(numBlocks);
@@ -818,8 +817,8 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
 //                                              typename VoxelTypeFlags<VTF_SIZE>::reduce_op());
 //  }
 //
-//  PerformanceMonitor::stop(prefix, prefix, "");
-//  PerformanceMonitor::addData(prefix, "NumCollisions", collisions);
+//  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
+//  PERF_MON_ADD_DATA_NONTIME_P("NumCollisions", collisions, prefix);
 //
 //  return collisions;
 //}
@@ -833,7 +832,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
 //      (use_VoxelFlags && result_voxelTypeFlags != NULL) || (!use_VoxelFlags && result_voxelTypeFlags == NULL));
 
   const std::string prefix = __FUNCTION__;
-  PerformanceMonitor::start(prefix);
+  PERF_MON_START(prefix);
 
   thrust::device_vector<voxel_count> d_num_collisions(numBlocks);
   thrust::device_vector<VoxelType> d_voxelTypeFlags(numBlocks);
@@ -868,8 +867,8 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
                                               typename VoxelType::reduce_op());
   }
 
-  PerformanceMonitor::stop(prefix, prefix, "");
-  PerformanceMonitor::addData(prefix, "NumCollisions", collisions);
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
+  PERF_MON_ADD_DATA_NONTIME_P("NumCollisions", collisions, prefix);
 
   return collisions;
 }
@@ -881,7 +880,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
     VoxelTypeFlags<vft_size>* h_result_voxelTypeFlags)
 {
   const std::string prefix = "VoxelMap::" + std::string(__FUNCTION__);
-  PerformanceMonitor::start(prefix);
+  PERF_MON_START(prefix);
 
   typedef LoadBalancer::IntersectVMap<
       branching_factor,
@@ -902,10 +901,10 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
 
   load_balancer.run();
 
-  PerformanceMonitor::stop(prefix, prefix, "");
-  PerformanceMonitor::addData(prefix, "NumCollisions", load_balancer.m_num_collisions);
-//  PerformanceMonitor::addData(prefix, "BalanceOverhead", balance_overhead);
-//  PerformanceMonitor::addData(prefix, "BalanceTasks", balance_tasks);
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
+  PERF_MON_ADD_DATA_NONTIME_P("NumCollisions", load_balancer.m_num_collisions, prefix);
+//  PERF_MON_ADD_DATA_NONTIME_P("BalanceOverhead", balance_overhead, prefix);
+//  PERF_MON_ADD_DATA_NONTIME_P("BalanceTasks", balance_tasks, prefix);
 
   return load_balancer.m_num_collisions;
 }
@@ -1006,7 +1005,7 @@ VoxelID NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect_loa
     bool mark_collisions, double* balance_overhead, int* num_balance_tasks)
 {
   const std::string prefix = __FUNCTION__;
-  PerformanceMonitor::start(prefix);
+  PERF_MON_START(prefix);
 
   std::size_t num_collisions = 0;
   // mark_collisions is not a template parameter, to be able to omit the template parameters for using this function (see GvlNTree.hpp)
@@ -1051,10 +1050,10 @@ VoxelID NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect_loa
      num_collisions = load_balancer.m_num_collisions;
   }
 
-  PerformanceMonitor::stop(prefix, prefix, "");
-//  PerformanceMonitor::addData(prefix, "BalanceOverhead", *balance_overhead);
-//  PerformanceMonitor::addData(prefix, "BalanceTasks", *num_balance_tasks);
-  PerformanceMonitor::addData(prefix, "NumCollisions", num_collisions);
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
+//  PERF_MON_ADD_DATA_NONTIME_P("BalanceOverhead", *balance_overhead, prefix);
+//  PERF_MON_ADD_DATA_NONTIME_P("BalanceTasks", *num_balance_tasks, prefix);
+  PERF_MON_ADD_DATA_NONTIME_P("NumCollisions", num_collisions, prefix);
 
 #ifdef INTERSECT_MESSAGES
   LOGGING_INFO(OctreeInsertLog, "used min level: " << min_level <<  endl);
@@ -1464,8 +1463,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
   const std::string prefix = __FUNCTION__;
   const std::string temp_timer = prefix + "_temp";
   const std::string loop_timer = prefix + "_loop";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
   timespec time, time_total = getCPUTime();
   thrust::device_vector<voxel_count> d_num_voxel_this_level(numBlocks + 1);
@@ -1480,7 +1479,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
   uint32_t l = map_properties.level;
   for (; l < level_count && num_next_level != 0; ++l)
   {
-    PerformanceMonitor::start(loop_timer);
+    PERF_MON_START(loop_timer);
 
     // ### pack voxel - compute needed space ###
     d_num_voxel_this_level.back() = 0;
@@ -1494,8 +1493,10 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
         this_level_map);
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-    total_count_kernel_time += PerformanceMonitor::stop(loop_timer, prefix, "PackCountKernelL" + to_string(l, "%02d"));
-    PerformanceMonitor::start(loop_timer);
+#ifdef IC_PERFORMANCE_MONITOR
+// we need the return value, so we need to call the function directly
+    total_count_kernel_time += icl_core::perf_mon::PerformanceMonitor::measurement(loop_timer, "PackCountKernelL" + to_string(l, "%02d"), prefix);
+#endif
 
     //  cudaProfilerStop();
 #ifdef FREESPACE_MESSAGES
@@ -1543,8 +1544,10 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
     thrust::device_ptr<typename InnerNode::RayCastType> d_ptr(next_level_map.d_ptr);
     thrust::fill(d_ptr, d_ptr + next_level_map.size_v, init);
 
-    total_malloc_time += PerformanceMonitor::stop(loop_timer, prefix, "MallocL" + to_string(l, "%02d"));
-    PerformanceMonitor::start(loop_timer);
+#ifdef IC_PERFORMANCE_MONITOR
+// we need the return value, so we need to call the function directly
+    total_malloc_time += icl_core::perf_mon::PerformanceMonitor::measurement(loop_timer, "MallocL" + to_string(l, "%02d"), prefix);
+#endif
 
 #ifdef FREESPACE_MESSAGES
     LOGGING_DEBUG(OctreeFreespaceLog, "malloc/memset: " << timeDiff(time, getCPUTime() << " ms" << endl);
@@ -1569,8 +1572,10 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
         next_level_map);
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-    total_kernel_time += PerformanceMonitor::stop(loop_timer, prefix, "PackKernelL" + to_string(l, "%02d"));
-    PerformanceMonitor::start(loop_timer);
+#ifdef IC_PERFORMANCE_MONITOR
+// we need the return value, so we need to call the function directly
+    total_kernel_time += icl_core::perf_mon::PerformanceMonitor::measurement(loop_timer, "PackKernelL" + to_string(l, "%02d"), prefix);
+#endif
 
     num_this_level = (voxel_count) d_this_level_index.back();
 
@@ -1588,7 +1593,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
     if (min_level <= l)
     {
       const std::string sort_timer = prefix + "_sort";
-      PerformanceMonitor::start(sort_timer);
+      PERF_MON_START(sort_timer);
 
       timespec time_sort = getCPUTime();
 
@@ -1637,7 +1642,10 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
         HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
        }
 
-      total_sort_time += PerformanceMonitor::stop(sort_timer, prefix, "SortL" + to_string(l, "%02d"));
+#ifdef IC_PERFORMANCE_MONITOR
+// we need the return value, so we need to call the function directly
+    total_sort_time += icl_core::perf_mon::PerformanceMonitor::measurement(sort_timer, "SortL" + to_string(l, "%02d"), prefix);
+#endif
 
 #ifdef FREESPACE_MESSAGES
       LOGGING_DEBUG(OctreeFreespaceLog, "sort(): " << timeDiff(time_sort, getCPUTime()) << " ms" << endl);
@@ -1656,7 +1664,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
 #endif
     num_last_level = num_next_level;
 
-    PerformanceMonitor::stop(temp_timer, prefix, "PackL" + to_string(l, "%02d"));
+    PERF_MON_PRINT_INFO_P(temp_timer, "PackL" + to_string(l, "%02d"), prefix);
 
     if (!PACKING_OF_VOXEL)
       break;
@@ -1666,18 +1674,18 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
   // timings for skipped level to be complete
   for (size_t i = l; i < level_count; ++i)
   {
-    PerformanceMonitor::addData(prefix, "PackL" + to_string(i, "%02d"), 0);
-    PerformanceMonitor::addData(prefix, "SortL" + to_string(i, "%02d"), 0);
-    PerformanceMonitor::addData(prefix, "PackCountKernelL" + to_string(i, "%02d"), 0);
-    PerformanceMonitor::addData(prefix, "MallocL" + to_string(i, "%02d"), 0);
-    PerformanceMonitor::addData(prefix, "PackKernelL" + to_string(i, "%02d"), 0);
+    PERF_MON_ADD_DATA_P("PackL" + to_string(i, "%02d"), 0, prefix);
+    PERF_MON_ADD_DATA_P("SortL" + to_string(i, "%02d"), 0, prefix);
+    PERF_MON_ADD_DATA_P("PackCountKernelL" + to_string(i, "%02d"), 0, prefix);
+    PERF_MON_ADD_DATA_P("MallocL" + to_string(i, "%02d"), 0, prefix);
+    PERF_MON_ADD_DATA_P("PackKernelL" + to_string(i, "%02d"), 0, prefix);
   }
-  PerformanceMonitor::addData(prefix, "SortALL", total_sort_time);
-  PerformanceMonitor::addData(prefix, "PackCountKernelALL", total_count_kernel_time);
-  PerformanceMonitor::addData(prefix, "MallocALL", total_malloc_time);
-  PerformanceMonitor::addData(prefix, "PackKernelALL", total_kernel_time);
+  PERF_MON_ADD_DATA_P("SortALL", total_sort_time, prefix);
+  PERF_MON_ADD_DATA_P("PackCountKernelALL", total_count_kernel_time, prefix);
+  PERF_MON_ADD_DATA_P("MallocALL", total_malloc_time, prefix);
+  PERF_MON_ADD_DATA_P("PackKernelALL", total_kernel_time, prefix);
 
-  PerformanceMonitor::stop(prefix, prefix, "");
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
 
 #ifdef FREESPACE_MESSAGES
   LOGGING_DEBUG(OctreeFreespaceLog, "num_packed_voxel: " << num_packed_voxel << endl);
@@ -1817,8 +1825,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::computeFreeSpace
 
   const std::string prefix = __FUNCTION__;
   const std::string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
 // ### find min/max coordinates ###
   timespec time = getCPUTime();
@@ -1895,16 +1903,14 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::computeFreeSpace
   //printf("sensor origin %u %u %u\n", sensor_origin.x, sensor_origin.y, sensor_origin.z);
 #endif
 
-  PerformanceMonitor::stop(temp_timer, prefix, "RayCastPreparations");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "RayCastPreparations", prefix);
 
   time = getCPUTime();
   kernel_rayInsert<branching_factor, InnerNode> <<<numBlocks, numThreadsPerBlock>>>(sensor_origin,
                                                                                     D_PTR(d_voxel_count),map_properties);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-  PerformanceMonitor::stop(temp_timer, prefix, "RayCast");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "RayCast", prefix);
 
   uint32_t set_to_free = thrust::reduce(d_voxel_count.begin(), d_voxel_count.end());
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
@@ -1912,7 +1918,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::computeFreeSpace
   d_voxel_count.shrink_to_fit();
   uint32_t num_free_voxel = thrust::count_if(d_ptr, d_ptr + map_properties.size, Comp_is_valid<InnerNode>());
 
-  PerformanceMonitor::addData(prefix, "NumFreeVoxel", num_free_voxel);
+  PERF_MON_ADD_DATA_NONTIME_P("NumFreeVoxel", num_free_voxel, prefix);
 
 #ifdef FREESPACE_MESSAGES
   LOGGING_DEBUG(OctreeFreespaceLog, "set_to_free: " << set_to_free << endl);
@@ -2147,8 +2153,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
 {
   const std::string prefix = __FUNCTION__;
   const std::string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
   timespec time = getCPUTime();
   timespec total_time = getCPUTime();
@@ -2195,13 +2201,12 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
   gpu_voxels::Vector3ui sensor_origin_scaled = gpu_voxels::Vector3ui(sensor_origin.x / free_space_scale,
                                                        sensor_origin.y / free_space_scale,
                                                        sensor_origin.z / free_space_scale);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(temp_timer);
 
   if (d_free_space_voxel.size() > 0)
     computeFreeSpaceViaRayCast(d_free_space_voxel, sensor_origin_scaled, h_packed_levels);
 
-  PerformanceMonitor::stop(temp_timer, prefix, "FreeSpaceComputation");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "FreeSpaceComputation", prefix);
 
 #ifdef INSERT_MESSAGES
   LOGGING_DEBUG(OctreeInsertLog, "## computeFreeSpaceViaRayCast(): " << timeDiff(time, getCPUTime()) << " ms ##" << endl);
@@ -2282,8 +2287,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
 //    }
   }
 
-  PerformanceMonitor::stop(temp_timer, prefix, "InsertFreeSpaceVoxel");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "InsertFreeSpaceVoxel", prefix);
 
 #ifdef INSERT_MESSAGES
   LOGGING_DEBUG(OctreeInsertLog, "## insertVoxel(free space): " << timeDiff(time, getCPUTime()) << " ms ##" << endl);
@@ -2336,9 +2340,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
       num_voxel_object,
       uint32_t(log2(float(object_scale))));
 
-  PerformanceMonitor::stop(temp_timer, prefix, "InsertObjectVoxel");
-  PerformanceMonitor::addData(prefix, "NewVoxel", free_space_voxel + num_voxel_object);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_ADD_DATA_NONTIME_P("NewVoxel", free_space_voxel + num_voxel_object, prefix);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "InsertObjectVoxel", prefix);
 
 #ifdef INSERT_MESSAGES
   LOGGING_DEBUG(OctreeInsertLog, "## insertVoxel(occupied): " << timeDiff(time, getCPUTime()) << " ms ##" << endl);
@@ -2371,7 +2374,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
   propagate(free_space_voxel + num_voxel_object);
   cudaProfilerStop();
 
-  PerformanceMonitor::stop(temp_timer, prefix, "Propagate");
+  PERF_MON_PRINT_INFO_P(temp_timer, "Propagate", prefix);
 
 #ifdef INSERT_MESSAGES
   LOGGING_DEBUG(OctreeInsertLog, "## load balancing propagate: " << timeDiff(time, getCPUTime()) << " ms ##" << endl);
@@ -2408,9 +2411,9 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
     }
   }
 
-  PerformanceMonitor::stop(temp_timer, prefix, "FreeMem");
+  PERF_MON_PRINT_INFO_P(temp_timer, "FreeMem", prefix);
 
-  PerformanceMonitor::addData(prefix, "UsedMemOctree", getMemUsage());
+  PERF_MON_ADD_DATA_NONTIME_P("UsedMemOctree", getMemUsage(), prefix);
 
 #if defined(INSERT_MESSAGES) || defined(FEW_MESSAGES)
   LOGGING_DEBUG(OctreeInsertLog, "### insertVoxel(total): " << timeDiff(total_time, getCPUTime()) << " ms ###" << endl);
@@ -2648,10 +2651,10 @@ void NTree<branching_factor, level_count, InnerNode,
 
   const std::string prefix = "rebuild";
   const std::string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(temp_timer);
 
   ++m_rebuild_counter;
-  PerformanceMonitor::addStaticData(prefix, "RebuildCount", m_rebuild_counter);
+  PERF_MON_ADD_STATIC_DATA_P("RebuildCount", m_rebuild_counter, prefix);
 
 #if defined(REBUILD_MESSAGES) || defined(FEW_MESSAGES)
   LOGGING_INFO(OctreeRebuildLog, "\n\n\n ##### rebuild() #####" << endl);
@@ -2712,8 +2715,7 @@ void NTree<branching_factor, level_count, InnerNode,
     gpu_voxels::cuPrintDeviceMemoryInfo();
   }
 
-  PerformanceMonitor::stop(temp_timer, prefix, "ProcessData");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ProcessData", prefix);
 
 #ifdef REBUILD_MESSAGES
   LOGGING_DEBUG(OctreeRebuildLog, "preprocess voxelList(): " <<  timeDiff(time, getCPUTime()) << " ms" << endl);
@@ -2742,8 +2744,7 @@ void NTree<branching_factor, level_count, InnerNode,
 #endif
   }
 
-  PerformanceMonitor::stop(temp_timer, prefix, "InsertVoxel");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "InsertVoxel", prefix);
 
 //// insert LeafNodes
 //  thrust::device_vector<Probability> d_ll_probability(d_last_level.size());
@@ -2764,9 +2765,8 @@ void NTree<branching_factor, level_count, InnerNode,
   propagate();
 #endif
 
-  PerformanceMonitor::stop(temp_timer, prefix, "Propagate");
-  PerformanceMonitor::start(temp_timer);
-  PerformanceMonitor::stop(prefix, prefix, "");
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Propagate", prefix);
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
 
 #ifdef REBUILD_MESSAGES
   LOGGING_DEBUG(OctreeRebuildLog, "insertVoxel(): " <<  timeDiff(time, getCPUTime()) << " ms" << endl);
@@ -2789,11 +2789,11 @@ void NTree<branching_factor, level_count, InnerNode,
 {
   const std::string prefix = __FUNCTION__;
   const std::string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
   ++m_rebuild_counter;
-  PerformanceMonitor::addStaticData(prefix, "RebuildCount", m_rebuild_counter);
+  PERF_MON_ADD_STATIC_DATA_P("RebuildCount", m_rebuild_counter, prefix);
 
 #if defined(REBUILD_MESSAGES) || defined(FEW_MESSAGES)
   printf("\n\n\n ##### rebuild() #####\n");
@@ -2830,13 +2830,11 @@ void NTree<branching_factor, level_count, InnerNode,
 
 #endif
 
-  PerformanceMonitor::stop(temp_timer, prefix, "ExtractCount");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ExtractCount", prefix);
 
   thrust::device_vector<NodeData> d_node_data(needed_size);
 
-  PerformanceMonitor::stop(temp_timer, prefix, "Malloc");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Malloc", prefix);
 
   typedef LoadBalancer::Extract<
          branching_factor,
@@ -2854,8 +2852,7 @@ void NTree<branching_factor, level_count, InnerNode,
   load_balancer.run();
   uint32_t num_cubes = load_balancer.m_num_elements;
 
-  PerformanceMonitor::stop(temp_timer, prefix, "Extract");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Extract", prefix);
 
 #ifdef REBUILD_MESSAGES
   printf("num_cubes %u\n", num_cubes);
@@ -2912,7 +2909,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate(const 
 {
   const std::string prefix = __FUNCTION__;
   const std::string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
+  PERF_MON_START(prefix);
 
   uint32_t blocks = DEFAULT_PROPAGATE_QUEUE_NTASKS;
 
@@ -2938,7 +2935,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate(const 
       nodes_1 = 128; //10000;
       blocks = linearApprox(blocks_1, nodes_1, blocks_2, nodes_2, num_changed_nodes);
     }
-    PerformanceMonitor::addData(prefix, "LinearApprox", blocks);
+    PERF_MON_ADD_DATA_NONTIME_P("LinearApprox", blocks, prefix);
   }
 
   //blocks = numBlocks;
@@ -2952,7 +2949,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate(const 
       this,
       blocks);
   load_balancer.run();
-  PerformanceMonitor::stop(temp_timer, prefix, "");
+  PERF_MON_PRINT_INFO_P(temp_timer, "", prefix);
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
@@ -3238,7 +3235,7 @@ bool NTree<branching_factor, level_count, InnerNode, LeafNode>::deserialize(std:
 
   const std::string prefix = "rebuild";
   const std::string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
+  PERF_MON_START(prefix);
 
   this->numBlocks = numBlocks;
   this->numThreadsPerBlock = numThreadsPerBlock;

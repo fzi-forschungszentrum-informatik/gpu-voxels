@@ -134,9 +134,9 @@ bool XMLInterpreter::getDataContext(DataContext* context, std::string name)
   {
     context->m_occupancy_threshold = (uint8_t) threshold;
   }
-  uint32_t i = 0;
+  bool found_something = false;
   // get the colors for all the specified types
-  while (true)
+  for (size_t i=0; i < MAX_DRAW_TYPES; ++i)
   {
     std::string pt = "type_" + boost::lexical_cast<std::string>(i);
     glm::vec4 color;
@@ -146,19 +146,16 @@ bool XMLInterpreter::getDataContext(DataContext* context, std::string name)
       colors.first = color;
       colors.second = color;
       context->m_colors[i] = colors;
+      found_something = true;
     }
     else if (getColorPairFromXML(colors, c_path / pt))
     {
       context->m_colors[i] = colors;
+      found_something = true;
     }
-    else
-    {
-      break;
-    }
-    i++;
   }
-  // if i == 0, than no colors have been found for this voxel map
-  return i;
+  // if found_something == false, than no colors have been found for this voxel map
+  return found_something;
 }
 /**
  * Fills the VoxelmapContext with colors from the XML file.
@@ -410,11 +407,12 @@ Camera_gpu * XMLInterpreter::getCameraFromXML()
     camera_focus = camera_focus - glm::vec3(10);
   }
 
+  float hor_angle = glm::radians(icl_core::config::getDefault<float>((c_path / "horizontal_angle").string(), 28.64788f));
+  float vert_angle = glm::radians(icl_core::config::getDefault<float>((c_path / "vertical_angle").string(), 0.f));
+  float fov = glm::radians(icl_core::config::getDefault<float>((c_path / "field_of_view").string(), 60));
+
   Camera_gpu::CameraContext context = Camera_gpu::CameraContext(
-      camera_position, camera_focus,
-      icl_core::config::getDefault<float>((c_path / "horizontal_angle").string(), .5f),
-      icl_core::config::getDefault<float>((c_path / "vertical_angle").string(), 0.f),
-      icl_core::config::getDefault<float>((c_path / "field_of_view").string(), 60.f));
+      camera_position, camera_focus, hor_angle, vert_angle, fov);
 
   float width = icl_core::config::getDefault<float>((c_path / "window_width").string(), 1024.f);
   float height = icl_core::config::getDefault<float>((c_path / "window_height").string(), 768.f);

@@ -523,6 +523,27 @@ __device__ __host__
 }
 
 __device__ __host__
+   inline Vector3f minVec(const Vector3f& a, const Vector3f& b)
+{
+  Vector3f result;
+  result.x = a.x < b.x ? a.x : b.x;
+  result.y = a.y < b.y ? a.y : b.y;
+  result.z = a.z < b.z ? a.z : b.z;
+  return result;
+}
+
+__device__ __host__
+   inline Vector3f maxVec(const Vector3f& a, const Vector3f& b)
+{
+  Vector3f result;
+  result.x = a.x < b.x ? b.x : a.x;
+  result.y = a.y < b.y ? b.y : a.y;
+  result.z = a.z < b.z ? b.z : a.z;
+  return result;
+}
+
+
+__device__ __host__
    inline Vector3f operator+(const Vector3f& a, const Vector3f& b)
 {
   Vector3f result;
@@ -769,18 +790,6 @@ struct MetaPointCloudStruct
     {
     }
 };
-
-/*!
- * \brief centerPointCloud Centers a pointcloud relative to its maximum coordinates
- * \param points Working cloud
- */
-void centerPointCloud(std::vector<Vector3f> &points);
-
-/*!
- * \brief shiftPointCloudToZero Moves a pointcloud, so that its minimum coordinates are shifted to zero.
- * \param points Working cloud
- */
-void shiftPointCloudToZero(std::vector<Vector3f> &points);
 
 } // end of namespace
 #endif

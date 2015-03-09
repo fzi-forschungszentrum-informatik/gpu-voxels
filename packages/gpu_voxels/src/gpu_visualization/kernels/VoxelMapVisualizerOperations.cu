@@ -86,7 +86,7 @@ namespace visualization {
                 {
                   index = index + vbo_offsets[prefix];
 
-                  vbo[index] = make_float4(x, z, y, dim_super_voxel.x);
+                  vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
                   // write the lower left front corner of the super voxel into the vbo as its translation
                   // use the z as height so switch z and y
                   found = true;
@@ -177,7 +177,7 @@ namespace visualization {
                   {
                     index = index + vbo_offsets[prefix];
 
-                    vbo[index] = make_float4(x, z, y, dim_super_voxel.x);
+                    vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
                     // write the lower left front corner of the super voxel into the vbo as its translation
                     // use the z as height so switch z and y
                     found = true;
@@ -198,7 +198,7 @@ namespace visualization {
 //              {
 //                index = index + vbo_offsets[prefix];
 //
-//                vbo[index] = make_float4(x, z, y, dim_super_voxel.x);
+//                vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
 //                // write the lower left front corner of the super voxel into the vbo as its translation
 //                // use the z as height so switch z and y
 //                found = true;
@@ -240,7 +240,7 @@ namespace visualization {
       float y = cube->m_position.y;
       float z = cube->m_position.z;
       float w = cube->m_side_length;
-      vbo[index] = make_float4(x, z, y, w);
+      vbo[index] = make_float4(x, y, z, w);
       // write the position and the scale factor into the vbo
       // use the z as height so switch z and y
     }

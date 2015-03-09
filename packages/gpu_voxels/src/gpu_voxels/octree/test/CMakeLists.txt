@@ -99,6 +99,8 @@ ICMAKER_BUILD_PROGRAM()
 
 # ----- program octree_provider -----
 ICMAKER_SET("octree_provider")
+# enable performance monitor
+add_definitions(-DIC_PERFORMANCE_MONITOR)
 
 ICMAKER_ADD_HEADERS(
   ArgumentHandling.h
@@ -135,6 +137,7 @@ ICMAKER_INTERNAL_DEPENDENCIES(
   gpu_voxels_octree
   gpu_voxels_voxelmap
   icl_core
+  icl_core_performance_monitor
   )
 
 IF(NOT Octomap_FOUND)
@@ -168,6 +171,9 @@ ICMAKER_BUILD_PROGRAM()
 
 # ----- program octree_provider -----
 ICMAKER_SET("octree_bench")
+
+# enable performance monitor
+add_definitions(-DIC_PERFORMANCE_MONITOR)
 
 ICMAKER_ADD_HEADERS(
   ArgumentHandling.h
@@ -205,6 +211,7 @@ ICMAKER_INTERNAL_DEPENDENCIES(
   gpu_voxels_octree
   gpu_voxels_voxelmap
   icl_core
+  icl_core_performance_monitor
   ROS
   )
 

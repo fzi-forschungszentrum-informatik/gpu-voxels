@@ -50,12 +50,6 @@ Kinect::~Kinect()
 
 void Kinect::cloud_callback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr &cloud)
 {
-
-//	m_pcl_cloud = new pcl::PointCloud<pcl::PointXYZRGBA>;
-  pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
-
-
-
   for (uint32_t i=0; i<cloud->points.size(); i++)
   {
     m_data->at(i).x = /*(float)1000.0**/(cloud->points[i].x);
@@ -73,20 +67,7 @@ void Kinect::cloud_callback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr &clou
 
     //printf("kinect point: %f, %f, %f\n", m_data[i].x,m_data[i].y, m_data[i].z);
   }
-  //m_voxelmap->insertSensorData(m_data, m_enable_raycasting, m_cut_real_robot, m_robotmap->getDeviceDataPtr());
-  //m_voxelmap->increaseUpdateCounter();
-
-
-//  if (!m_viewer.wasStopped())
-//  {
-//    m_viewer.showCloud(cloud);
-//  }
 }
-
-//void Kinect::getLastPCStamp()
-//{
-//
-//}
 
 void Kinect::run()
 {
@@ -117,4 +98,4 @@ bool Kinect::isRunning()
   return m_running;
 }
 
-} // end of namespace
+} // end of namespace gpu_voxels

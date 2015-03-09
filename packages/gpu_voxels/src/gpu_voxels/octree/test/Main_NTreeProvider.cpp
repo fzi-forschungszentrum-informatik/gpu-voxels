@@ -36,6 +36,8 @@
 #include <gpu_voxels/octree/EnvNodesProbabilistic.h>
 #include <gpu_voxels/octree/test/OctomapProvider.h>
 
+#include <icl_core_performance_monitor/PerformanceMonitor.h>
+
 #include <boost/thread/barrier.hpp>
 #include <boost/thread.hpp>
 
@@ -227,8 +229,8 @@ int main(int argc, char **argv)
   srand(Test::RAND_SEED);
   srand48(Test::RAND_SEED);
 
-//  PerformanceMonitor::getInstance()->m_all_enabled = true;
-//  PerformanceMonitor::getInstance()->m_print_addData = true;
+  PERF_MON_ENABLE_ALL(true);
+
 
   printf("sizeof(Environment::InnerNode) = %lu\n", sizeof(Environment::InnerNode));
   printf("sizeof(Environment::LeafNode) = %lu\n", sizeof(Environment::LeafNode));

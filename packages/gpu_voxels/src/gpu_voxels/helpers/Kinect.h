@@ -57,7 +57,6 @@ public:
 
 private:
 
-  //pcl::visualization::CloudViewer m_viewer;
   pcl::Grabber* m_interface;
   std::vector<Vector3f> *m_data;
 

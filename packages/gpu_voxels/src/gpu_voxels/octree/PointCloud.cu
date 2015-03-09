@@ -25,6 +25,8 @@
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/cuda_handling.h>
 
+#include <icl_core_performance_monitor/PerformanceMonitor.h>
+
 #include <algorithm>    // std::random_shuffle
 
 using namespace std;
@@ -96,8 +98,8 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
 
   const string prefix = __FUNCTION__;
   const string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
   uint32_t num_threads = 128;
   uint32_t num_blocks = num_points / num_threads + 1;
@@ -110,8 +112,7 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
                                                                    resolution);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-  PerformanceMonitor::stop(temp_timer, prefix, "ToWorldCoordinates");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ToWorldCoordinates", prefix);
 
   // TODO: try to get rid of this sorting step since it consumes the most time of this task; sorting this small sets is quite slow
 
@@ -151,8 +152,7 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
     d_tmp_voxel_id = h_tmp_voxel_id;
   }
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  PerformanceMonitor::stop(temp_timer, prefix, "SortByMorton");
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "SortByMorton", prefix);
 
   num_threads = 32; //have to use max. 32 threads for kernel_voxelize()
   num_blocks = num_points / num_threads + 1;
@@ -183,9 +183,9 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
   D_PTR(d_voxel),
   d_sensor);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  PerformanceMonitor::stop(temp_timer, prefix, "Voxelize");
-  PerformanceMonitor::addData(prefix, "NumVoxel", num_voxel);
-  PerformanceMonitor::stop(prefix, prefix, "");
+  PERF_MON_PRINT_INFO_P(temp_timer, "Voxelize", prefix);
+  PERF_MON_ADD_DATA_NONTIME_P("NumVoxel", num_voxel, prefix);
+  PERF_MON_PRINT_INFO_P(prefix, "", prefix);
   return num_voxel;
 #undef SORT_ON_GPU
 }

@@ -27,7 +27,8 @@
 
 #include "OctomapProvider.h"
 #include <gpu_voxels/octree/PointCloud.h>
-#include <gpu_voxels/octree/PerformanceMonitor.h>
+
+#include <icl_core_performance_monitor/PerformanceMonitor.h>
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 
@@ -73,7 +74,7 @@ void OctomapProvider::init(Provider_Parameter& parameter)
 
   //octomap::Pointcloud* point_cloud = toOctoPointCloud(&parameter.points[0], parameter.points.size());
 
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(temp_timer);
 
   // manual insert
   for(uint32_t j = 0; j < parameter.points.size(); ++j)
@@ -90,14 +91,14 @@ void OctomapProvider::init(Provider_Parameter& parameter)
   //m_octree->insertPointCloud(*point_cloud, sensor, -1, true, true);
   m_octree->updateInnerOccupancy();
 
-  PerformanceMonitor::stop(temp_timer, prefix , "Build");
+  PERF_MON_PRINT_INFO_P(temp_timer, "Build", prefix);
 
   //delete point_cloud;
 
-  PerformanceMonitor::addStaticData(prefix, "Mem", m_octree->memoryUsage());
-  PerformanceMonitor::addStaticData(prefix, "LeafNodes", m_octree->getNumLeafNodes());
-  PerformanceMonitor::addStaticData(prefix, "NodeSize", m_octree->memoryUsageNode());
-  PerformanceMonitor::addStaticData(prefix, "TotalNodes", m_octree->calcNumNodes());
+  PERF_MON_ADD_STATIC_DATA_P("Mem", m_octree->memoryUsage(), prefix);
+  PERF_MON_ADD_STATIC_DATA_P("LeafNodes", m_octree->getNumLeafNodes(), prefix);
+  PERF_MON_ADD_STATIC_DATA_P("NodeSize", m_octree->memoryUsageNode(), prefix);
+  PERF_MON_ADD_STATIC_DATA_P("TotalNodes", m_octree->calcNumNodes(), prefix);
 
 //  Provider::init(parameter);
 //
@@ -172,7 +173,7 @@ void OctomapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const u
   octomap::point3d sensor(0, 0, 0);
   printf("size: %lu\n", point_cloud->size());
 
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(temp_timer);
 
   double max_range = -1;
   if(m_parameter->sensor_max_range > 0)
@@ -181,8 +182,8 @@ void OctomapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const u
   m_octree->insertPointCloud(*point_cloud, sensor, max_range, true, true);
   m_octree->updateInnerOccupancy();
 
-  PerformanceMonitor::stop(temp_timer, prefix , "OctomapInsert");
-  PerformanceMonitor::addData(prefix , "UsedMemOctomap", m_octree->memoryUsage());
+  PERF_MON_PRINT_INFO_P(temp_timer, "OctomapInsert", prefix);
+  PERF_MON_ADD_DATA_NONTIME_P("UsedMemOctomap", m_octree->memoryUsage(), prefix);
 
   delete point_cloud;
 }

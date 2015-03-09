@@ -32,6 +32,8 @@
 //#include <gpu_voxels/voxelmap/Voxel.h>
 //#include <gpu_voxels/voxelmap/VoxelMap.hpp>
 
+#include <icl_core_performance_monitor/PerformanceMonitor.h>
+
 using namespace std;
 
 namespace gpu_voxels {
@@ -71,8 +73,8 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
 
   const string prefix = "VoxelMapProvider::" + string(__FUNCTION__);
   const string temp_timer = prefix + "_temp";
-  PerformanceMonitor::start(prefix);
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(prefix);
+  PERF_MON_START(temp_timer);
 
   Provider::init(parameter);
 
@@ -160,7 +162,7 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
       insert_points[i].y = points[i].y * voxel_map_res + voxel_map_res / 2;
       insert_points[i].z = points[i].z * voxel_map_res + voxel_map_res / 2;
     }
-    PerformanceMonitor::start(temp_timer);
+    PERF_MON_START(temp_timer);
   }
   else
   {
@@ -206,10 +208,10 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
 //      }
 //    }
 
-    PerformanceMonitor::stop(temp_timer, prefix, "Build");
+    PERF_MON_PRINT_INFO_P(temp_timer, "Build", prefix);
   }
 
-  PerformanceMonitor::addData(prefix, "UsedMemory", m_voxelMap->getMemorySizeInByte());
+  PERF_MON_ADD_DATA_NONTIME_P("UsedMemory", m_voxelMap->getMemorySizeInByte(), prefix);
 
   m_sensor_orientation = gpu_voxels::Vector3f(0, 0, 0);
   m_sensor_position = gpu_voxels::Vector3f(
@@ -248,7 +250,7 @@ void VoxelMapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const 
       h_point_cloud[i] = sensor.sensorCoordinatesToWorldCoordinates(point);
   }
 
-  PerformanceMonitor::start(temp_timer);
+  PERF_MON_START(temp_timer);
 
   if (voxelmap::ProbVoxelMap* _voxelmap = dynamic_cast<voxelmap::ProbVoxelMap*>(m_voxelMap))
   {
@@ -260,7 +262,7 @@ void VoxelMapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const 
     printf("Voxelmap can't 'insertSensorData()'\n");
   }
 
-  PerformanceMonitor::stop(temp_timer, prefix, "InsertSensorData");
+  PERF_MON_PRINT_INFO_P(temp_timer, "InsertSensorData", prefix);
 }
 
 void VoxelMapProvider::newSensorData(const DepthData* h_depth_data, const uint32_t width,
@@ -294,7 +296,7 @@ void VoxelMapProvider::collide_wo_locking()
 
     if (VoxelMapProvider* _provider = dynamic_cast<VoxelMapProvider*>(m_collide_with))
     {
-      PerformanceMonitor::start(temp_timer);
+      PERF_MON_START(temp_timer);
 
       if (voxelmap::ProbVoxelMap* _voxelmap = dynamic_cast<voxelmap::ProbVoxelMap*>(_provider->getVoxelMap()))
       {
@@ -308,8 +310,8 @@ void VoxelMapProvider::collide_wo_locking()
 
 //      num_collisions = m_voxelMap->collisionCheckWithCounter<voxelmap::Voxel, voxelmap::DefaultCollider>((voxelmap::TemplateVoxelMap<voxelmap::Voxel>*)(voxelmap->m_voxelMap),
 //                                                                                                         voxelmap::DefaultCollider());
-      PerformanceMonitor::stop(temp_timer, prefix, "");
-      PerformanceMonitor::addData(prefix, "NumCollisions", num_collisions);
+      PERF_MON_PRINT_INFO_P(temp_timer, "", prefix);
+      PERF_MON_ADD_DATA_NONTIME_P("NumCollisions", num_collisions, prefix);
       m_changed = true;
       m_collide_with->setChanged(true);
     }

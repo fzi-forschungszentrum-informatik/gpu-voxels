@@ -19,6 +19,9 @@
  * \date    2013-12-2
  *
  *  \brief Camera class for the voxel map visualizer on GPU
+ * This class uses a right hand coordinate system.
+ * In the world the Z axis points upwards.
+ * The camera looks into the direction of positive X. Z points upwards.
  *
  */
 //----------------------------------------------------------------------
@@ -91,14 +94,14 @@ void Camera_gpu::updateViewMatrixFromMouseInput(int32_t xpos, int32_t ypos)
     glm::vec3 up = glm::normalize(glm::cross(direction, right));
     glm::vec3 camFocusVector = getCameraPosition() - target;
 
-    glm::mat4 rotation1 = glm::rotate(glm::degrees(yaw), up);
-    glm::mat4 rotation2 = glm::rotate(glm::degrees(pitch), right);
+    glm::mat4 rotation1 = glm::rotate(glm::mat4(1), yaw, up);
+    glm::mat4 rotation2 = glm::rotate(glm::mat4(1), -pitch, right);
 
     glm::vec3 camFocusRotated = glm::vec3(rotation1 * rotation2 * glm::vec4(camFocusVector, 0));
     glm::vec3 newCamPos = target + camFocusRotated;
 
     direction = -glm::normalize(camFocusRotated);
-    up = glm::vec3(0, 1, 0);
+    up = glm::vec3(0, 0, 1);
     right = glm::cross(direction, up);
 
     m_camera_right = right;
@@ -128,20 +131,12 @@ void Camera_gpu::setCameraTarget(glm::vec3 camera_target)
   updateViewMatrix();
 }
 
-/**
- * Moves the camera along the camera's direction vector.
- * Use negative factor to move in negative direction.
- */
 void Camera_gpu::moveAlongDirection(float factor)
 {
   m_cur_context.camera_position += m_camera_direction * m_speed * factor;
   updateViewMatrix();
 }
-/**
- * Moves the camera along the camera's right vector.
- * Use negative factor to move in negative direction.
- * Is disabled in orbit mode.
- */
+
 void Camera_gpu::moveAlongRight(float factor)
 {
   if (!m_camera_orbit)
@@ -151,11 +146,7 @@ void Camera_gpu::moveAlongRight(float factor)
   }
 
 }
-/**
- * Move the camera along the camera's up vector.
- * Use negative factor to move in negative direction.
- * Is disabled in orbit mode.
- */
+
 void Camera_gpu::moveAlongUp(float factor)
 {
   if (!m_camera_orbit)
@@ -177,33 +168,32 @@ void Camera_gpu::moveFocusPointFromMouseInput(int32_t xpos, int32_t ypos)
   m_mouse_old_y = ypos;
 
   glm::vec3 target = getCameraTarget();
-  target = target - glm::vec3(dx, 0, dy);
+  target = target - glm::vec3(dx, dy, 0);
   setCameraTarget(target);
   updateViewMatrix();
 }
 
-/**
- * Update the view matrix.
- * Call this function if the camera's right or direction vector or the camera position have changed.
- */
+
 void Camera_gpu::updateViewMatrix()
 {
-  // Up vector
   glm::mat4 view;
   if (m_camera_orbit)
   {
+    // Up vector is determined by right vector and view direction
     glm::vec3 up = glm::cross(m_camera_right, m_camera_direction);
+    // Cam looks at target point
     view = glm::lookAt(m_cur_context.camera_position, m_cur_context.camera_target, up);
   }
   else
   {
+    // Up vector is determined by right vector and view direction
     glm::vec3 up = glm::cross(m_camera_right, m_camera_direction);
     view = glm::lookAt(m_cur_context.camera_position, // Camera is here
         m_cur_context.camera_position + m_camera_direction, // and looks here : at the same position, plus "direction"
-        up // Head is up (set to 0,-1,0 to look upside-down)
+        up // Head is up
         );
   }
-  m_view_matrix = view; // * m_rotation_matrix;
+  m_view_matrix = view;
   m_has_view_changed = true;
 }
 
@@ -216,13 +206,16 @@ void Camera_gpu::updateCameraDirection()
 {
   if (m_camera_orbit)
   {
+    // direction points from the camera to the target
     m_camera_direction = glm::normalize(m_cur_context.camera_target - m_cur_context.camera_position);
   }
   else
   {
+    // in free float mode we pan and tilt the cameras direction vector (X)
     m_camera_direction = glm::normalize(
-        glm::vec3(cos(m_cur_context.v_angle) * sin(m_cur_context.h_angle), sin(m_cur_context.v_angle),
-                  cos(m_cur_context.v_angle) * cos(m_cur_context.h_angle)));
+        glm::vec3(cos(m_cur_context.v_angle) * sin(m_cur_context.h_angle),
+                  -cos(m_cur_context.v_angle) * cos(m_cur_context.h_angle),
+                  sin(m_cur_context.v_angle)));
   }
 }
 
@@ -230,11 +223,13 @@ void Camera_gpu::updateCameraRight()
 {
   if (m_camera_orbit)
   {
-    m_camera_right = glm::cross(m_camera_direction, glm::vec3(0.f, 1.0f, 0.f));
+    // the right vector is determined by the direction and the up vector (Z)
+    m_camera_right = glm::cross(m_camera_direction, glm::vec3(0.f, 0.f, 1.f));
   }
   else
   {
-    m_camera_right = glm::vec3(sin(m_cur_context.h_angle - M_PI_2), 0, cos(m_cur_context.h_angle - M_PI_2));
+    // in free float mode the right vector is only panned around the Z axis
+    m_camera_right = glm::vec3(sin(m_cur_context.h_angle - M_PI_2), -cos(m_cur_context.h_angle - M_PI_2), 0 );
   }
 }
 
@@ -255,9 +250,9 @@ void Camera_gpu::printCameraPosDirR()
   std::cout << "    <y> " << m_cur_context.camera_position.y << " </y>" << std::endl;
   std::cout << "    <z> " << m_cur_context.camera_position.z << " </z>" << std::endl;
   std::cout << "  </position>" << std::endl;
-  std::cout << "  <horizontal_angle> " << m_cur_context.h_angle << " </horizontal_angle>" << std::endl;
-  std::cout << "  <vertical_angle> " << m_cur_context.v_angle << " </vertical_angle>" << std::endl;
-  std::cout << "  <field_of_view> " << m_cur_context.foV << " </field_of_view>" << std::endl;
+  std::cout << "  <horizontal_angle> " << glm::degrees(m_cur_context.h_angle) << " </horizontal_angle> <!-- given in Deg -->" << std::endl;
+  std::cout << "  <vertical_angle> " << glm::degrees(m_cur_context.v_angle) << " </vertical_angle> <!-- given in Deg -->" << std::endl;
+  std::cout << "  <field_of_view> " << glm::degrees(m_cur_context.foV) << " </field_of_view> <!-- given in Deg -->" << std::endl;
   std::cout << "  <window_width> " << getWindowWidth() << " </window_width>" << std::endl;
   std::cout << "  <window_height> " << getWindowHeight() << " </window_height>" << std::endl;
   std::cout << "</camera>" << std::endl;
