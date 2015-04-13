@@ -32,12 +32,12 @@ GpuVoxelsMap::~GpuVoxelsMap()
 {
 }
 
-bool GpuVoxelsMap::insertPointcloudFromFile(const std::string path, VoxelType voxel_type, const bool shift_to_zero, const Vector3f &offset_XYZ, const float scaling)
+bool GpuVoxelsMap::insertPointcloudFromFile(const std::string path, const bool use_model_path, VoxelType voxel_type, const bool shift_to_zero, const Vector3f &offset_XYZ, const float scaling)
 {
   //load the points into the vector
   std::vector<Vector3f> points;
 
-  if(pointcloud_file_handler.loadPointCloud(path, points, shift_to_zero, offset_XYZ, scaling))
+  if(file_handling::PointcloudFileHandler::Instance()->loadPointCloud(path, use_model_path, points, shift_to_zero, offset_XYZ, scaling))
   {
     insertGlobalData(points, voxel_type);
     return true;

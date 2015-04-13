@@ -61,7 +61,7 @@ KinematicChain::KinematicChain(const std::vector<KinematicLinkSharedPtr> &links,
   for (uint8_t i = 0; i < m_size; i++)
   {
     m_dh_parameters[i] = m_links[i]->getDHParam();
-    m_joint_types[i] = (uint8_t) m_links[i]->getJointType();
+    m_joint_types[i] = m_links[i]->getJointType();
   }
   m_dev_joint_types = m_joint_types;
 
@@ -97,6 +97,8 @@ void KinematicChain::update()
   HANDLE_CUDA_ERROR(
       cudaMemcpy(transformation_dev, &transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
 
+  // Todo: Get rid of this for-loop and move it to within the kernel! So instead of calling the
+  //       Kernel m_size times, call it once and let it loop internaly or parallellize it.
   for (uint8_t i = 0; i < m_size; ++i)
   {
     m_math.computeLinearLoad(m_links_meta_cloud->getPointcloudSize(i), &m_blocks, &m_threads_per_block);
@@ -113,11 +115,8 @@ void KinematicChain::update()
     // Sending the actual transformation for this link to the GPU.
     // This means the Transformation for link i is not applied to link i, but to link i+1, i+2...
 
-    KinematicLink::DHParameters dh_parameter = m_links[i]->getDHParam();
-    convertDHtoMHost(dh_parameter.theta, dh_parameter.d,
-                     0, // currently only b = 0
-                     dh_parameter.a, dh_parameter.alpha, dh_parameter.value,
-                     (uint8_t) m_links[i]->getJointType(), dh_transformation);
+    m_links[i]->getMatrixRepresentation(dh_transformation);
+
     transformation = transformation * dh_transformation;
     HANDLE_CUDA_ERROR(
         cudaMemcpy(transformation_dev, &transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
@@ -151,54 +150,6 @@ void KinematicChain::setConfiguration(std::vector<float> joint_values)
     m_links[i]->setJointValue(joint_values[i]);
   }
   update();
-}
-
-void KinematicChain::convertDHtoMHost(float theta, float d, float b, float a, float alpha, float q,
-                                      uint8_t joint_type, Matrix4f& m)
-{
-//  printf("theta, d, a, alpha : \t%f, %f, %f, %f\n", theta, d, a, alpha);
-  float ca = 0;
-  float sa = 0;
-  float ct = 0;
-  float st = 0;
-
-  if (joint_type == KinematicLink::PRISMATIC) /* Prismatic joint */
-  {
-    d += q;
-  }
-  else /* Revolute joint */
-  {
-    if (joint_type != KinematicLink::REVOLUTE)
-    {
-      LOGGING_ERROR_C(RobotLog, KinematicChain, "Illegal joint type" << endl);
-    }
-    theta += q;
-  }
-
-  ca = (float) cos(alpha);
-  sa = (float) sin(alpha);
-  ct = (float) cos(theta);
-  st = (float) sin(theta);
-
-  m.a11 = ct;
-  m.a12 = -st * ca;
-  m.a13 = st * sa;
-  m.a14 = a * ct - b * st;
-
-  m.a21 = st;
-  m.a22 = ct * ca;
-  m.a23 = -ct * sa;
-  m.a24 = a * st + b * ct;
-
-  m.a31 = 0.0;
-  m.a32 = sa;
-  m.a33 = ca;
-  m.a34 = d;
-
-  m.a41 = 0.0;
-  m.a42 = 0.0;
-  m.a43 = 0.0;
-  m.a44 = 1.0;
 }
 
 /* private helper functions */

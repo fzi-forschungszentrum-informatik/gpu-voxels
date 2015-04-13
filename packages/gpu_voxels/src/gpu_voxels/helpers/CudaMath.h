@@ -28,6 +28,89 @@
 
 namespace gpu_voxels {
 
+
+__host__ __device__
+inline gpu_voxels::Matrix4f roll(float angle)
+{
+  gpu_voxels::Matrix4f m;
+  m.a11 = 1;
+  m.a12 = 0;
+  m.a13 = 0;
+  m.a14 = 0;
+  m.a21 = 0;
+  m.a22 = cos(angle);
+  m.a23 = sin(angle);
+  m.a24 = 0;
+  m.a31 = 0;
+  m.a32 = -sin(angle);
+  m.a33 = cos(angle);
+  m.a34 = 0;
+  m.a41 = 0;
+  m.a42 = 0;
+  m.a43 = 0;
+  m.a44 = 1;
+  return m;
+}
+
+__host__ __device__
+inline gpu_voxels::Matrix4f pitch(float angle)
+{
+  gpu_voxels::Matrix4f m;
+  m.a11 = cos(angle);
+  m.a12 = 0;
+  m.a13 = sin(angle);
+  m.a14 = 0;
+  m.a21 = 0;
+  m.a22 = 1;
+  m.a23 = 0;
+  m.a24 = 0;
+  m.a31 = -sin(angle);
+  m.a32 = 0;
+  m.a33 = cos(angle);
+  m.a34 = 0;
+  m.a41 = 0;
+  m.a42 = 0;
+  m.a43 = 0;
+  m.a44 = 1;
+  return m;
+}
+
+__host__ __device__
+inline gpu_voxels::Matrix4f yaw(float angle)
+{
+  gpu_voxels::Matrix4f m;
+  m.a11 = cos(angle);
+  m.a12 = sin(angle);
+  m.a13 = 0;
+  m.a14 = 0;
+  m.a21 = -sin(angle);
+  m.a22 = cos(angle);
+  m.a23 = 0;
+  m.a24 = 0;
+  m.a31 = 0;
+  m.a32 = 0;
+  m.a33 = 1;
+  m.a34 = 0;
+  m.a41 = 0;
+  m.a42 = 0;
+  m.a43 = 0;
+  m.a44 = 1;
+  return m;
+}
+
+__host__ __device__
+inline gpu_voxels::Matrix4f rotateYPR(float _yaw, float _pitch, float _roll)
+{
+  return yaw(_yaw) * (pitch(_pitch) * roll(_roll));
+}
+
+__host__ __device__
+inline gpu_voxels::Matrix4f rotateRPY(float _yaw, float _pitch, float _roll)
+{
+  return roll(_roll) * (pitch(_pitch) * yaw(_yaw));
+}
+
+
 /*!
  * \brief CUDA class CudaMath
  *

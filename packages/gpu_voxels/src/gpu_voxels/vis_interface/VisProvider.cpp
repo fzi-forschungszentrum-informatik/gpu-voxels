@@ -28,11 +28,11 @@ using namespace boost::interprocess;
 
 VisProvider::VisProvider(std::string segment_name, std::string map_name)
   : m_segment(),
+    m_visualizer_segment(),
     m_segment_name(segment_name),
     m_map_name(map_name),
     m_shm_mapName(),
-    m_shm_draw_types(NULL),
-    m_visualizer_segment()
+    m_shm_draw_types(NULL)
 {
 }
 

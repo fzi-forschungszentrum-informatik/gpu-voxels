@@ -101,14 +101,14 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
 
 }
 
-MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_files)
+MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_files, const bool use_model_path)
 {
   std::vector<std::vector<Vector3f> > *point_clouds = new std::vector<std::vector<Vector3f> >(
       _point_cloud_files.size());
 
   for (size_t i = 0; i < _point_cloud_files.size(); i++)
   {
-    if(!pointcloud_file_handler.loadPointCloud(_point_cloud_files.at(i), point_clouds->at(i)))
+    if(!file_handling::PointcloudFileHandler::Instance()->loadPointCloud(_point_cloud_files.at(i), use_model_path, point_clouds->at(i)))
     {
       LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud,
                       "Could not read file " << _point_cloud_files.at(i) << icl_core::logging::endl);

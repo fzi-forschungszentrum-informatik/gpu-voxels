@@ -390,9 +390,9 @@ Camera_gpu * XMLInterpreter::getCameraFromXML()
 {
   boost::filesystem::path c_path("/camera");
   glm::vec3 camera_position = glm::vec3(
-      icl_core::config::getDefault<float>((c_path / "position/x").string(), 0.f),
-      icl_core::config::getDefault<float>((c_path / "position/y").string(), 10.f),
-      icl_core::config::getDefault<float>((c_path / "position/z").string(), 0.f));
+      icl_core::config::getDefault<float>((c_path / "position/x").string(), -100.f),
+      icl_core::config::getDefault<float>((c_path / "position/y").string(), -100.f),
+      icl_core::config::getDefault<float>((c_path / "position/z").string(), 100.f));
 
   glm::vec3 camera_focus; //= glm::vec3(icl_core::config::getDefault<float>((c_path / "focus/x").string(), 0.f),
 //                                     icl_core::config::getDefault<float>((c_path / "focus/y").string(), 0.f),
@@ -407,8 +407,8 @@ Camera_gpu * XMLInterpreter::getCameraFromXML()
     camera_focus = camera_focus - glm::vec3(10);
   }
 
-  float hor_angle = glm::radians(icl_core::config::getDefault<float>((c_path / "horizontal_angle").string(), 28.64788f));
-  float vert_angle = glm::radians(icl_core::config::getDefault<float>((c_path / "vertical_angle").string(), 0.f));
+  float hor_angle = glm::radians(icl_core::config::getDefault<float>((c_path / "horizontal_angle").string(), 135));
+  float vert_angle = glm::radians(icl_core::config::getDefault<float>((c_path / "vertical_angle").string(), -10));
   float fov = glm::radians(icl_core::config::getDefault<float>((c_path / "field_of_view").string(), 60));
 
   Camera_gpu::CameraContext context = Camera_gpu::CameraContext(

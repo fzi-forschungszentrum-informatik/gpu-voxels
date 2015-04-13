@@ -73,8 +73,8 @@ public:
   virtual void run();
 
   /**
-   * @brief getIdleCountThreshold
-   * @return Returns the number of idle tasks when a load balancing step is introduced.
+   * @brief getIdleCountThreshold calculated from \code IDLE_THESHOLD * NUM_TASKS \endcode
+   * @return Returns the maximum allowed number of idle tasks for a load balancing step. Minimum is 1.
    */
   uint32_t getIdleCountThreshold();
 

@@ -53,7 +53,6 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertGlobalD
   else
   {
     // Copy points to gpu and tranform to voxel coordinates
-    size_t num_points = point_cloud.end() - point_cloud.begin();
     thrust::host_vector<Vector3f> h_points(point_cloud.begin(), point_cloud.end());
     thrust::device_vector<Vector3ui> d_voxels;
     this->toVoxelCoordinates(h_points, d_voxels);
@@ -86,7 +85,7 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
   const bool save_collisions = true;
   const uint32_t min_level = resolution_level;
 
-  if (type == MT_OCTREE)
+  if (type == MT_BITVECTOR_OCTREE)
   {
     NTreeDet* _ntree = dynamic_cast<NTreeDet*>(map);
     if (_ntree == NULL)
@@ -115,7 +114,7 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
 //    num_collisions = this->template intersect_load_balance<VOXELMAP_FLAG_SIZE, true, false, gpu_voxels::Voxel, true>(
 //        *_voxelmap);
   }
-  else if (type == MT_BIT_VOXELMAP)
+  else if (type == MT_BITVECTOR_VOXELMAP)
   {
     voxelmap::BitVectorVoxelMap* _voxelmap = dynamic_cast<voxelmap::BitVectorVoxelMap*>(map);
     if (_voxelmap == NULL)
@@ -124,7 +123,7 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
     //    num_collisions = this->template intersect_load_balance<VOXELMAP_FLAG_SIZE, true, false, gpu_voxels::Voxel, true>(
     //        *_voxelmap);
   }
-  else if (type == MT_OCTREE_VOXELLIST || type == MT_PROBAB_OCTREE_VOXELLIST)
+  else if (type == MT_BITVECTOR_MORTON_VOXELLIST || type == MT_PROBAB_MORTON_VOXELLIST)
   {
     VoxelList<VOXELLIST_FLAGS_SIZE> *_voxellist = dynamic_cast<VoxelList<VOXELLIST_FLAGS_SIZE>*>(map);
     if (_voxellist == NULL)
@@ -134,7 +133,7 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
 
     num_collisions = this->template intersect<VOXELLIST_FLAGS_SIZE, true, false>(*_voxellist);
   }
-  else if (type == MT_VOXELLIST || type == MT_PROBAB_VOXELLIST)
+  else if (type == MT_BITVECTOR_VOXELLIST || type == MT_PROBAB_VOXELLIST)
     LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
   else
     LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
@@ -150,7 +149,7 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
   GpuVoxelsMap* map = other.get();
   MapType type = map->getMapType();
 
-  if (type == MT_BIT_VOXELMAP)
+  if (type == MT_BITVECTOR_VOXELMAP)
   {
     voxelmap::BitVectorVoxelMap* _voxelmap = dynamic_cast<voxelmap::BitVectorVoxelMap*>(map);
     if (_voxelmap == NULL)

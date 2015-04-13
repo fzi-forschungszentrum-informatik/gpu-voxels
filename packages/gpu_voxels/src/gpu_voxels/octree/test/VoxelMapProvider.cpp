@@ -29,6 +29,7 @@
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/common_defines.h>
+#include <gpu_voxels/helpers/CudaMath.h>
 //#include <gpu_voxels/voxelmap/Voxel.h>
 //#include <gpu_voxels/voxelmap/VoxelMap.hpp>
 
@@ -181,7 +182,7 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
     }
     case Provider_Parameter::eMT_BitVector:
     {
-      m_voxelMap = new gpu_voxels::voxelmap::BitVectorVoxelMap(map_dim.x, map_dim.y, map_dim.z, voxel_map_res, MT_BIT_VOXELMAP);
+      m_voxelMap = new gpu_voxels::voxelmap::BitVectorVoxelMap(map_dim.x, map_dim.y, map_dim.z, voxel_map_res, MT_BITVECTOR_VOXELMAP);
       break;
     }
     default:
@@ -234,12 +235,12 @@ void VoxelMapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const 
   orientation.setIdentity();
   gpu_voxels::Vector3f temp = m_sensor_orientation;
 #ifdef MODE_KINECT
-  orientation = rotate(KINECT_ORIENTATION.z, KINECT_ORIENTATION.y, KINECT_ORIENTATION.x);
+  orientation = gpu_voxels::rotateYPR(KINECT_ORIENTATION.z, KINECT_ORIENTATION.y, KINECT_ORIENTATION.x);
   temp.z *= -1; // invert to fix the incorrect positioning for ptu-mode
 #endif
 
   Sensor sensor;
-  sensor.orientation = rotate(temp.z, temp.y, temp.x) * sensor.orientation;
+  sensor.orientation = gpu_voxels::rotateYPR(temp.z, temp.y, temp.x) * sensor.orientation;
   sensor.position = m_sensor_position;
 
 // transform points in world corrdinates

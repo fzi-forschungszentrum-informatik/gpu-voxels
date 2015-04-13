@@ -297,7 +297,7 @@ public:
       if (clear_collision_flag)
       {
         if (variables.is_active)
-          node->setStatus(EnumNodeStatus(node->getStatus() & ~ns_COLLISION));
+          node->setStatus(node->getStatus() & ~ns_COLLISION);
       }
 
       // ### handle LeafNodes ###

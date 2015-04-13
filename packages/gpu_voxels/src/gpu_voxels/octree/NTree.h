@@ -310,7 +310,7 @@ public:
 //        else
 //          tmp = ns_FREE;
 //      }
-//      c.m_type = statusToVoxelType(EnumNodeStatus(tmp));
+//      c.m_type = statusToVoxelType(tmp);
 //      return c;
 //    }
 //  };

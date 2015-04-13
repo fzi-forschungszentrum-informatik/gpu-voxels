@@ -104,6 +104,13 @@
 namespace gpu_voxels {
 namespace NTree {
 
+/** This is a construct to avoid warnings about an unused variable
+ * Later on templates are defined from a const bool, which isn't used anywhere else.
+ * These bools are passed to this unused() class.
+ */
+template<class T> void unused(T&)
+{ }
+
 /*
  * #################### Some Helpers ######################
  */
@@ -442,7 +449,9 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
 // Sort input voxel
 // implements radix sort for primitive types and default comparator
 // complexity O(N/P)
+#ifdef _IC_DEBUG_
   timespec time = getCPUTime();
+#endif
 // Throughput of max 690 MKey/s (Key is 8 Byte) thats only about 5.1 GB/s
 // Radixsort is implemented in thrust see http://code.google.com/p/back40computing/wiki/RadixSorting#Performance
 // There are also performance charts which are conform to my measured performance
@@ -845,7 +854,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
   set_collision_flag,
   compute_voxelTypeFlags,
   VoxelType>
-  <<<numBlocks, numThreadsPerBlock>>>
+  <<<numBlocks, numThreadsPerBlock, numThreadsPerBlock*sizeof(VoxelType)>>>
       (m_root,
       voxel_map.getDeviceDataPtr(),
       voxel_map.getVoxelMapSize(),
@@ -1289,7 +1298,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map_an
       numBlocks,
       NUM_THREADS_PER_BLOCK>>>(D_PTR(d_num_voxel_this_level),
   D_PTR(d_num_voxel_next_level), map_properties, D_PTR(d_this_level_index), D_PTR(d_next_level_index),
-  d_free_space_this_level, D_PTR(d_free_space_next_level), NULL, NULL, NULL);
+  d_free_space_this_level, D_PTR(d_free_space_next_level), NULL, NULL);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 #ifdef FREESPACE_MESSAGES
@@ -1408,6 +1417,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map_an
     assert(num_free_space == num_this_level + num_next_level * branching_factor);
 
     last_level_sum += num_this_level * uint32_t(std::pow(branching_factor, l));
+    unused(total_num_voxel); // gets used in assert
     assert(last_level_sum + num_next_level * uint32_t(std::pow(branching_factor, l + 1)) == total_num_voxel);
 
     //break;
@@ -1466,7 +1476,10 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
   PERF_MON_START(prefix);
   PERF_MON_START(temp_timer);
 
-  timespec time, time_total = getCPUTime();
+#if defined FREESPACE_MESSAGES && defined _IC_DEBUG_
+  timespec time_total = getCPUTime();
+  timespec time;
+#endif
   thrust::device_vector<voxel_count> d_num_voxel_this_level(numBlocks + 1);
   thrust::device_vector<voxel_count> d_num_voxel_next_level(numBlocks + 1);
   voxel_count num_next_level = 1;
@@ -1485,7 +1498,9 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
     d_num_voxel_this_level.back() = 0;
     d_num_voxel_next_level.back() = 0;
 
+#if defined FREESPACE_MESSAGES && defined _IC_DEBUG_
     time = getCPUTime();
+#endif
     kernel_packMortonL0Map<NUM_THREADS_PER_BLOCK, branching_factor, true, true, PACKING_OF_VOXEL, InnerNode>
     <<<numBlocks, NUM_THREADS_PER_BLOCK>>>(
         D_PTR(d_num_voxel_this_level),
@@ -1504,8 +1519,10 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
     LOGGING_DEBUG(OctreeFreespaceLog, "kernel_packByteMap(counting): " << timeDiff(time, getCPUTime()) << " ms" << endl);
     //printf("level %u\n", l);
     //printf("kernel_packByteMap(counting): %f ms\n", timeDiff(time, getCPUTime()));
-#endif
+#ifdef _IC_DEBUG_
     time = getCPUTime();
+#endif
+#endif
     uint32_t num_this_level =
         (min_level > l) ? 0 : thrust::reduce(d_num_voxel_this_level.begin(), d_num_voxel_this_level.end());
     num_next_level = thrust::reduce(d_num_voxel_next_level.begin(), d_num_voxel_next_level.end());
@@ -1515,9 +1532,11 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
     LOGGING_DEBUG(OctreeFreespaceLog, "thrust::reduce(): " << timeDiff(time, getCPUTime()) << " ms" << endl);
     //printf("num_this_level: %u num_next_level: %u\n", num_this_level, num_next_level);
     //printf("thrust::reduce(): %f ms\n", timeDiff(time, getCPUTime()));
-#endif
-
+#ifdef _IC_DEBUG_
     time = getCPUTime();
+#endif
+#endif
+    unused(num_last_level);
     assert(num_last_level == (num_this_level + num_next_level * branching_factor));
     last_level_sum += num_this_level * uint32_t(std::pow(branching_factor, l));
     assert(last_level_sum + num_next_level * uint32_t(std::pow(branching_factor, l + 1)) == num_free_voxel);
@@ -1555,9 +1574,11 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
     //printf("malloc/memset: %f ms\n", timeDiff(time, getCPUTime()));
     //printf("next_level_map\n");
     //cout << next_level_map;
+#ifdef _IC_DEBUG_
+    time = getCPUTime();
+#endif
 #endif
 
-    time = getCPUTime();
     kernel_packMortonL0Map<NUM_THREADS_PER_BLOCK, branching_factor, false, true, PACKING_OF_VOXEL, InnerNode>
     <<<numBlocks, NUM_THREADS_PER_BLOCK>>>(
         D_PTR(d_num_voxel_this_level),
@@ -1587,15 +1608,18 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
     LOGGING_DEBUG(OctreeFreespaceLog, "this level: " << num_this_level << endl);
     //printf("kernel_packByteMap(): %f ms\n", timeDiff(time, getCPUTime()));
     //printf("this level: %u\n", num_this_level);
+#ifdef _IC_DEBUG_
+    time = getCPUTime();
+#endif
 #endif
 
-    time = getCPUTime();
     if (min_level <= l)
     {
       const std::string sort_timer = prefix + "_sort";
       PERF_MON_START(sort_timer);
-
+#if defined FREESPACE_MESSAGES && defined _IC_DEBUG_
       timespec time_sort = getCPUTime();
+#endif
 
       // sort with CUB for small problem sizes
       // thrust performs better for large ones
@@ -1912,7 +1936,9 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::computeFreeSpace
 
   PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "RayCast", prefix);
 
+#if defined FREESPACE_MESSAGES && defined _IC_DEBUG_
   uint32_t set_to_free = thrust::reduce(d_voxel_count.begin(), d_voxel_count.end());
+#endif
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   d_voxel_count.clear();
   d_voxel_count.shrink_to_fit();
@@ -2097,8 +2123,10 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
 // ##### insert voxel ######
 #ifdef LOAD_BALANCING_PROPAGATE
   const bool update_Flag = true;
+  unused(update_Flag);
 #else
   const bool update_Flag = false;
+  unused(update_Flag);
 #endif
   LOGGING_INFO(OctreeInsertLog, "\ninsert voxel" << endl);
   //printf("\ninsert voxel \n");
@@ -2157,7 +2185,11 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
   PERF_MON_START(temp_timer);
 
   timespec time = getCPUTime();
+#if defined(INSERT_MESSAGES) || defined(FEW_MESSAGES)
+#ifdef _IC_DEBUG_
   timespec total_time = getCPUTime();
+#endif
+#endif
 
   assert((free_space_resolution % m_resolution) == 0);
   assert(
@@ -2223,8 +2255,10 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
 
 #ifdef LOAD_BALANCING_PROPAGATE
   const bool update_Flag = true;
+  unused(update_Flag);
 #else
   const bool update_Flag = false;
+  unused(update_Flag);
 #endif
 
 // ##### insert free space #####
@@ -2425,7 +2459,9 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate_bottom_up(
     thrust::device_vector<Voxel>& d_voxel_vector, uint32_t level)
 {
+#ifdef _IC_DEBUG_
   timespec time = getCPUTime();
+#endif
   voxel_count num_voxel = d_voxel_vector.size();
   thrust::device_vector<VoxelID> d_voxel_id(num_voxel);
 
@@ -2457,10 +2493,14 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate_bottom
 #endif
 
   // propagate bottom up level by level
+#if defined PROPAGATE_MESSAGES && defined _IC_DEBUG_
   timespec time = getCPUTime();
+#endif
   for (uint32_t l = level; l < level_count - 1; ++l)
   {
+#if defined PROPAGATE_MESSAGES && defined _IC_DEBUG_
     timespec time_loop = getCPUTime();
+#endif
 //    kernel_propagate_bottom_up<branching_factor, level_count, InnerNode, LeafNode> <<<numBlocks,
 //                                                                                      32>>>(
 //        m_root, d_voxel_id, num_voxel, l);
@@ -2502,7 +2542,7 @@ bool NTree<branching_factor, level_count, InnerNode, LeafNode>::checkTree()
   return e;
 }
 
-static int num_extract_call = -1;
+// static int num_extract_call = -1;
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes(
@@ -2516,10 +2556,10 @@ uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes
   if (d_status_selection == NULL)
     d_status_selection = m_extract_status_selection;
 
-  timespec time = getCPUTime();
+#if defined   _IC_DEBUG_ && (defined COUNT_BEFORE_EXTRACT || defined EXTRACTCUBE_MESSAGES)
+ timespec time = getCPUTime();
+#endif
   uint32_t needed_size = m_extract_buffer_size;
-  double balance_overhead;
-  int num_balance_tasks;
 #ifdef COUNT_BEFORE_EXTRACT
   {
   typedef LoadBalancer::Extract<
@@ -2539,9 +2579,7 @@ uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes
   needed_size = load_balancer.m_num_elements;
   }
   LOGGING_DEBUG(OctreeCountBeforeExtractLog, "count: " << timeDiff(time, getCPUTime()) << " ms" << endl);
-  LOGGING_DEBUG(OctreeCountBeforeExtractLog, "count balance overhead: " << balance_overhead << " ms  balance tasks: " << num_balance_tasks << endl);
   //printf("count: %f ms\n", timeDiff(time, getCPUTime()));
-  //printf("count balance overhead: %f ms  balance tasks: %i\n", balance_overhead, num_balance_tasks);
 #endif
   thrust::device_vector<NodeData> d_node_data(needed_size);
   typedef LoadBalancer::Extract<
@@ -2616,10 +2654,7 @@ uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes
                     Trafo_NodeData_to_Cube(mapping));
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-  uint32_t num_coll = thrust::count_if(d_cubes->begin(), d_cubes->end(), Comp_is_collision());
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  //LOGGING_INFO(OctreeLog, "extract num_coll: " << num_coll << endl);
- //printf("extract num_coll: %u\n", num_coll);
 
 //++num_extract_call;
 
@@ -2630,11 +2665,9 @@ uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes
   LOGGING_INFO(OctreeExtractCubeLog, "cubes buffer size " << d_cubes->size() << endl);
   LOGGING_INFO(OctreeExtractCubeLog, "used_size " << used_size << endl);
   LOGGING_INFO(OctreeExtractCubeLog, "extractCubes total: " << timeDiff(time, getCPUTime()) << " ms" << endl);
-  LOGGING_INFO(OctreeExtractCubeLog, "balance overhead: " << balance_overhead << " ms  balance tasks: " << num_balance_tasks << endl);
-//  printf("cubes buffer size %lu\n", d_cubes->size());
-//  printf("used_size %u\n", used_size);
-//  printf("extractCubes total: %f ms\n", timeDiff(time, getCPUTime()));
-//  printf("balance overhead: %f ms  balance tasks: %i\n", balance_overhead, num_balance_tasks);
+  //  printf("cubes buffer size %lu\n", d_cubes->size());
+  //  printf("used_size %u\n", used_size);
+  //  printf("extractCubes total: %f ms\n", timeDiff(time, getCPUTime()));
 #endif
   return used_size;
 }
@@ -2643,10 +2676,14 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 void NTree<branching_factor, level_count, InnerNode,
     LeafNode>::internal_rebuild(thrust::device_vector<NodeData>& d_node_data, const uint32_t num_cubes)
 {
+
+// This throws a -Wunsused-variable at compile time, since this is only used as template parameter.
 #ifdef LOAD_BALANCING_PROPAGATE
   const bool update_Flag = true;
+  unused(update_Flag);
 #else
   const bool update_Flag = false;
+  unused(update_Flag);
 #endif
 
   const std::string prefix = "rebuild";
@@ -2664,16 +2701,19 @@ void NTree<branching_factor, level_count, InnerNode,
 #endif
   gpu_voxels::cuPrintDeviceMemoryInfo();
 
-
+#if defined REBUILD_MESSAGES && defined _IC_DEBUG_
   timespec total_time = getCPUTime();
   timespec time = getCPUTime();
+#endif
   thrust::host_vector<voxel_count> num_per_level(level_count);
-  thrust::host_vector<thrust::device_vector<VoxelID> > h_voxel_lists(level_count);
+  thrust::device_vector<VoxelID> h_voxel_lists[level_count];
 //thrust::device_vector<thrust::pair<NodeStatus, Probability> > d_last_level;
-  thrust::host_vector<thrust::device_vector<BasicData> > h_basic_data(level_count);
+  thrust::device_vector<BasicData>h_basic_data[level_count];
 
   {
+#if defined REBUILD_MESSAGES && defined _IC_DEBUG_
     time = getCPUTime();
+#endif
     thrust::device_vector<NodeData> d_node_data_tmp(num_cubes);
 
     // compute list of voxel_ids for each tree level
@@ -2689,7 +2729,7 @@ void NTree<branching_factor, level_count, InnerNode,
 #endif
 
       // transform to VoxelID
-      h_voxel_lists[l].resize(num_items);
+      h_voxel_lists[l]=thrust::device_vector<VoxelID>(num_items);
       thrust::transform(d_node_data_tmp.begin(), d_node_data_tmp.begin() + num_items,
                         h_voxel_lists[l].begin(), Trafo_NodeData_to_VoxelID());
 
@@ -2704,7 +2744,7 @@ void NTree<branching_factor, level_count, InnerNode,
 //      else
 //      {
       // transform to NodeStatus
-      h_basic_data[l].resize(num_items);
+      h_basic_data[l]=thrust::device_vector<BasicData>(num_items);
       thrust::transform(d_node_data_tmp.begin(), d_node_data_tmp.begin() + num_items, h_basic_data[l].begin(),
                         Trafo_to_BasicData());
       thrust::sort_by_key(h_voxel_lists[l].begin(), h_voxel_lists[l].end(), h_basic_data[l].begin());
@@ -2720,8 +2760,10 @@ void NTree<branching_factor, level_count, InnerNode,
 #ifdef REBUILD_MESSAGES
   LOGGING_DEBUG(OctreeRebuildLog, "preprocess voxelList(): " <<  timeDiff(time, getCPUTime()) << " ms" << endl);
   //printf("preprocess voxelList(): %f ms\n", timeDiff(time, getCPUTime()));
-#endif
+#ifdef _IC_DEBUG_
   time = getCPUTime();
+#endif
+#endif
 
   clear();
 
@@ -2778,7 +2820,7 @@ void NTree<branching_factor, level_count, InnerNode,
   gpu_voxels::cuPrintDeviceMemoryInfo();
 
 #if defined(REBUILD_MESSAGES) || defined(FEW_MESSAGES)
-  LOGGING_DEBUG(OctreeRebuildLog, "#### rebuild(): " <<  timeDiff(time, getCPUTime()) << " ms ####\n\n " << endl);
+  LOGGING_DEBUG(OctreeRebuildLog, "#### rebuild(): " <<  timeDiff(total_time, getCPUTime()) << " ms ####\n\n " << endl);
   //printf("#### rebuild(): %f ms #### \n\n\n", timeDiff(total_time, getCPUTime()));
 #endif
 }
@@ -2801,12 +2843,7 @@ void NTree<branching_factor, level_count, InnerNode,
 #endif
   gpu_voxels::cuPrintDeviceMemoryInfo();
 
-  timespec total_time = getCPUTime();
   timespec time = getCPUTime();
-  thrust::host_vector<voxel_count> num_per_level(level_count);
-  thrust::host_vector<thrust::device_vector<VoxelID> > h_voxel_lists(level_count);
-//thrust::device_vector<thrust::pair<NodeStatus, Probability> > d_last_level;
-  thrust::host_vector<thrust::device_vector<BasicData> > h_basic_data(level_count);
 
   uint32_t needed_size = m_rebuild_buffer_size;
 #ifdef COUNT_BEFORE_EXTRACT
@@ -3167,7 +3204,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::serialize(std::o
   uint32_t num_cubes;
   {
     thrust::device_vector<NodeData> d_node_data(needed_size);
-    MyLBCounter load_balancer(
+    MyLoadBalancer load_balancer(
             this,
             D_PTR(d_node_data),
             needed_size,
@@ -3196,7 +3233,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::serialize(std::o
       out << h_node_data[i] << "\n";
   }
 
-  printf("Serialize done\n");
+  printf("Serialize done: Extracted %u Voxels.\n", num_cubes);
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
@@ -3241,7 +3278,7 @@ bool NTree<branching_factor, level_count, InnerNode, LeafNode>::deserialize(std:
   this->numThreadsPerBlock = numThreadsPerBlock;
   this->m_resolution = resolution;
   internal_rebuild(d_node_data, size);
-  printf("Deserialize done\n");
+  printf("Deserialize done. Loaded %u Cubes (h_node_data size = %lu).\n", size, h_node_data.size());
   return true;
 }
 

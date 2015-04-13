@@ -537,8 +537,7 @@ namespace Test {
 bool readPCD(string file_name, vector<Vector3f>& points, uint32_t& num_points, bool swap_x_z)
 { 
   points.resize(num_points);
-  file_handling::PointcloudFileHandler my_file_handler;
-  my_file_handler.loadPointCloud(file_name, points);
+  file_handling::PointcloudFileHandler::Instance()->loadPointCloud(file_name, false, points);
 
   if (swap_x_z)
   {

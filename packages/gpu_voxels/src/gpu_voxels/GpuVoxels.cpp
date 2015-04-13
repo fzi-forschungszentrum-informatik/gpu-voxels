@@ -84,6 +84,7 @@ bool GpuVoxels::modifyPrimitives(const std::string &array_name, std::vector<Vect
     return false;
   }
   it->second.prim_array_shared_ptr->setPoints(prim_positions);
+  return true;
 }
 
 bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
@@ -110,27 +111,27 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
       break;
     }
 
-    case MT_VOXELLIST:
+    case MT_BITVECTOR_VOXELLIST:
     {
       break;
     }
-    case MT_OCTREE:
+    case MT_BITVECTOR_OCTREE:
     {
-      NTree::GvlNTreeDet* ntree = new NTree::GvlNTreeDet(m_voxel_side_length, MT_OCTREE);
+      NTree::GvlNTreeDet* ntree = new NTree::GvlNTreeDet(m_voxel_side_length, MT_BITVECTOR_OCTREE);
       NTree::VisNTreeDet* vis_map = new NTree::VisNTreeDet(ntree, map_name);
 
       map_shared_ptr = GpuVoxelsMapSharedPtr(ntree);
       vis_map_shared_ptr = VisProviderSharedPtr(vis_map);
       break;
     }
-    case MT_OCTREE_VOXELLIST:
+    case MT_BITVECTOR_MORTON_VOXELLIST:
       break;
 
-    case MT_BIT_VOXELMAP:
+    case MT_BITVECTOR_VOXELMAP:
     {
-      // todo move code to correct type e.g. MT_BIT_VOXELMAP
+      // todo move code to correct type e.g. MT_BITVECTOR_VOXELMAP
       voxelmap::BitVectorVoxelMap* orig_map = new voxelmap::BitVectorVoxelMap(m_dim_x, m_dim_y, m_dim_z,
-                                                                              m_voxel_side_length, MT_BIT_VOXELMAP);
+                                                                              m_voxel_side_length, MT_BITVECTOR_VOXELMAP);
       VisVoxelMap* vis_map = new VisVoxelMap(orig_map, map_name);
 
       map_shared_ptr = GpuVoxelsMapSharedPtr(orig_map);
@@ -148,7 +149,7 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
       vis_map_shared_ptr = VisProviderSharedPtr(vis_map);
       break;
     }
-    case MT_PROBAB_OCTREE_VOXELLIST:
+    case MT_PROBAB_MORTON_VOXELLIST:
       break;
     default:
       return false;
@@ -190,7 +191,7 @@ GpuVoxelsMapSharedPtr GpuVoxels::getMap(const std::string &map_name)
 // ---------- Robot Stuff ------------
 
 bool GpuVoxels::addRobot(const std::string &robot_name,
-                         const std::vector<KinematicLink::DHParameters> &dh_params,
+                         const std::vector<DHParameters> &dh_params,
                          const MetaPointCloud &robot_clouds)
 {
   // check if robot with same name already exists
@@ -205,7 +206,7 @@ bool GpuVoxels::addRobot(const std::string &robot_name,
 
   for (uint32_t i = 0; i < dh_params.size(); ++i)
   {
-    KinematicLinkSharedPtr link = KinematicLinkSharedPtr(new KinematicLink(KinematicLink::REVOLUTE));
+    KinematicLinkSharedPtr link = KinematicLinkSharedPtr(new KinematicLink(REVOLUTE));
 
     link->setDHParam(dh_params[i].d, dh_params[i].theta, dh_params[i].a, dh_params[i].alpha,
                      dh_params[i].value);
@@ -226,10 +227,11 @@ bool GpuVoxels::addRobot(const std::string &robot_name,
 }
 
 bool GpuVoxels::addRobot(const std::string &robot_name,
-                         const std::vector<KinematicLink::DHParameters> &dh_params,
-                         const std::vector<std::string> &paths_to_pointclouds)
+                         const std::vector<DHParameters> &dh_params,
+                         const std::vector<std::string> &paths_to_pointclouds,
+                         const bool use_model_path)
 {
-  MetaPointCloud robot_clouds(paths_to_pointclouds);
+  MetaPointCloud robot_clouds(paths_to_pointclouds, use_model_path);
   return addRobot(robot_name, dh_params, robot_clouds);
 }
 

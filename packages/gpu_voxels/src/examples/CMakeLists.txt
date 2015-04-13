@@ -52,7 +52,7 @@ ICMAKER_ADD_HEADERS(
   )
 
 ICMAKER_ADD_SOURCES(
-  sandbox.cpp
+  Sandbox.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(

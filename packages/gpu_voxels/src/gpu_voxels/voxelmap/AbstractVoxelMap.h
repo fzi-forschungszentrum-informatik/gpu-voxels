@@ -38,6 +38,15 @@
 namespace gpu_voxels {
 namespace voxelmap {
 
+
+/**
+ * @brief The VoxelTemplateId enum to compare which template is used
+ */
+enum VoxelMapTemplateId{
+  VMT_PROBABILISTIC_VOXELMAP,
+  VMT_BITVECTOR_VOXELMAP
+};
+
 class AbstractVoxelMap : public GpuVoxelsMap
 {
 public:
@@ -52,6 +61,9 @@ public:
 
   //! get the number of bytes that is required for the voxelmap
   virtual uint32_t getMemorySizeInByte() = 0;
+
+  virtual VoxelMapTemplateId getTemplateType() = 0;
+
 
 
   // ------ BEGIN Global API functions ------

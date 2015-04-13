@@ -43,7 +43,7 @@ class MetaPointCloud
 {
 public:
 
-  MetaPointCloud(const std::vector<std::string> &_point_cloud_files);
+  MetaPointCloud(const std::vector<std::string> &_point_cloud_files, const bool use_model_path);
   MetaPointCloud(const std::vector<uint32_t> &_point_cloud_sizes);
   MetaPointCloud(const std::vector< std::vector<Vector3f> > &point_clouds);
   MetaPointCloud(const MetaPointCloud &other);
@@ -159,8 +159,6 @@ private:
   Vector3f** m_dev_ptrs_to_addrs;
   uint32_t *m_dev_ptr_to_cloud_sizes;
   Vector3f** m_dev_ptr_to_clouds_base_addresses;
-
-  file_handling::PointcloudFileHandler pointcloud_file_handler;
 };
 
 }

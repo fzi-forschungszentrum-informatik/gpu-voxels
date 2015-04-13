@@ -128,22 +128,19 @@
         
         
     <!------------------ The parameter for camera--------------> 
-      <camera>
-      <position>
-        	<!--<x> 0 </x>
-        	<y> 20 </y>
-        	<z> -80 </z>-->
-        <x> 8213 </x>
-        <y> 8171 </y>
-        <z> 7870 </z>
-      </position>
-      <focus>
+    <camera>
+     <position>
+       <x> 8314.02 </x>
+       <y> 8697.94 </y>
+       <z> 8211.91 </z>
+     </position>
+     <horizontal_angle> 341.519 </horizontal_angle> <!-- given in Deg -->
+     <vertical_angle> 0.264989 </vertical_angle> <!-- given in Deg -->
+     <focus>
         <x> 8399 </x>
         <y> 8125 </y>
         <z> 8375 </z>    
      </focus>
-      <horizontal_angle> 7.93541 </horizontal_angle>
-      <vertical_angle> 7.24075  </vertical_angle>
       <field_of_view> 60 </field_of_view>
       <window_width> 1024 </window_width>
       <window_height> 768 </window_height>
@@ -173,7 +170,7 @@
       <grid_height> 0 </grid_height> <!-- the height where the grid will be drawn -->
       <grid_max_x> 500 </grid_max_x> <!-- the x dimension of the grid -->
       <grid_max_y> 500 </grid_max_y> <!-- the y dimension of the grid -->
-      <grid_color> black </grid_color> 2014-07-01_23.44.03
+      <grid_color> black </grid_color>
       <unit_scale> 1 cm </unit_scale>
     </miscellaneous>
     

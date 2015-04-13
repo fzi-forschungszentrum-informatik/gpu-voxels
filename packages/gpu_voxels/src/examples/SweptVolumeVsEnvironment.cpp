@@ -39,9 +39,6 @@
 
 #include <icl_core_config/Config.h>
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-
 #include <gpu_voxels/GpuVoxels.h>
 #include <gpu_voxels/helpers/Kinect.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
@@ -49,7 +46,6 @@
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 
 using namespace gpu_voxels;
-namespace bfs = boost::filesystem;
 
 GpuVoxels* gvl;
 
@@ -90,13 +86,13 @@ int main(int argc, char* argv[])
    * The robot is inserted with deterministic poses,
    * so a deterministic map is sufficient here.
    */
-  gvl->addMap(MT_BIT_VOXELMAP, "myRobotMap");
+  gvl->addMap(MT_BITVECTOR_VOXELMAP, "myRobotMap");
 
   /*
    * A second map will represent the environment.
    * As it is captured by a sensor, this map is probabilistic.
    */
-  gvl->addMap(MT_OCTREE, "myEnvironmentMap");
+  gvl->addMap(MT_BITVECTOR_OCTREE, "myEnvironmentMap");
 
   /*
    * Lets create a kinect driver and an according pointcloud.
@@ -105,8 +101,8 @@ int main(int argc, char* argv[])
    */
   Kinect* kinect = new Kinect(identifier);
   kinect->run();
-  std::vector<KinematicLink::DHParameters> kinect_dh_params(1);
-  kinect_dh_params[0] = KinematicLink::DHParameters(0.0, 0.0, 0.0, 0.0, 0.0);
+  std::vector<DHParameters> kinect_dh_params(1);
+  kinect_dh_params[0] = DHParameters(0.0, 0.0, 0.0, 0.0, 0.0);
   std::vector<uint32_t> sizes(1, 640*480);
   MetaPointCloud myKinectCloud(sizes);
   gvl->addRobot("kinectData", kinect_dh_params, myKinectCloud);
@@ -119,35 +115,29 @@ int main(int argc, char* argv[])
    * The environment variable GPU_VOXELS_MODEL_PATH is checked
    * to ensure that the robot parts can be loaded.
    */
-  bfs::path model_path;
-  if (!file_handling::getGpuVoxelsPath(model_path))
-  {
-    LOGGING_ERROR(Gpu_voxels, "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
-    return -1; // exit here.
-  }
-  LOGGING_INFO(Gpu_voxels, "Search path of the models is: " << model_path.generic_string() << endl);
+
   size_t rob_dim = 7;
   // this loads the segment models from pointclouds
   std::vector<std::string> paths_to_pointclouds(rob_dim);
-  paths_to_pointclouds[0] = bfs::path(model_path / "hollie_plain_left_arm_0_link.xyz").generic_string();
-  paths_to_pointclouds[1] = bfs::path(model_path / "hollie_plain_left_arm_1_link.xyz").generic_string();
-  paths_to_pointclouds[2] = bfs::path(model_path / "hollie_plain_left_arm_2_link.xyz").generic_string();
-  paths_to_pointclouds[3] = bfs::path(model_path / "hollie_plain_left_arm_3_link.xyz").generic_string();
-  paths_to_pointclouds[4] = bfs::path(model_path / "hollie_plain_left_arm_4_link.xyz").generic_string();
-  paths_to_pointclouds[5] = bfs::path(model_path / "hollie_plain_left_arm_5_link.xyz").generic_string();
-  paths_to_pointclouds[6] = bfs::path(model_path / "hollie_plain_left_arm_6_link.xyz").generic_string();
-  MetaPointCloud myRobotCloud(paths_to_pointclouds);
+  paths_to_pointclouds[0] = "arm_0_link.xyz";
+  paths_to_pointclouds[1] = "arm_1_link.xyz";
+  paths_to_pointclouds[2] = "arm_2_link.xyz";
+  paths_to_pointclouds[3] = "arm_3_link.xyz";
+  paths_to_pointclouds[4] = "arm_4_link.xyz";
+  paths_to_pointclouds[5] = "arm_5_link.xyz";
+  paths_to_pointclouds[6] = "arm_6_link.xyz";
+  MetaPointCloud myRobotCloud(paths_to_pointclouds, true);
 
   // this is the DH description of the robots kinematic
-  std::vector<KinematicLink::DHParameters> dh_params(rob_dim);
+  std::vector<DHParameters> dh_params(rob_dim);
                                           // _d,_theta,_a,_alpha,_value
-  dh_params[0] = KinematicLink::DHParameters(0.0, 0.0, 0.0,     1.5708, 0.0); // build an arm from 6 segments
-  dh_params[1] = KinematicLink::DHParameters(0.0,  0.0, 0.35,  -3.1415, 0.0);
-  dh_params[2] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0);
-  dh_params[3] = KinematicLink::DHParameters(0.0,  0.0, 0.365, -1.5708, 0.0);
-  dh_params[4] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0);
-  dh_params[5] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    0.0,    0.0);
-  dh_params[6] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    0.0,    0.0);
+  dh_params[0] = DHParameters(0.0, 0.0, 0.0,     1.5708, 0.0); // build an arm from 6 segments
+  dh_params[1] = DHParameters(0.0,  0.0, 0.35,  -3.1415, 0.0);
+  dh_params[2] = DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0);
+  dh_params[3] = DHParameters(0.0,  0.0, 0.365, -1.5708, 0.0);
+  dh_params[4] = DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0);
+  dh_params[5] = DHParameters(0.0,  0.0, 0.0,    0.0,    0.0);
+  dh_params[6] = DHParameters(0.0,  0.0, 0.0,    0.0,    0.0);
 
   // now we add the robot to the management
   gvl->addRobot("myRobot", dh_params, myRobotCloud);
@@ -206,10 +196,11 @@ int main(int argc, char* argv[])
     gpu_voxels::Matrix4f kinect_base_pose;
 
     // Rotate the kinect 90 Degrees about the X-Axis:
-    kinect_base_pose.a11 = 1; kinect_base_pose.a12 =  0; kinect_base_pose.a13 = 0; kinect_base_pose.a14 = 1;
-    kinect_base_pose.a21 = 0; kinect_base_pose.a22 =  0; kinect_base_pose.a23 = 1; kinect_base_pose.a24 = 1;
-    kinect_base_pose.a31 = 0; kinect_base_pose.a32 = -1; kinect_base_pose.a33 = 0; kinect_base_pose.a34 = 1;
-    kinect_base_pose.a41 = 0; kinect_base_pose.a42 =  0; kinect_base_pose.a43 = 0; kinect_base_pose.a44 = 1;
+    kinect_base_pose = gpu_voxels::roll(M_PI_2);
+    kinect_base_pose.a14 = 1;
+    kinect_base_pose.a24 = 1;
+    kinect_base_pose.a34 = 1;
+    kinect_base_pose.a44 = 1;
 
     gvl->updateRobotPose("kinectData", joints, &kinect_base_pose);
     gvl->updateRobotPart("kinectData", 0, kinect->getDataPtr());

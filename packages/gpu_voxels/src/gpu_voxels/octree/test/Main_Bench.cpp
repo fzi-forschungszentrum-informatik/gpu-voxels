@@ -55,7 +55,6 @@ void build()
     PERF_MON_ENABLE("lb_propagate");
     PERF_MON_ENABLE("Octomap::init");
 
-    bool first_pass = true;
     for (int res = parameter.resolution_from; res <= parameter.resolution_to;
         res = ceil(res * parameter.resolution_scaling))
     {
@@ -235,7 +234,6 @@ void insert_collide()
     PERF_MON_ENABLE("Octomap::newSensorData");
 
     int runs = parameter.runs;
-    int replays = parameter.replay;
 
     for (int res = parameter.resolution_from; res <= parameter.resolution_to;
         res = ceil(res * parameter.resolution_scaling))
@@ -308,6 +306,8 @@ void insert_collide()
                 sensor_data = new Kinect(provider[i], my_parameter);
                 break;
               }
+              default:
+                break;
             }
 
             if (my_parameter->collide)

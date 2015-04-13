@@ -139,9 +139,6 @@ void Sensor::_processSensorData(thrust::device_vector<Vector3f>& d_free_space_po
   PERF_MON_START(prefix);
   PERF_MON_START(temp_timer);
 
-  const uint32_t num_threads = 128;
-  const uint32_t num_blocks = data_width*data_height / num_threads / 4;
-
   bool data_equals = object_data.equals(free_space_data) && object_data.m_process_data;
   bool process_object_data = object_data.m_process_data;
   bool process_free_space_data = !data_equals && free_space_data.m_process_data;

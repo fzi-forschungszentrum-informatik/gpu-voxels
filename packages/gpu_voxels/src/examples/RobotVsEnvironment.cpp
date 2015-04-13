@@ -30,16 +30,12 @@
 
 #include <icl_core_config/Config.h>
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-
 #include <gpu_voxels/GpuVoxels.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/helpers/PointcloudFileHandler.h>
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 
 using namespace gpu_voxels;
-namespace bfs = boost::filesystem;
 
 GpuVoxels* gvl;
 
@@ -75,7 +71,7 @@ int main(int argc, char* argv[])
    * The robot is inserted with deterministic poses,
    * so a deterministic map is sufficient here.
    */
-  gvl->addMap(MT_BIT_VOXELMAP, "myRobotMap");
+  gvl->addMap(MT_BITVECTOR_VOXELMAP, "myRobotMap");
 
 
   /*
@@ -89,18 +85,10 @@ int main(int argc, char* argv[])
    * The additional (optional) params shift the map to zero and then add
    * a offset to the loaded pointcloud.
    */
-  gvl->addMap(MT_OCTREE, "myEnvironmentMap");
+  gvl->addMap(MT_BITVECTOR_OCTREE, "myEnvironmentMap");
 
-  bfs::path model_path;
-  if (!file_handling::getGpuVoxelsPath(model_path))
-  {
-    LOGGING_ERROR(Gpu_voxels, "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
-    return -1; // exit here.
-  }
-
-  bfs::path pcd_file = bfs::path(model_path / "pointcloud_0002.pcd");
-  if (!gvl->getMap("myEnvironmentMap")->insertPointcloudFromFile(pcd_file.generic_string(), eVT_OCCUPIED,
-                                                  true, Vector3f(-6, -7.3, 0)))
+  if (!gvl->getMap("myEnvironmentMap")->insertPointcloudFromFile("pointcloud_0002.pcd", true,
+                                                                 eVT_OCCUPIED, true, Vector3f(-6, -7.3, 0)))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
   }
@@ -113,29 +101,26 @@ int main(int argc, char* argv[])
    */
 
   // First, we load the robot geometry which contains 6 links:
-  LOGGING_INFO(Gpu_voxels, "Search path of the models is: " << model_path.generic_string() << endl);
-
-
   size_t rob_dim = 7;
   std::vector<std::string> paths_to_pointclouds(rob_dim);
-  paths_to_pointclouds[0] = bfs::path(model_path / "hollie_plain_left_arm_0_link.xyz").generic_string();
-  paths_to_pointclouds[1] = bfs::path(model_path / "hollie_plain_left_arm_1_link.xyz").generic_string();
-  paths_to_pointclouds[2] = bfs::path(model_path / "hollie_plain_left_arm_2_link.xyz").generic_string();
-  paths_to_pointclouds[3] = bfs::path(model_path / "hollie_plain_left_arm_3_link.xyz").generic_string();
-  paths_to_pointclouds[4] = bfs::path(model_path / "hollie_plain_left_arm_4_link.xyz").generic_string();
-  paths_to_pointclouds[5] = bfs::path(model_path / "hollie_plain_left_arm_5_link.xyz").generic_string();
-  paths_to_pointclouds[6] = bfs::path(model_path / "hollie_plain_left_arm_6_link.xyz").generic_string();
-  MetaPointCloud myRobotCloud(paths_to_pointclouds);
+  paths_to_pointclouds[0] = "arm_0_link.xyz";
+  paths_to_pointclouds[1] = "arm_1_link.xyz";
+  paths_to_pointclouds[2] = "arm_2_link.xyz";
+  paths_to_pointclouds[3] = "arm_3_link.xyz";
+  paths_to_pointclouds[4] = "arm_4_link.xyz";
+  paths_to_pointclouds[5] = "arm_5_link.xyz";
+  paths_to_pointclouds[6] = "arm_6_link.xyz";
+  MetaPointCloud myRobotCloud(paths_to_pointclouds, true);
 
-  std::vector<KinematicLink::DHParameters> dh_params(rob_dim);
+  std::vector<DHParameters> dh_params(rob_dim);
                                           // _d,_theta,_a,_alpha,_value
-  dh_params[0] = KinematicLink::DHParameters(0.0, 0.0, 0.0,     1.5708, 0.0); // build an arm from 6 segments
-  dh_params[1] = KinematicLink::DHParameters(0.0,  0.0, 0.35,  -3.1415, 0.0); //
-  dh_params[2] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0); //
-  dh_params[3] = KinematicLink::DHParameters(0.0,  0.0, 0.365, -1.5708, 0.0); //
-  dh_params[4] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0); //
-  dh_params[5] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); //
-  dh_params[6] = KinematicLink::DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); //
+  dh_params[0] = DHParameters(0.0, 0.0, 0.0,     1.5708, 0.0); // build an arm from 6 segments
+  dh_params[1] = DHParameters(0.0,  0.0, 0.35,  -3.1415, 0.0); //
+  dh_params[2] = DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0); //
+  dh_params[3] = DHParameters(0.0,  0.0, 0.365, -1.5708, 0.0); //
+  dh_params[4] = DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0); //
+  dh_params[5] = DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); //
+  dh_params[6] = DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); //
 
   gvl->addRobot("myRobot", dh_params, myRobotCloud);
 

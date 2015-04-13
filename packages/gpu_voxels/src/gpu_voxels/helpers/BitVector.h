@@ -101,13 +101,22 @@ public:
   __host__ __device__
   void setBit(const uint32_t index);
 
-protected:
   /**
-   * @brief getBit Gets the byte to the given index position.
+   * @brief getByte Gets the byte to the given index position.
    * @return Byte of given index position
    */
   __host__ __device__
   item_type getByte(const uint32_t index) const;
+
+  /**
+   * @brief setByte Sets the byte at the given index position.
+   * @param index Which byte to set
+   * @param data Data to write into byte
+   */
+  __host__ __device__
+  void setByte(const uint32_t index, const item_type data);
+
+protected:
 
   /**
    * @brief getBit Gets the reference to the given index position.

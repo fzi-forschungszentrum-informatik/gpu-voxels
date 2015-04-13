@@ -18,6 +18,9 @@
  * \author  Sebastian Klemm
  * \date    2014-07-10
  *
+ * This is a singleton implementation of a helper to load
+ * various pointcloud filetypes.
+ *
  */
 //----------------------------------------------------------------------
 #ifndef GPU_VOXELS_HELPERS_POINTCLOUD_FILE_HANDLER_H_INCLUDED
@@ -35,27 +38,46 @@
 namespace gpu_voxels {
 namespace file_handling {
 
-
-/*! Read environment variable GPU_VOXELS_MODEL_PATH into \a path
- *  \returns \c true, if variable could be read, \c false otherwise
- */
-inline bool getGpuVoxelsPath(boost::filesystem::path& path)
-{
-  char const* tmp = std::getenv("GPU_VOXELS_MODEL_PATH");
-  if (tmp == NULL)
-  {
-    return false;
-  }
-
-  path = boost::filesystem::path(tmp);
-  return true;
-}
-
-
 class PointcloudFileHandler
 {
+public:
+
+  /*!
+   * \brief Instance generator
+   * \return Pointer to singleton instance of PointcloudFileHandler
+   */
+  static PointcloudFileHandler* Instance();
+
+  /*!
+   * \brief loadPointCloud loads a PCD file and returns the points in a vector.
+   * \param path Filename
+   * \param points points are written into this vector
+   * \param shift_to_zero If true, the pointcloud is shifted, so its minimum coordinates lie at zero
+   * \param offset_XYZ Additional transformation offset
+   * \return true if succeeded, false otherwise
+   */
+  bool loadPointCloud(const std::string _path, const bool use_model_path, std::vector<Vector3f> &points, const bool shift_to_zero = false,
+                      const Vector3f &offset_XYZ = Vector3f(), const float scaling = 1.0);
+
+  /*! Read environment variable GPU_VOXELS_MODEL_PATH
+   *  \returns the path
+   */
+  boost::filesystem::path getGpuVoxelsPath();
 
 private:
+  /*!
+   * \brief Private ctor, as this is a singleton
+   */
+  PointcloudFileHandler(){}
+  /*!
+   * \brief Private copy ctor, as this is a singleton
+   */
+  PointcloudFileHandler(PointcloudFileHandler const&){}
+
+  /*!
+   * \brief m_instance singleton instance
+   */
+  static PointcloudFileHandler* m_instance;
 
   /*!
    * \brief centerPointCloud Centers a pointcloud relative to its maximum coordinates
@@ -72,19 +94,6 @@ private:
   XyzFileReader xyz_reader;
   PcdFileReader pcd_reader;
   BinvoxFileReader binvox_reader;
-
-public:
-
-  /*!
-   * \brief loadPointCloud loads a PCD file and returns the points in a vector.
-   * \param path Filename
-   * \param points points are written into this vector
-   * \param shift_to_zero If true, the pointcloud is shifted, so its minimum coordinates lie at zero
-   * \param offset_XYZ Additional transformation offset
-   * \return true if succeeded, false otherwise
-   */
-  bool loadPointCloud(const std::string path, std::vector<Vector3f> &points, const bool shift_to_zero = false,
-                      const Vector3f &offset_XYZ = Vector3f(), const float scaling = 1.0);
 
 };
 

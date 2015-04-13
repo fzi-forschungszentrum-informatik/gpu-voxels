@@ -11,6 +11,7 @@ Andreas Hermann
 Sebastian Klemm
 Florian Drews
 Matthias Wagner
+Felix Mauch
 
 We would be grateful if scientific publications resulting from projects that make use of GPU-Voxels would cite our overview paper:
 A. Hermann, F. Drews, J. Bauer, S. Klemm, A. Roennau and R. Dillmann:

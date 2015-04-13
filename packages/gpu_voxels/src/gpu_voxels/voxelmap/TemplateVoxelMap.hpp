@@ -800,14 +800,14 @@ size_t TemplateVoxelMap<Voxel>::collideWith(const GpuVoxelsMapSharedPtr other, f
       collisions = collisionCheckWithCounterRelativeTransform(m, collider, offset);
       break;
     }
-    case MT_BIT_VOXELMAP:
+    case MT_BITVECTOR_VOXELMAP:
     {
       DefaultCollider collider(coll_threshold);
       BitVectorVoxelMap* m = (BitVectorVoxelMap*) other.get();
       collisions = collisionCheckWithCounterRelativeTransform(m, collider, offset);
       break;
     }
-    case MT_OCTREE:
+    case MT_BITVECTOR_OCTREE:
     {
       // Have to collide the octree with the voxel map the other way round
       // --> cyclic dependency between libs would be necessary
@@ -899,7 +899,7 @@ size_t TemplateVoxelMap<Voxel>::collideWithResolution(const GpuVoxelsMapSharedPt
   size_t collisions = SSIZE_MAX;
   switch (other->getMapType())
   {
-    case MT_OCTREE:
+    case MT_BITVECTOR_OCTREE:
     {
       LOGGING_ERROR_C(
           VoxelmapLog, TemplateVoxelMap,
@@ -1133,14 +1133,124 @@ size_t TemplateVoxelMap<Voxel>::getMemoryUsage()
 template<class Voxel>
 void TemplateVoxelMap<Voxel>::writeToDisk(const std::string path)
 {
-  LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+  std::ofstream out(path.c_str());
+
+  VoxelMapTemplateId map_type = this->getTemplateType();
+  uint32_t buffer_size = this->getMemorySizeInByte();
+  char* buffer = new char[buffer_size];
+
+  LOGGING_INFO_C(VoxelmapLog, VoxelMap, "Dumping Voxelmap to disk: " <<
+                 getVoxelMapSize() << " Voxels ==> " << (buffer_size / 1024.0 / 1024.0) << " MB. ..." << endl);
+
+  HANDLE_CUDA_ERROR(cudaMemcpy((void*)buffer, this->getVoidDeviceDataPtr(), buffer_size, cudaMemcpyDeviceToHost));
+
+  bool bin_mode = true;
+  // Write meta data and actual data
+  if (bin_mode)
+  {
+    out.write((char*) &map_type, sizeof(VoxelMapTemplateId));
+    out.write((char*) &m_voxel_side_length, sizeof(float));
+    out.write((char*) &m_dim.x, sizeof(uint32_t));
+    out.write((char*) &m_dim.y, sizeof(uint32_t));
+    out.write((char*) &m_dim.z, sizeof(uint32_t));
+    out.write((char*) &buffer[0], buffer_size);
+  }
+  else
+  {
+    out << map_type << "\n";
+    out << m_voxel_side_length << "\n";
+    out << m_dim.x << "\n";
+    out << m_dim.y << "\n";
+    out << m_dim.z << "\n";
+    for (uint32_t i = 0; i < buffer_size; ++i)
+      out << buffer[i] << "\n";
+  }
+
+  out.close();
+  delete buffer;
+  LOGGING_INFO_C(VoxelmapLog, VoxelMap, "... writing to disk is done." << endl);
 }
+
 
 template<class Voxel>
 bool TemplateVoxelMap<Voxel>::readFromDisk(const std::string path)
 {
-  LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-  return false;
+  VoxelMapTemplateId map_type;
+  float voxel_side_length;
+  uint32_t dim_x, dim_y, dim_z;
+
+  try
+  {
+    std::ifstream in(path.c_str());
+
+    // Read meta data
+    bool bin_mode = true;
+    if(bin_mode)
+    {
+      in.read((char*)&map_type, sizeof(VoxelMapTemplateId));
+      in.read((char*)&voxel_side_length, sizeof(float));
+      in.read((char*)&dim_x, sizeof(uint32_t));
+      in.read((char*)&dim_y, sizeof(uint32_t));
+      in.read((char*)&dim_z, sizeof(uint32_t));
+    }
+    else
+    {
+      int tmp;
+      in >> tmp;
+      map_type = (VoxelMapTemplateId)tmp;
+      in >> voxel_side_length;
+      in >> dim_x;
+      in >> dim_y;
+      in >> dim_z;
+    }
+
+    // Check meta data
+    if(map_type != this->getTemplateType())
+    {
+      LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Voxelmap type does not match!" << endl);
+      return false;
+    }
+    if(voxel_side_length != this->m_voxel_side_length)
+    {
+      LOGGING_WARNING_C(VoxelmapLog, VoxelMap, "Voxel side lenghts does not match! Continuing though..." << endl);
+    }else{
+      if(map_type == VMT_BITVECTOR_VOXELMAP)
+      {
+        //TODO: Check for size of bitvector, as that may change!
+      }
+    }
+    if((dim_x != m_dim.x) || (dim_y != m_dim.y) || (dim_z != m_dim.z))
+    {
+      // after that check we may use the class size variables.
+      LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Voxelmap dimensions do not match!" << endl);
+      return false;
+    }
+
+    // Read actual data
+    LOGGING_INFO_C(VoxelmapLog, VoxelMap, "Reading Voxelmap from disk: " <<
+                   getVoxelMapSize() << " Voxels ==> " << (getMemorySizeInByte() / 1024.0 / 1024.0) << " MB. ..." << endl);
+    char* buffer = new char[getMemorySizeInByte()];
+
+    if(bin_mode)
+    {
+      in.read(buffer, getMemorySizeInByte());
+    }else{
+      for(uint32_t i = 0; i < getMemorySizeInByte(); ++i)
+        in >> buffer[i];
+    }
+
+    // Copy data to device
+    HANDLE_CUDA_ERROR(cudaMemcpy(this->getVoidDeviceDataPtr(), (void*)buffer, getMemorySizeInByte(), cudaMemcpyHostToDevice));
+
+    in.close();
+    delete buffer;
+    LOGGING_INFO_C(VoxelmapLog, VoxelMap, "... reading from disk is done." << endl);
+    return true;
+  } catch (std::ifstream::failure& e)
+  {
+    LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Error in filestream!" << endl);
+    return false;
+  }
 }
 
 template<class Voxel>

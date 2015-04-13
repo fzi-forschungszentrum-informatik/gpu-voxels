@@ -113,13 +113,15 @@ public:
   /*!
    * \brief insertPointcloudFromFile inserts a pointcloud from a file into the map
    * The coordinates are interpreted as global coordinates
-   * \param path filename (Must end in .xyz for PCD files or .binvox for Binvox files)
+   * \param path filename (Must end in .xyz for XYZ files, .pcd for PCD files or .binvox for Binvox files)
+   * \param use_model_path Prepends environment variable GPU_VOXELS_MODEL_PATH to path if true
    * \param shift_to_zero if true, the map will be shifted, so that its minimum lies at zero.
    * \param offset_XYZ if given, the map will be transformed by this XYZ offset. If shifting is active, this happens after the shifting.
    * \return true if succeeded, false otherwise
    */
-  bool insertPointcloudFromFile(const std::string path, VoxelType voxel_type, const bool shift_to_zero = false,
-                 const Vector3f &offset_XYZ = Vector3f(), const float scaling = 1.0);
+  bool insertPointcloudFromFile(const std::string path, const bool use_model_path, VoxelType voxel_type,
+                                const bool shift_to_zero = false, const Vector3f &offset_XYZ = Vector3f(),
+                                const float scaling = 1.0);
 
   // Maintanance functions
   /*!
@@ -192,7 +194,6 @@ public:
 
 protected:
   MapType m_map_type;
-  file_handling::PointcloudFileHandler pointcloud_file_handler;
 };
 
 } // end of namespace

@@ -139,9 +139,9 @@ void registerVoxelmapFromSharedMemory(uint32_t index)
       voxelmap::AbstractVoxelMap* voxel_map;
       switch (map_type)
       {
-        case MT_BIT_VOXELMAP:
+        case MT_BITVECTOR_VOXELMAP:
           voxel_map = new voxelmap::BitVectorVoxelMap((voxelmap::BitVectorVoxel*) dev_data_pointer, dim,
-                                                      voxel_side_length, MT_BIT_VOXELMAP);
+                                                      voxel_side_length, MT_BITVECTOR_VOXELMAP);
           break;
         case MT_PROBAB_VOXELMAP:
           voxel_map = new voxelmap::ProbVoxelMap((voxelmap::ProbabilisticVoxel*) dev_data_pointer, dim,

@@ -45,7 +45,6 @@ public:
       m_map_name(""),m_draw_context(true), m_vbo(), m_vbo_draw_able(false), m_cur_vbo_size(1), m_max_vbo_size(0), m_cuda_ressources(), m_occupancy_threshold(
           0), m_translation_offset(0.f), m_total_num_voxels(0), m_num_voxels_per_type()
   {
-    uint32_t number_of_voxel_types = 10;
 
     m_threads_per_block = dim3(10, 10, 10);
     m_num_blocks = dim3(1, 1, 1);
@@ -84,16 +83,16 @@ public:
       m_colors.push_back(p);
     }
 
-    m_num_voxels_per_type.resize(number_of_voxel_types);
+    m_num_voxels_per_type.resize(MAX_DRAW_TYPES);
     m_d_num_voxels_per_type = m_num_voxels_per_type;
 
-    m_vbo_segment_voxel_capacities.resize(number_of_voxel_types);
+    m_vbo_segment_voxel_capacities.resize(MAX_DRAW_TYPES);
     m_d_vbo_segment_voxel_capacities = m_vbo_segment_voxel_capacities;
 
-    m_vbo_offsets.resize(number_of_voxel_types);
+    m_vbo_offsets.resize(MAX_DRAW_TYPES);
     m_d_vbo_offsets = m_vbo_offsets;
 
-    m_types_segment_mapping = thrust::host_vector<uint8_t>(256, 0);
+    m_types_segment_mapping = thrust::host_vector<uint8_t>(MAX_DRAW_TYPES, 0);
     m_has_draw_type_flipped = true;
   }
 

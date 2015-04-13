@@ -62,7 +62,6 @@ BOOST_AUTO_TEST_CASE(multiply)
   Matrix4f a = Matrix4f(1, 2, 3, 4, 4, 3, 2, 1, 2, 1, 3, 4, 2, 3, 1, 4);
   Matrix4f b = Matrix4f(7, 4, 5, 6, 6, 5, 7, 4, 4, 6, 5, 7, 4, 5, 6, 7);
   Matrix4f r = Matrix4f(47, 52, 58, 63, 58, 48, 57, 57, 48, 51, 56, 65, 52, 49, 60, 59);
-  CudaMath* cuda_math = new CudaMath();
 
   result = a * b;
 

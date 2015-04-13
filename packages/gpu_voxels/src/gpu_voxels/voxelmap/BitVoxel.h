@@ -26,6 +26,8 @@
 #include <gpu_voxels/voxelmap/AbstractVoxel.h>
 #include <gpu_voxels/helpers/BitVector.h>
 #include <cstddef>
+#include <ostream>
+#include <istream>
 
 namespace gpu_voxels {
 namespace voxelmap {
@@ -65,6 +67,29 @@ public:
       return res;
     }
   };
+
+
+  __host__
+  friend std::ostream& operator<<(std::ostream& os, const BitVoxel& dt)
+  {
+    for(std::size_t i = 0; i < length; i++)
+    {
+      os << dt.bitVector().getByte(i);
+    }
+    return os;
+  }
+
+  __host__
+  friend std::istream& operator>>(std::istream& in, BitVoxel& dt)
+  {
+    typename BitVector<length>::item_type tmp;
+    for(std::size_t i = 0; i < length; i++)
+    {
+      in >> tmp;
+      dt.bitVector().setByte(i, tmp);
+    }
+    return in;
+  }
 
 protected:
   BitVector<length> m_bit_vector;

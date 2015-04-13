@@ -24,6 +24,7 @@
 #include "VoxelMapProvider.h"
 #include <gpu_voxels/vis_interface/VisualizerInterface.h>
 
+#include <gpu_voxels/helpers/CudaMath.h>
 //#include <gpu_voxels/octree/PointCloud.h>
 //#include <gpu_voxels/octree/kernels/kernel_PointCloud.h>
 #include <gpu_voxels/helpers/cuda_handling.h>
@@ -277,8 +278,8 @@ void NTreeProvider::init(Provider_Parameter& parameter)
   {
     // ROS
     int argc = 0;
-    char *argv = "";
-    ros::init(argc, &argv, "NTreeProvider");
+    const char* argv = "";
+    ros::init(argc, const_cast<char**>(&argv), "NTreeProvider");
     m_node_handle = new ros::NodeHandle();
 
     boost::function<void(const sensor_msgs::PointCloud2::ConstPtr& msg)> f_cb = boost::bind(
@@ -323,7 +324,7 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
 
   gpu_voxels::Vector3f temp = m_sensor_orientation;
 #ifdef MODE_KINECT
-  orientation = rotate(KINECT_ORIENTATION.z, KINECT_ORIENTATION.y, KINECT_ORIENTATION.x);
+  orientation = gpu_voxels::rotateYPR(KINECT_ORIENTATION.z, KINECT_ORIENTATION.y, KINECT_ORIENTATION.x);
   temp.z *= -1; // invert to fix the incorrect positioning for ptu-mode
 #endif
 
@@ -331,7 +332,7 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
   m_sensor.data_height = height;
   m_sensor.data_size = m_sensor.data_width * m_sensor.data_height;
 
-  m_sensor.orientation = rotate(temp.z, temp.y, temp.x) * orientation;
+  m_sensor.orientation = gpu_voxels::rotateYPR(temp.z, temp.y, temp.x) * orientation;
   m_sensor.position = m_sensor_position;
   const uint32_t ntree_resolution = m_ntree->m_resolution;
 
@@ -499,7 +500,6 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
   m_mutex.lock();
 
   tf::StampedTransform transform;
-  double roll, pitch, yaw;
   bool eval = false;
   if (m_node_handle->ok())
   {
@@ -508,7 +508,6 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
     str_stream << "/camera_depth_optical_frame_" << name;
     string from_frame = str_stream.str();
     string to_frame = "/odom";
-    string error_msg = "Blub";
     if (m_tf_listener->canTransform(to_frame, from_frame, ros::Time(0)))
     {
       try
@@ -594,10 +593,10 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
         || (m_parameter->rebuild_frame_count != -1 && m_fps_rebuild == m_parameter->rebuild_frame_count))
     {
       printf("BEFORE: Octree mem usage: %f\n", double(m_ntree->getMemUsage()) / 1024 / 1024);
-      printf("OLD allocInnerNodes %lu, allocLeafNodes %lu \n", m_ntree->allocInnerNodes,
+      printf("OLD allocInnerNodes %u, allocLeafNodes %u \n", m_ntree->allocInnerNodes,
              m_ntree->allocLeafNodes);
       m_ntree->rebuild();
-      printf("NEW allocInnerNodes %lu, allocLeafNodes %lu \n", m_ntree->allocInnerNodes,
+      printf("NEW allocInnerNodes %u, allocLeafNodes %u \n", m_ntree->allocInnerNodes,
              m_ntree->allocLeafNodes);
       m_fps_rebuild = 0;
       printf("AFTER: Octree mem usage: %f\n", double(m_ntree->getMemUsage()) / 1024 / 1024);

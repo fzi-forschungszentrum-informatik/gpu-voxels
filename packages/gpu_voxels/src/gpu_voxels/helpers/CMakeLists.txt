@@ -24,6 +24,7 @@ ICMAKER_ADD_HEADERS(
   cuda_handling.hpp
   PointcloudFileHandler.h
   BinvoxFileReader.h
+  FileReaderInterface.h
   PcdFileReader.h
   XyzFileReader.h
   MetaPointCloud.h

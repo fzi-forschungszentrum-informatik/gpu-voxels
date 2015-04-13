@@ -220,6 +220,7 @@ private:
   void flipDrawVoxelmap(uint32_t index);
   void flipDrawOctree(uint32_t index);
   void flipDrawType(VoxelType type);
+  void flipDrawSweptVolume();
   void flipExternalVisibilityTrigger();
   void copyDrawTypeToDevice();
   void updateTypesSegmentMapping(DataContext* context);
@@ -240,6 +241,9 @@ private:
 
   // if enabled, provider programs can trigger which maps should be drawn
   bool m_use_external_draw_type_triggers;
+
+  // if enabled, the full swept volumes are drawn. If disabled start, 1, 2, 3, 4 can be triggered by number keys
+  bool m_draw_swept_volumes;
 
   // the title of the visualizer window
   std::string m_window_title;
@@ -262,6 +266,9 @@ private:
 
   GLuint m_colormap_programID;
   GLuint m_vertex_arrayID;
+
+  // enable focus point movement
+  bool m_move_focus_enabled;
 
   // lighting variables for OpenGl
   GLuint m_lighting_programID;

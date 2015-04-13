@@ -28,15 +28,11 @@
 #include <cstdlib>
 #include <signal.h>
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-
 #include <gpu_voxels/GpuVoxels.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 
 using namespace gpu_voxels;
-namespace bfs = boost::filesystem;
 
 GpuVoxels* gvl;
 
@@ -69,8 +65,8 @@ int main(int argc, char* argv[])
 
   // Now we add some maps
   gvl->addMap(MT_PROBAB_VOXELMAP, "myProbabVoxmap");
-  gvl->addMap(MT_BIT_VOXELMAP, "myBitmapVoxmap");
-  gvl->addMap(MT_OCTREE, "myOctree");
+  gvl->addMap(MT_BITVECTOR_VOXELMAP, "myBitmapVoxmap");
+  gvl->addMap(MT_BITVECTOR_OCTREE, "myOctree");
   gvl->addMap(MT_PROBAB_VOXELMAP, "myCoordinateSystemMap");
 
   // And two different primitive types
@@ -94,15 +90,7 @@ int main(int argc, char* argv[])
   Vector3f corner3_max;
 
   // We load the model of a coordinate system.
-  bfs::path model_path;
-  if (!file_handling::getGpuVoxelsPath(model_path))
-  {
-    LOGGING_ERROR(Gpu_voxels, "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
-    return -1; // exit here.
-  }
-  bfs::path cs_file = bfs::path(model_path / "coordinate_system_100.binvox");
-
-  if (!gvl->getMap("myCoordinateSystemMap")->insertPointcloudFromFile(cs_file.generic_string(), eVT_OCCUPIED,
+  if (!gvl->getMap("myCoordinateSystemMap")->insertPointcloudFromFile("coordinate_system_100.binvox", true, eVT_OCCUPIED,
                                                   true, Vector3f(0, 0, 0),0.010))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);

@@ -159,7 +159,7 @@ public:
    * \param paths_to_pointclouds Files on disk that hold the pointcloud representation of the robot geometry
    * \return true, if robot was added, false otherwise
    */
-  bool addRobot(const std::string &robot_name, const std::vector<KinematicLink::DHParameters> &dh_params, const std::vector<std::string> &paths_to_pointclouds);
+  bool addRobot(const std::string &robot_name, const std::vector<DHParameters> &dh_params, const std::vector<std::string> &paths_to_pointclouds, const bool use_model_path);
 
   /*!
    * \brief addRobot Define a robot with its geometries and kinematic structure
@@ -168,7 +168,7 @@ public:
    * \param robot_cloud Metapointcloud representation of the robot links
    * \return true, if robot was added, false otherwise
    */
-  bool addRobot(const std::string &robot_name, const std::vector<KinematicLink::DHParameters> &dh_params, const MetaPointCloud &robot_cloud);
+  bool addRobot(const std::string &robot_name, const std::vector<DHParameters> &dh_params, const MetaPointCloud &robot_cloud);
 
   /*!
    * \brief updateRobotPose Changes the robot joint configuration. Call \code insertRobotIntoMap() afterwards!

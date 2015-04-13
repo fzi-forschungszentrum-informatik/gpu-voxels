@@ -37,3 +37,19 @@ V 0.4 (2015-03-09):
 - Moved performance monitor to icl_core
 - Some smaller fixes regarding RAD / DEG
 - Removed compiler warnings
+
+V 0.5 (2015-04-13):
+===================
+- Release 0.5: Critical bugfixes and reduction of warnings.
+- Fixed loadbalancer bug that occurred when inserting only very little data into an octree.
+- Fixed bug in extraction of Octree data.
+- Fixed color gradient along Z-Axis in viewer.
+- Fixed overwrite of Swept-Volume subvolumes via provider in the Viewer.
+- Fixed heaps of compiler warnings (Thanks to Felix Mauch).
+- Renamed MapTypes to more understandable names.
+- Implemented disk-reader and writer for generic Voxelmaps.
+- Simplified file loading of pointclouds.
+- Moved some math functions to more general file.
+- Moved some DH computation code in preparation for URDF support.
+- Reimplemented function to move focus point in Viewer.
+- Removed dead code and dead files.

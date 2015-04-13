@@ -152,26 +152,12 @@ namespace visualization {
                   uint32_t index = 0xffff;
                   uint8_t prefix;
 
-                  // show all swept volumes
-                  if(t >= eVT_SWEPT_VOLUME_START && draw_voxel_type[eVT_SWEPT_VOLUME_START] && voxel.bitVector().getBit(t))
-                  {
-                    prefix = prefixes[eVT_SWEPT_VOLUME_START];
-                    index = atomicAdd(write_index + prefix, 1);
-                    found = true;
-                  }
-                  else if(draw_voxel_type[t] && voxel.bitVector().getBit(t))
+                 if (draw_voxel_type[t] && voxel.bitVector().getBit(t))
                   {
                     prefix = prefixes[t];
                     index = atomicAdd(write_index + prefix, 1);
                     found = true;
                   }
-
-//                 if (draw_voxel_type[t] && voxel.bitVector().getBit(t))
-//                  {
-//                    prefix = prefixes[t];
-//                    index = atomicAdd(write_index + prefix, 1);
-//                    found = true;
-//                  }
 
                   if (index != 0xffff && index < vbo_limits[prefix])
                   {

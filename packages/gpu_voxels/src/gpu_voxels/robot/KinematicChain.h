@@ -98,9 +98,6 @@ public:
   __host__
   void transformPointAlongChain(Vector3f point);
 
-  //! same function as for device
-  __host__
-  void convertDHtoMHost(float theta, float d, float b, float a, float alpha, float q, uint8_t joint_type, Matrix4f& m);
 private:
 
   /*!  Update the joint values on host and device.
@@ -125,8 +122,8 @@ private:
   //! pointer to the kinematic links
   std::vector<KinematicLinkSharedPtr> m_links;
 
-  thrust::host_vector<uint8_t> m_joint_types;
-  thrust::host_vector<KinematicLink::DHParameters> m_dh_parameters;
+  thrust::host_vector<DHJointType> m_joint_types;
+  thrust::host_vector<DHParameters> m_dh_parameters;
 
   Matrix4f m_basis_transformation;
 
@@ -135,17 +132,15 @@ private:
   CudaMath m_math;
   uint32_t m_blocks;
   uint32_t m_threads_per_block;
-
+  Matrix4f* m_dev_basis_transformation;
+  std::map<unsigned int, std::string> m_pointcloud_to_linkname;
 
   /* device stored contents */
-  thrust::device_vector<uint8_t> m_dev_joint_types;
-  thrust::device_vector<KinematicLink::DHParameters> m_dev_dh_parameters;
+  thrust::device_vector<DHJointType> m_dev_joint_types;
+  thrust::device_vector<DHParameters> m_dev_dh_parameters;
   thrust::device_vector<Matrix4f> m_dev_transformations;
   thrust::device_vector<Matrix4f> m_dev_local_transformations;
 
-  Matrix4f* m_dev_basis_transformation;
-
-  std::map<unsigned int, std::string> m_pointcloud_to_linkname;
 };
 
 } // end of namespace

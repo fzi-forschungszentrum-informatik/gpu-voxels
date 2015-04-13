@@ -49,6 +49,8 @@
 //#include <gpu_voxels/voxelmap/RobotVoxel.h>
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 
+#include "shared_voxel.cuh"
+
 namespace gpu_voxels {
 namespace NTree {
 
@@ -268,8 +270,8 @@ void kernel_print2(InnerNode* root, MyTripple<InnerNode*, VoxelID, bool>* stack1
         // is child node
         char status[8];
         LeafNode* tmp_leaf = (LeafNode*) current.m_a;
-        NodeStatus s = tmp_leaf->getStatus();
-        getStatusString(status, EnumNodeStatus(s));
+        uint8_t s = tmp_leaf->getStatus();
+        getStatusString(status, s);
         printf("[%lu][%s][@ ] -- ", current.m_b, status);  // tmp_leaf);
       }
       else
@@ -497,7 +499,8 @@ __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, ui
                                           const Vector3ui voxelmap_offset = Vector3ui(0))
 {
   __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
-  __shared__ VoxelType shared_voxels[NUM_THREADS_PER_BLOCK];
+  SharedVoxel<VoxelType> shared;
+  VoxelType* shared_voxels = shared.getPointer();
   VoxelType my_voxel_flags;
   const gpu_voxels::Vector3ui dim = dimensions;
 

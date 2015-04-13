@@ -26,6 +26,18 @@
 namespace gpu_voxels {
 namespace file_handling {
 
+// Global static pointer used to ensure a single instance of the class.
+PointcloudFileHandler* PointcloudFileHandler::m_instance = NULL;
+
+
+PointcloudFileHandler* PointcloudFileHandler::Instance()
+{
+  if(!m_instance) // Only allow one instance of class to be generated.
+    m_instance = new PointcloudFileHandler;
+
+  return m_instance;
+}
+
 /*!
  * \brief loadPointCloud loads a PCD file and returns the points in a vector.
  * \param path Filename
@@ -34,9 +46,15 @@ namespace file_handling {
  * \param offset_XYZ Additional transformation offset
  * \return true if succeeded, false otherwise
  */
-bool PointcloudFileHandler::loadPointCloud(const std::string path, std::vector<Vector3f> &points, const bool shift_to_zero,
+bool PointcloudFileHandler::loadPointCloud(const std::string _path, const bool use_model_path, std::vector<Vector3f> &points, const bool shift_to_zero,
                     const Vector3f &offset_XYZ, const float scaling)
 {
+  std::string path;
+  if(use_model_path)
+  {
+    path = (getGpuVoxelsPath() / boost::filesystem::path(_path)).string();
+  }
+
   // is the file a simple xyz file?
   std::size_t found = path.find(std::string("xyz"));
   if (found!=std::string::npos)
@@ -141,6 +159,20 @@ void PointcloudFileHandler::shiftPointCloudToZero(std::vector<Vector3f> &points)
     points[i].y -= min_xyz.y;
     points[i].z -= min_xyz.z;
   }
+}
+
+
+boost::filesystem::path PointcloudFileHandler::getGpuVoxelsPath()
+{
+  char const* tmp = std::getenv("GPU_VOXELS_MODEL_PATH");
+  if (tmp == NULL)
+  {
+    LOGGING_ERROR_C(
+        Gpu_voxels_helpers,
+        PointcloudFileHandler,
+        "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
+  }
+  return boost::filesystem::path(tmp);
 }
 
 }  // end of ns

@@ -51,22 +51,15 @@ typedef int8_t Probability;
  */
 typedef uint8_t NodeStatus;
 
-/*
- * Status flags of an inner node, to handle different situations.
- * (Size is restricted to 1 byte, but nvcc doesn't support explicit enum types of C++0x)
- */
-enum EnumNodeStatus
-  : NodeStatus
-  {
-    ns_FREE = 1,
-    ns_UNKNOWN = 2,
-    ns_OCCUPIED = 4,
-    ns_PART = 8,
-    ns_LAST_LEVEL = 16,
-    ns_COLLISION = 32,
-    ns_STATIC_MAP = 64,
-    ns_DYNAMIC_MAP = 128
-};
+
+static const NodeStatus ns_FREE = 1;
+static const NodeStatus ns_UNKNOWN = 2;
+static const NodeStatus ns_OCCUPIED = 4;
+static const NodeStatus ns_PART = 8;
+static const NodeStatus ns_LAST_LEVEL = 16;
+static const NodeStatus ns_COLLISION = 32;
+static const NodeStatus ns_STATIC_MAP = 64;
+static const NodeStatus ns_DYNAMIC_MAP = 128;
 
 static const NodeStatus STATUS_OCCUPANCY_MASK = ns_FREE | ns_UNKNOWN | ns_OCCUPIED;
 static const NodeStatus STATUS_OCCUPANCY_MASK_INV = ~STATUS_OCCUPANCY_MASK;
@@ -134,13 +127,9 @@ typedef uint8_t NodeFlags;
 /*
  * InnerNode flags needed for propagate
  */
-enum EnumNodeFlags
-  : NodeFlags
-  {
     //nf_RESERVED = 15,
-    nf_UPDATE_SUBTREE = 64, // indicates that all nodes in it's subtree have to be updated with this nodes' value
-    nf_NEEDS_UPDATE = 128 // indicates that this node needs to be updated since it was newly created or any node of it's subtree changed
-};
+static const NodeFlags nf_UPDATE_SUBTREE = 64; // indicates that all nodes in it's subtree have to be updated with this nodes' value
+static const NodeFlags nf_NEEDS_UPDATE = 128; // indicates that this node needs to be updated since it was newly created or any node of it's subtree changed
 
 }  // end of ns
 }  // end of ns

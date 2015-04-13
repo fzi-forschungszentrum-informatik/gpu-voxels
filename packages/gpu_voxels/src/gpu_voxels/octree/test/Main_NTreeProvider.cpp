@@ -136,6 +136,8 @@ void thread_handleProvider(Provider_Parameter& parameter, uint32_t id)
     case Provider_Parameter::MODE_KINECT_PLAYBACK:
       *kinect = new Kinect(*provider, &parameter);
       break;
+    default:
+      break;
   }
 
 //  if (use_kinect)

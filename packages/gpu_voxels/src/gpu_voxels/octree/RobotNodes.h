@@ -57,9 +57,7 @@ public:
   __device__ __forceinline__
   void init_d()
   {
-#pragma unroll
-    for (uint32_t i = 0; i < VOXELLIST_FLAGS_SIZE; ++i)
-      m_voxel_type[i] = 0;
+    memset(m_voxel_type, 0, sizeof(m_voxel_type));
   }
 
   __device__ __forceinline__ void initLastLevel_d()
@@ -145,11 +143,11 @@ class InnerNode
 {
 private:
   __device__ __host__ __forceinline__
-  void init(enum EnumNodeStatus status)
+  void init(NodeStatus status)
   {
     m_child_low = 0;
     m_child_high = 0;
-    m_status = (uint8_t) status;
+    m_status = status;
     alignment = 0;
 
   }
@@ -166,23 +164,18 @@ public:
   void init_d()
   {
     init(ns_FREE);
-#pragma unroll
-    for (uint32_t i = 0; i < VOXELLIST_FLAGS_SIZE; ++i)
-      m_voxel_type[i] = 0xFFFFFFFF;
+    memset(m_voxel_type, 0xFFFFFFFF, sizeof(m_voxel_type));
   }
 
   __device__ __forceinline__
   void initLastLevel_d()
   {
-    init((enum EnumNodeStatus) (ns_FREE | ns_LAST_LEVEL));
-#pragma unroll
-    for (uint32_t i = 0; i < VOXELLIST_FLAGS_SIZE; ++i)
-      m_voxel_type[i] = 0xFFFFFFFF;
-
+    init(NodeStatus(ns_FREE | ns_LAST_LEVEL));
+    memset(m_voxel_type, 0xFFFFFFFF, sizeof(m_voxel_type));
   }
 
   __device__ __host__ __forceinline__
-  bool hasStatus(enum EnumNodeStatus status)
+  bool hasStatus(NodeStatus status)
   {
     return (getStatus() & status) > 0;
   }
@@ -190,24 +183,24 @@ public:
   __device__ __host__ __forceinline__
   bool isOccupied()
   {
-    return hasStatus((enum EnumNodeStatus) (ns_OCCUPIED | ns_PART));
+    return hasStatus(NodeStatus (ns_OCCUPIED | ns_PART));
   }
 
   __device__ __host__ __forceinline__
   void setOccupied()
   {
     // clear all flags except LAST_LEVEL and set PART_OCCUPIED
-    setStatus((enum EnumNodeStatus) ((getStatus() & ns_LAST_LEVEL) | ns_PART));
+    setStatus(NodeStatus ((getStatus() & ns_LAST_LEVEL) | ns_PART));
   }
 
   __device__ __host__ __forceinline__
-  enum EnumNodeStatus getStatus()
+  NodeStatus getStatus()
   {
-    return (enum EnumNodeStatus) m_status;
+    return m_status;
   }
 
   __device__ __host__ __forceinline__
-  void setStatus(enum EnumNodeStatus status)
+  void setStatus(NodeStatus status)
   {
     assert(uint32_t(status) <= 0xFF);
     m_status = status;

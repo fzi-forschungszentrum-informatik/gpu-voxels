@@ -42,16 +42,15 @@ enum VoxelType
 };
 
 enum MapType {
-  MT_VOXELLIST,
-  MT_OCTREE,
-  MT_OCTREE_VOXELLIST,
+  MT_BITVECTOR_VOXELMAP,         // 3D-Array of deterministic Voxels (identified by their Voxelmap-like Pointer adress) that hold a Bitvector
+  MT_BITVECTOR_VOXELLIST,        // List of     deterministic Voxels (identified by their Voxelmap-like Pointer adress) that hold a Bitvector
+  MT_BITVECTOR_OCTREE,           // Octree of   deterministic Voxels (identified by a Morton Code)                      that hold a Bitvector
+  MT_BITVECTOR_MORTON_VOXELLIST, // List of     deterministic Voxels (identified by a Morton Code)                      that hold a Bitvector
 
-  MT_PROBAB_VOXELMAP,
-  MT_PROBAB_VOXELLIST,
-  MT_PROBAB_OCTREE,
-  MT_PROBAB_OCTREE_VOXELLIST,
-
-  MT_BIT_VOXELMAP,
+  MT_PROBAB_VOXELMAP,            // 3D-Array of probabilistic Voxels (identified by their Voxelmap-like Pointer adress) that hold a Probability
+  MT_PROBAB_VOXELLIST,           // List of     probabilistic Voxels (identified by their Voxelmap-like Pointer adress) that hold a Probability
+  MT_PROBAB_OCTREE,              // Octree of   probabilistic Voxels (identified by a Morton Code)                      that hold a Probability
+  MT_PROBAB_MORTON_VOXELLIST     // List of     probabilistic Voxels (identified by a Morton Code)                      that hold a Probability
 };
 
 static const std::string GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED = "THIS OPERATION IS NOT SUPPORTED BY THE DATA STRUCTURE!";

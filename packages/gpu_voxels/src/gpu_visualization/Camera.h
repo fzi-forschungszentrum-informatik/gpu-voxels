@@ -207,13 +207,11 @@ public:
   void setMousePosition(int32_t x, int32_t y)
   {
     m_mouse_old_x = x;
-    m_mouse_old_y = y;
+    m_mouse_old_y = m_window_height - y;
   }
 
   // --- debug functions ---
   void printCameraPosDirR();
-
-  void printCameraTargetPointPos();
 
   glm::vec3 getCameraRight() const
   {

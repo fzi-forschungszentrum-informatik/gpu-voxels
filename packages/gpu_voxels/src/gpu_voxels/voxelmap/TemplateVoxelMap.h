@@ -108,25 +108,25 @@ public:
   //! gets an offset in pointer arithmetics
   Voxel* getVoxelPtrOffset(const Vector3ui &coordinates)
   {
-    return (Voxel*) (coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x);
+    return (Voxel*) (intptr_t)(coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x);
   }
 
   //! gets an offset in pointer arithmetics
   Voxel* getVoxelPtrOffset(uint32_t x, uint32_t y, uint32_t z)
   {
-    return (Voxel*) (z * m_dim.x * m_dim.y + y * m_dim.x + x);
+    return (Voxel*) (intptr_t)(z * m_dim.x * m_dim.y + y * m_dim.x + x);
   }
 
   //! get pointer to specific voxel on device given the coordinates
   Voxel* getDeviceVoxelPtr(uint32_t x, uint32_t y, uint32_t z)
   {
-    return (Voxel*) (m_dev_data + (z * m_dim.x * m_dim.y + y * m_dim.x + x));
+    return (Voxel*) (intptr_t)(m_dev_data + (z * m_dim.x * m_dim.y + y * m_dim.x + x));
   }
 
   //! get pointer to specific voxel on device given the coordinates
   Voxel* getDeviceVoxelPtr(const Vector3ui &coordinates)
   {
-    return (Voxel*) (m_dev_data +
+    return (Voxel*) (intptr_t)(m_dev_data +
                      (coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x));
   }
 

@@ -164,7 +164,7 @@ template<std::size_t branching_factor, std::size_t level_count, class InnerNode,
 class WorkItem, typename RunConfig>
 uint32_t AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, WorkItem, RunConfig>::getIdleCountThreshold()
 {
-  return IDLE_THESHOLD * NUM_TASKS;
+  return max(1, uint32_t(IDLE_THESHOLD * NUM_TASKS));
 }
 
 }

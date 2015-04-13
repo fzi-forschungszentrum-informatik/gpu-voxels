@@ -98,6 +98,23 @@ public:
     }
   };
 
+
+  __host__
+  friend std::ostream& operator<<(std::ostream& os, const ProbabilisticVoxel& dt)
+  {
+    os << dt.getOccupancy();
+    return os;
+  }
+
+  __host__
+  friend std::istream& operator>>(std::istream& in, ProbabilisticVoxel& dt)
+  {
+    probability tmp;
+    in >> tmp;
+    dt.occupancy() = tmp;
+    return in;
+  }
+
 protected:
   probability m_occupancy;
 };

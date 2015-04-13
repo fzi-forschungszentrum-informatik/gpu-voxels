@@ -39,6 +39,8 @@ Visualizer::Visualizer()
   m_shm_manager_visualizer = NULL;
   m_window_title = "visualizer";
   m_use_external_draw_type_triggers = true;
+  m_draw_swept_volumes = false;
+  m_move_focus_enabled = false;
 }
 
 Visualizer::~Visualizer()
@@ -532,7 +534,7 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
 
   // Launch kernel to copy data into the OpenGL buffer.
   // fill_vbo_without_precounting<<< dim3(1,1,1), dim3(1,1,1)>>>(/**/
-  if (context->m_voxelMap->getMapType() == MT_BIT_VOXELMAP)
+  if (context->m_voxelMap->getMapType() == MT_BITVECTOR_VOXELMAP)
   {
     if(voxelmap::BIT_VECTOR_LENGTH > MAX_DRAW_TYPES)
       LOGGING_ERROR_C(Visualization, Visualizer,
@@ -581,7 +583,6 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
   HANDLE_CUDA_ERROR(cudaGraphicsUnmapResources(1, &context->m_cuda_ressources, 0));
 
   context->m_num_voxels_per_type = indices;
-  thrust::host_vector<uint32_t> temp = context->m_num_voxels_per_type;
   bool resize = false;
   bool increaseSuperVoxel = false;
   size_t vbo_size = context->m_cur_vbo_size;
@@ -1352,17 +1353,46 @@ void Visualizer::renderFunction(void)
 
 void Visualizer::mouseClickFunction(int32_t button, int32_t state, int32_t xpos, int32_t ypos)
 {
+  float speed_multiplier = 80.f;
   if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
   {
     printPositionOfVoxelUnderMouseCurser(xpos, ypos);
   }
   else if (button == 3 && state == GLUT_DOWN) /*mouse wheel up*/
   {
-    increaseSuperVoxelSize();
+    int32_t modi = glutGetModifiers();
+    if (modi & GLUT_ACTIVE_CTRL  && modi & GLUT_ACTIVE_ALT)
+    {
+      m_cur_context->m_camera->moveAlongDirection(speed_multiplier);
+    }
+    else
+    {
+      increaseSuperVoxelSize();
+    }
   }
   else if (button == 4 && state == GLUT_DOWN)/*mouse wheel down*/
   {
-    decreaseSuperVoxelSize();
+    int32_t modi = glutGetModifiers();
+    if (modi & GLUT_ACTIVE_CTRL  && modi & GLUT_ACTIVE_ALT)
+    {
+      m_cur_context->m_camera->moveAlongDirection(-speed_multiplier);
+    }
+    else
+    {
+      decreaseSuperVoxelSize();
+    }
+  }
+  else if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+  {
+    int32_t modi = glutGetModifiers();
+    if (modi & GLUT_ACTIVE_CTRL  && modi & GLUT_ACTIVE_ALT)
+    {
+      m_move_focus_enabled = true;
+    }
+  }
+  else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
+  {
+    m_move_focus_enabled = false;
   }
 
 }
@@ -1372,9 +1402,7 @@ void Visualizer::mouseClickFunction(int32_t button, int32_t state, int32_t xpos,
  */
 void Visualizer::mouseMotionFunction(int32_t xpos, int32_t ypos)
 {
-
-  int32_t modi = glutGetModifiers();
-  if (modi == GLUT_ACTIVE_CTRL)
+  if (m_move_focus_enabled)
   {
     m_cur_context->m_camera->moveFocusPointFromMouseInput(xpos, ypos);
     createFocusPointVBO();
@@ -1483,8 +1511,8 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
       m_cur_context->m_camera->resetToInitialValues();
       createFocusPointVBO();
       break;
-    case 't':
-      m_cur_context->m_camera->printCameraTargetPointPos();
+    case 's': // draw all swept volume types
+      flipDrawSweptVolume();
       break;
     case 'v':
       printViewInfo();
@@ -1712,6 +1740,10 @@ void Visualizer::flipExternalVisibilityTrigger()
     LOGGING_INFO_C(Visualization, Visualizer, "External visibility trigger of Swept Volume subtypes deactivated" << endl);
   }else{
     m_use_external_draw_type_triggers = true;
+    if (m_draw_swept_volumes)
+    {
+      flipDrawSweptVolume(); // They will not be drawn after deactivation, anyway
+    }
     LOGGING_INFO_C(Visualization, Visualizer, "External visibility trigger of Swept Volume subtypes activated" << endl);
   }
 }
@@ -1728,6 +1760,36 @@ void Visualizer::flipDrawType(VoxelType type)
   {
     LOGGING_INFO_C(Visualization, Visualizer, "Draw type " << typeToString(type) << " activated" << endl);
     m_cur_context->m_draw_types[type] = 1;
+  }
+  for (uint32_t i = 0; i < m_cur_context->m_voxel_maps.size(); i++)
+  {
+    m_cur_context->m_voxel_maps[i]->m_has_draw_type_flipped = true;
+  }
+  for (uint32_t i = 0; i < m_cur_context->m_octrees.size(); i++)
+  {
+    m_cur_context->m_octrees[i]->m_has_draw_type_flipped = true;
+  }
+  m_cur_context->m_camera->setViewChanged(true);
+  copyDrawTypeToDevice();
+}
+
+void Visualizer::flipDrawSweptVolume()
+{
+  const uint8 start = static_cast<uint>(eVT_SWEPT_VOLUME_START);
+  const uint8 end = static_cast<uint>(eVT_SWEPT_VOLUME_END);
+  if (m_draw_swept_volumes)
+  {
+    m_draw_swept_volumes = false;
+    LOGGING_INFO_C(Visualization, Visualizer, "Drawing complete Swept Volumes" << " deactivated" << endl);
+
+    thrust::fill(m_cur_context->m_draw_types.begin()+start, m_cur_context->m_draw_types.begin()+end, 0);
+  }
+  else
+  {
+    m_draw_swept_volumes = true;
+    LOGGING_INFO_C(Visualization, Visualizer, "Drawing complete Swept Volumes" << " activated" << endl);
+    // for all from start to end
+    thrust::fill(m_cur_context->m_draw_types.begin()+start, m_cur_context->m_draw_types.begin()+end, 1);
   }
   for (uint32_t i = 0; i < m_cur_context->m_voxel_maps.size(); i++)
   {
@@ -2000,7 +2062,8 @@ void Visualizer::printHelp()
   std::cout << "---->Keyboard" << std::endl;
   std::cout << "h: print this help." << std::endl;
   std::cout << "v: print view info." << std::endl;
-  std::cout << "o: overwrite providers possibility to trigger visibility of swept volumes" << std::endl;
+  std::cout << "o: overwrite providers possibility to trigger visibility of swept volumes on/off" << std::endl;
+  std::cout << "s: draw all swept volume types on/off (All SweptVol types will be deactivated after switching off.)" << std::endl;
   std::cout << "p: print camera position." << std::endl;
   std::cout << "m: print total VBO size." << std::endl;
   std::cout << "n: print device memory info." << std::endl;
@@ -2027,6 +2090,7 @@ void Visualizer::printHelp()
   std::cout << "RIGHT_BUTTON: print x,y,z coordinates of the clicked voxel." << std::endl;
   std::cout << "LEFT_BUTTON: enables mouse movement." << std::endl;
   std::cout << "ALT + CTRL + LEFT_BUTTON: enables focus point movement in X-Y-Plane." << std::endl;
+  std::cout << "ALT + CTRL + MOUSE_WHEEL: Move Camera closer of further away from focus point." << std::endl;
   std::cout << "MOUSE_WHEEL: increase/ decrease super voxel size." << std::endl;
   std::cout << "" << std::endl;
 }

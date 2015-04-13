@@ -36,16 +36,6 @@
 namespace gpu_voxels {
 namespace NTree {
 
-// ##### NTree #####
-//TODO remove this
-#ifdef PROBABILISTIC_TREE
-typedef Environment::InnerNodeProb InnerNode;
-typedef Environment::LeafNodeProb LeafNode;
-#else
-typedef Environment::InnerNode InnerNode;
-typedef Environment::LeafNode LeafNode;
-#endif
-
 }  // end of ns
 }  // end of ns
 

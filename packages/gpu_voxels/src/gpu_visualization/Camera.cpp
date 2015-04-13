@@ -76,9 +76,10 @@ void Camera_gpu::updateViewMatrixFromMouseInput(int32_t xpos, int32_t ypos)
 
   if (m_camera_orbit)
   {
+    ypos = m_window_height - ypos;
     float dx, dy;
     dx = (float) (xpos - m_mouse_old_x);
-    dy = (float) (ypos - m_mouse_old_y);
+    dy = (float) (m_mouse_old_y - ypos);
 
     m_mouse_old_x = xpos;
     m_mouse_old_y = ypos;
@@ -160,16 +161,24 @@ void Camera_gpu::moveAlongUp(float factor)
 void Camera_gpu::moveFocusPointFromMouseInput(int32_t xpos, int32_t ypos)
 {
   ypos = m_window_height - ypos;
-  float dx, dy;
-  dx = (float) (xpos - m_mouse_old_x);
-  dy = (float) (ypos - m_mouse_old_y);
+  float du, dv;
+
+  glm::vec3 camera_direction = getCameraDirection();
+  float horizontal_angle = atan2(camera_direction.y, camera_direction.x);
+  float c = cos( horizontal_angle);
+  float s = sin( horizontal_angle);
+  du = (float) (xpos - m_mouse_old_x) * s + (float) (ypos - m_mouse_old_y) * c;
+  dv = (float) (xpos - m_mouse_old_x) * -c + (float) (ypos - m_mouse_old_y) * s;
 
   m_mouse_old_x = xpos;
   m_mouse_old_y = ypos;
 
   glm::vec3 target = getCameraTarget();
-  target = target - glm::vec3(dx, dy, 0);
+  target = target - glm::vec3(du, dv, 0);
   setCameraTarget(target);
+  glm::vec3 position = getCameraPosition();
+  position = position - glm::vec3(du, dv, 0);
+  m_cur_context.camera_position = position;
   updateViewMatrix();
 }
 
@@ -245,6 +254,7 @@ void Camera_gpu::toggleCameraMode()
 void Camera_gpu::printCameraPosDirR()
 {
   std::cout << "<camera>" << std::endl;
+  std::cout << "  <!-- Free flight mode -->" << std::endl;
   std::cout << "  <position>" << std::endl;
   std::cout << "    <x> " << m_cur_context.camera_position.x << " </x>" << std::endl;
   std::cout << "    <y> " << m_cur_context.camera_position.y << " </y>" << std::endl;
@@ -253,19 +263,17 @@ void Camera_gpu::printCameraPosDirR()
   std::cout << "  <horizontal_angle> " << glm::degrees(m_cur_context.h_angle) << " </horizontal_angle> <!-- given in Deg -->" << std::endl;
   std::cout << "  <vertical_angle> " << glm::degrees(m_cur_context.v_angle) << " </vertical_angle> <!-- given in Deg -->" << std::endl;
   std::cout << "  <field_of_view> " << glm::degrees(m_cur_context.foV) << " </field_of_view> <!-- given in Deg -->" << std::endl;
+  std::cout << "  <!-- Orbit mode -->" << std::endl;
+  std::cout << "  <focus>" << std::endl;
+  std::cout << "    <x> " << m_cur_context.camera_target.x << " </x>" << std::endl;
+  std::cout << "    <y> " << m_cur_context.camera_target.y << " </y>" << std::endl;
+  std::cout << "    <z> " << m_cur_context.camera_target.z << " </z>" << std::endl;
+  std::cout << "  </focus>" << std::endl;
   std::cout << "  <window_width> " << getWindowWidth() << " </window_width>" << std::endl;
   std::cout << "  <window_height> " << getWindowHeight() << " </window_height>" << std::endl;
   std::cout << "</camera>" << std::endl;
 }
 
-void Camera_gpu::printCameraTargetPointPos()
-{
-  std::cout << "  <target>" << std::endl;
-  std::cout << "    <x> " << m_cur_context.camera_target.x << " </x>" << std::endl;
-  std::cout << "    <y> " << m_cur_context.camera_target.y << " </y>" << std::endl;
-  std::cout << "    <z> " << m_cur_context.camera_target.z << " </z>" << std::endl;
-  std::cout << "  </target>" << std::endl;
-}
 
 } // end of namespace visualization
 } // end of namespace gpu_voxels

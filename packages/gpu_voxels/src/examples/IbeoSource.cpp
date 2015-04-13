@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
    * The additional (optional) params shift the map to zero and then add
    * a offset to the loaded pointcloud.
    */
-  gvl->addMap(MT_OCTREE, "myEnvironmentMap");
+  gvl->addMap(MT_BITVECTOR_OCTREE, "myEnvironmentMap");
 
   Vector3f center = gvl->getMap("myEnvironmentMap")->getMetricDimensions() * 0.5f;
   IbeoSourceWrapper ibeo(callback, ibeo_uri, ncom_uri, center);

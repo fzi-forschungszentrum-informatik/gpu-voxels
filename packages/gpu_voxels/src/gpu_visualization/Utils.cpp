@@ -76,13 +76,13 @@ std::string typeToString(MapType type)
   std::string name = "";
   switch (type)
   {
-    case MT_VOXELLIST:
+    case MT_BITVECTOR_VOXELLIST:
       name = "VOXELLIST";
       break;
-    case MT_OCTREE:
+    case MT_BITVECTOR_OCTREE:
       name = "OCTREE";
       break;
-    case MT_OCTREE_VOXELLIST:
+    case MT_BITVECTOR_MORTON_VOXELLIST:
       name = "OCTREE_VOXELLIST";
       break;
     case MT_PROBAB_VOXELMAP:
@@ -91,10 +91,10 @@ std::string typeToString(MapType type)
     case MT_PROBAB_VOXELLIST:
       name = "PROBAB_VOXELLIST";
       break;
-    case MT_PROBAB_OCTREE_VOXELLIST:
+    case MT_PROBAB_MORTON_VOXELLIST:
       name = "PROBAB_OCTREE_VOXELLIST";
       break;
-    case MT_BIT_VOXELMAP:
+    case MT_BITVECTOR_VOXELMAP:
       name = "BIT_VOXELMAP";
       break;
     default:

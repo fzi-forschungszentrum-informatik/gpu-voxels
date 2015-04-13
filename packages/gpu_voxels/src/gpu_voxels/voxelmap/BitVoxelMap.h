@@ -55,6 +55,8 @@ public:
 
   virtual void clearVoxelType(VoxelType voxel_type);
 
+  virtual VoxelMapTemplateId getTemplateType() { return VMT_BITVECTOR_VOXELMAP; }
+
 protected:
   virtual void clearVoxelMapRemoteLock(const uint32_t bit_index);
 };

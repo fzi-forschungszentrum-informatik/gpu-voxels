@@ -51,6 +51,8 @@ public:
   virtual void clearVoxelType(VoxelType voxel_type);
 
   virtual void insertPointCloud(const std::vector<Vector3f> &points, const uint32_t voxel_type);
+
+  virtual VoxelMapTemplateId getTemplateType() { return VMT_PROBABILISTIC_VOXELMAP; }
 };
 
 } // end of namespace

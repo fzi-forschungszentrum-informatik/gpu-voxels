@@ -18,55 +18,6 @@
 #include <stdio.h>
 
 namespace gpu_voxels {
-__global__
-void kernelUpdateTransformations(uint8_t chain_size, uint8_t* joint_types,
-                                 KinematicLink::DHParameters* dh_parameters, Matrix4f* dh_transformations, Matrix4f* local_transformations)
-{
-  const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-
-  if (i < chain_size)
-  {
-    Matrix4f matrix;
-    Matrix4f matrix_local;
-
-    convertDHtoM(dh_parameters[i].theta,
-                 dh_parameters[i].d,
-                 0, // currently only b = 0
-                 dh_parameters[i].a,
-                 dh_parameters[i].alpha,
-                 dh_parameters[i].value,
-                 joint_types[i],
-                 matrix);
-
-    dh_transformations[i] = matrix;
-
-    /* local transformations use only d and theta part of DH-parameters.
-     * and must be used for point cloud of the current joint
-     */
-    convertDHtoM(dh_parameters[i].theta,
-                 dh_parameters[i].d,
-                 0, // currently only b = 0
-                 dh_parameters[i].a, 			// a = 0
-                 dh_parameters[i].alpha, 		// alpha = 0
-                 dh_parameters[i].value,
-                 joint_types[i],
-                 matrix_local);
-
-    
-    local_transformations[i] = matrix_local;
-
-
-//    printf("dhtom: updated matrix %u \na11 .. a14:\t %f %f %f %f \na21 .. a24:\t %f %f %f %f \na31 .. a34:\t %f %f %f %f \na41 .. a44:\t %f %f %f %f\n",
-//           i,
-//           matrix.a11, matrix.a12, matrix.a13, matrix.a14,
-//           matrix.a21, matrix.a22, matrix.a23, matrix.a24,
-//           matrix.a31, matrix.a32, matrix.a33, matrix.a34,
-//           matrix.a41, matrix.a42, matrix.a43, matrix.a44);
-  }
-}
-
-
-
 
 __global__
 void kernelKinematicChainTransform(uint8_t chain_size, uint8_t joint_to_transform, const Matrix4f* basis_transformation,
