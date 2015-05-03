@@ -216,9 +216,9 @@ static void printHelp()
 {
   printf("\n\n##### Help for octree_provider #####\n");
   Provider_Parameter::printHelp();
-  printf("Example:\n   octree_provider -shm 0 -m load_pcd -f ./pointcloud.pcd \n");
+  printf("Example:\n   octree_provider -shm 0 -m load_pc -f ./pointcloud.pcd \n");
   printf(
-      "Example:\n   octree_provider -shm 0 -m kinect_live -fps 10 -shm 1 -m load_pcd -f ./pointcloud.pcd \n");
+      "Example:\n   octree_provider -shm 0 -m kinect_live -fps 10 -shm 1 -m load_pc -f ./pointcloud.pcd \n");
 }
 
 int main(int argc, char **argv)
@@ -249,9 +249,9 @@ int main(int argc, char **argv)
     return 0;
   }
   printf("num parameter: %lu\n", parameter.size());
-  if(readPCD(parameter))
+  if(readPcFile(parameter))
   {
-    printf("Error reading pcd file!\n");
+    printf("Error reading pointcloud file!\n");
     return 0;
   }
 

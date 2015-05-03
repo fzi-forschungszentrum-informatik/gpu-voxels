@@ -26,7 +26,7 @@ COMPILATION:
 
 mkdir build
 cd build
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 
 ==> This will also generate example programs and a visualization tool to see some live demos.

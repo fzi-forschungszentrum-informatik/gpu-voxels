@@ -56,18 +56,18 @@ void parseArguments(Benchmark_Parameter& parameter, int argc, char **argv)
         parameter.mode = Benchmark_Parameter::MODE_INTERSECT_LINEAR;
       else if (a.compare("BUILD_LINEAR") == 0)
         parameter.mode = Benchmark_Parameter::MODE_BUILD_LINEAR;
-      else if (a.compare("BUILD_PCD") == 0)
-        parameter.mode = Benchmark_Parameter::MODE_BUILD_PCD;
-      else if (a.compare("SORT_PCD") == 0)
-        parameter.mode = Benchmark_Parameter::MODE_SORT_PCD;
+      else if (a.compare("BUILD_PCF") == 0)
+        parameter.mode = Benchmark_Parameter::MODE_BUILD_PCF;
+      else if (a.compare("SORT_PCF") == 0)
+        parameter.mode = Benchmark_Parameter::MODE_SORT_PCF;
       else if (a.compare("SORT_LINEAR") == 0)
         parameter.mode = Benchmark_Parameter::MODE_SORT_LINEAR;
-      else if (a.compare("INSERT_ROTATE_PCD") == 0)
-        parameter.mode = Benchmark_Parameter::MODE_INSERT_ROTATE_PCD;
-      else if (a.compare("INTERSECT_PCD") == 0)
-        parameter.mode = Benchmark_Parameter::MODE_INTERSECT_PCD;
-      else if (a.compare("LOAD_PCD") == 0)
-        parameter.mode = Benchmark_Parameter::MODE_LOAD_PCD;
+      else if (a.compare("INSERT_ROTATE_PCF") == 0)
+        parameter.mode = Benchmark_Parameter::MODE_INSERT_ROTATE_PCF;
+      else if (a.compare("INTERSECT_PCF") == 0)
+        parameter.mode = Benchmark_Parameter::MODE_INTERSECT_PCF;
+      else if (a.compare("LOAD_PCF") == 0)
+        parameter.mode = Benchmark_Parameter::MODE_LOAD_PCF;
       else if (a.compare("MALLOC") == 0)
         parameter.mode = Benchmark_Parameter::MODE_MALLOC;
       else
@@ -162,8 +162,8 @@ bool parseArguments(vector<Provider_Parameter>& parameter, int argc, char **argv
           a = argv[++i];
           char* tmp = argv[i];
           argv[i] = deleted_argument;
-          if (a.compare("load_pcd") == 0)
-            parameter.back().mode = Provider_Parameter::MODE_LOAD_PCD;
+          if (a.compare("load_pc") == 0)
+            parameter.back().mode = Provider_Parameter::MODE_LOAD_PCF;
           else if (a.compare("kinect_live") == 0)
             parameter.back().mode = Provider_Parameter::MODE_KINECT_LIVE;
           else if (a.compare("ptu_live") == 0)
@@ -209,7 +209,7 @@ bool parseArguments(vector<Provider_Parameter>& parameter, int argc, char **argv
         if (i + 1 < argc)
         {
           argv[i] = deleted_argument;
-          parameter.back().pcd_file = argv[++i];
+          parameter.back().pc_file = argv[++i];
           argv[i] = deleted_argument;
         }
       }
@@ -372,22 +372,22 @@ bool parseArguments(vector<Provider_Parameter>& parameter, int argc, char **argv
   return error;
 }
 
-bool readPCD(vector<Provider_Parameter>& parameter)
+bool readPcFile(vector<Provider_Parameter>& parameter)
 {
   for (uint32_t i = 0; i < parameter.size(); ++i)
   {
-    if (parameter[i].pcd_file.empty()
-        && (parameter[i].mode == Provider_Parameter::MODE_LOAD_PCD
+    if (parameter[i].pc_file.empty()
+        && (parameter[i].mode == Provider_Parameter::MODE_LOAD_PCF
             || parameter[i].mode == Provider_Parameter::MODE_RANDOM_PLAN
             || parameter[i].mode == Provider_Parameter::MODE_KINECT_PLAYBACK))
     {
       printf("File name missing!\n");
       return true;
     }
-    else if(!parameter[i].pcd_file.empty() && parameter[i].mode != Provider_Parameter::MODE_KINECT_PLAYBACK
+    else if(!parameter[i].pc_file.empty() && parameter[i].mode != Provider_Parameter::MODE_KINECT_PLAYBACK
         && parameter[i].mode != Provider_Parameter::MODE_DESERIALIZE)
     {
-      bool res = Test::readPCD(parameter[i].pcd_file, parameter[i].points, parameter[i].num_points,
+      bool res = Test::readPcFile(parameter[i].pc_file, parameter[i].points, parameter[i].num_points,
                     parameter[i].swap_x_z);
       if(res)
         return true;
@@ -534,7 +534,7 @@ bool parseArguments(Bech_Parameter& parameter, int argc, char **argv, bool repor
 
 namespace Test {
 
-bool readPCD(string file_name, vector<Vector3f>& points, uint32_t& num_points, bool swap_x_z)
+bool readPcFile(string file_name, vector<Vector3f>& points, uint32_t& num_points, bool swap_x_z)
 { 
   points.resize(num_points);
   file_handling::PointcloudFileHandler::Instance()->loadPointCloud(file_name, false, points);

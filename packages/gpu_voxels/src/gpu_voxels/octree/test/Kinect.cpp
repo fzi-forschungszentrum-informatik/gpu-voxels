@@ -361,7 +361,7 @@ void Kinect::run()
   //m_interface = new pcl::OpenNIGrabber();
 
   if (m_parameter->mode == Provider::Provider_Parameter::MODE_KINECT_PLAYBACK)
-    m_interface = new pcl::ONIGrabber(m_parameter->pcd_file.c_str(), true, true);
+    m_interface = new pcl::ONIGrabber(m_parameter->pc_file.c_str(), true, true);
   else
     m_interface = new pcl::OpenNIGrabber(m_parameter->kinect_id);
 

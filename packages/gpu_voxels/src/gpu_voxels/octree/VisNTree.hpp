@@ -31,13 +31,11 @@
 namespace gpu_voxels {
 namespace NTree {
 
-thrust::device_vector<Cube> *d_cubes_1 = NULL;
-thrust::device_vector<Cube> *d_cubes_2 = NULL;
-
 template<typename InnerNode, typename LeafNode>
 VisNTree<InnerNode, LeafNode>::VisNTree(MyNTree* ntree, std::string map_name) :
     VisProvider(shm_segment_name_octrees, map_name), m_ntree(ntree), m_shm_memHandle(NULL), m_min_level(
-        UINT_MAX), m_shm_superVoxelSize(NULL), m_shm_numCubes(NULL), m_shm_bufferSwapped(NULL), m_internal_buffer_1(false)
+        UINT_MAX), m_shm_superVoxelSize(NULL), m_shm_numCubes(NULL), m_shm_bufferSwapped(NULL), m_internal_buffer_1(false),
+    m_d_cubes_1(NULL), m_d_cubes_2(NULL)
 {
 
 }
@@ -98,13 +96,13 @@ bool VisNTree<InnerNode, LeafNode>::visualize(const bool force_repaint)
     if(m_internal_buffer_1)
     {
       // extractCubes() allocates memory for the d_cubes_1, if the pointer is NULL
-      cube_buffer_size = m_ntree->extractCubes(d_cubes_1, NULL, m_min_level);
-      d_cubes_buffer = thrust::raw_pointer_cast(d_cubes_1->data());
+      cube_buffer_size = m_ntree->extractCubes(m_d_cubes_1, NULL, m_min_level);
+      d_cubes_buffer = thrust::raw_pointer_cast(m_d_cubes_1->data());
       m_internal_buffer_1 = false;
     }else{
       // extractCubes() allocates memory for the d_cubes_2, if the pointer is NULL
-      cube_buffer_size = m_ntree->extractCubes(d_cubes_2, NULL, m_min_level);
-      d_cubes_buffer = thrust::raw_pointer_cast(d_cubes_2->data());
+      cube_buffer_size = m_ntree->extractCubes(m_d_cubes_2, NULL, m_min_level);
+      d_cubes_buffer = thrust::raw_pointer_cast(m_d_cubes_2->data());
       m_internal_buffer_1 = true;
     }
 

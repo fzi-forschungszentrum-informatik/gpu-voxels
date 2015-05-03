@@ -435,7 +435,7 @@ int main(int argc, char **argv)
     //printHelp();
     return 0;
   }
-  if(readPCD(parameter.provider_parameter))
+  if(readPcFile(parameter.provider_parameter))
   {
     printf("Error reading pcd file!\n");
     return 0;

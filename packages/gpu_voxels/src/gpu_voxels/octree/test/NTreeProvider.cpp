@@ -49,9 +49,6 @@ namespace Provider {
 
 //const uint32_t BUFFER_SIZE = 10000000;
 
-thrust::device_vector<Cube> *d_cubes_1 = NULL;
-thrust::device_vector<Cube> *d_cubes_2 = NULL;
-
 string ros_point_cloud_types[2] =
 { "front", "back" };
 
@@ -62,7 +59,8 @@ NTreeProvider::NTreeProvider() :
         m_shm_numCubes(NULL), m_shm_bufferSwapped(NULL), m_fps_rebuild(0), map_data_offset(0),
         m_spinner(NULL), m_node_handle(NULL), m_subscriber_front(NULL), m_subscriber_back(NULL),
         m_tf_listener(NULL), d_free_space_voxel(NULL), d_object_voxel(NULL),
-        d_free_space_voxel2(NULL), d_object_voxel2(NULL), m_internal_buffer_1(false)
+        d_free_space_voxel2(NULL), d_object_voxel2(NULL), m_internal_buffer_1(false),
+        m_d_cubes_1(NULL), m_d_cubes_2(NULL)
 {
   m_segment_name = shm_segment_name_octrees;
 }
@@ -154,13 +152,13 @@ uint32_t NTreeProvider::generateCubes_wo_locking(Cube** ptr)
   if(m_internal_buffer_1)
   {
     // extractCubes() allocates memory for the d_cubes_1, if the pointer is NULL
-    cube_buffer_size = m_ntree->extractCubes(d_cubes_1, selection_ptr, m_min_level);
-    *ptr = thrust::raw_pointer_cast(d_cubes_1->data());
+    cube_buffer_size = m_ntree->extractCubes(m_d_cubes_1, selection_ptr, m_min_level);
+    *ptr = thrust::raw_pointer_cast(m_d_cubes_1->data());
     m_internal_buffer_1 = false;
   }else{
     // extractCubes() allocates memory for the d_cubes_2, if the pointer is NULL
-    cube_buffer_size = m_ntree->extractCubes(d_cubes_2, selection_ptr, m_min_level);
-    *ptr = thrust::raw_pointer_cast(d_cubes_2->data());
+    cube_buffer_size = m_ntree->extractCubes(m_d_cubes_2, selection_ptr, m_min_level);
+    *ptr = thrust::raw_pointer_cast(m_d_cubes_2->data());
     m_internal_buffer_1 = true;
   }
 
@@ -246,9 +244,9 @@ void NTreeProvider::init(Provider_Parameter& parameter)
 
   if (parameter.mode == Provider_Parameter::MODE_DESERIALIZE)
   {
-    printf("Deserialize '%s'\n", parameter.pcd_file.c_str());
+    printf("Deserialize '%s'\n", parameter.pc_file.c_str());
 
-    ifstream in(parameter.pcd_file.c_str());
+    ifstream in(parameter.pc_file.c_str());
     m_ntree->deserialize(in);
     in.close();
   }

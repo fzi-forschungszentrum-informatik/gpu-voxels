@@ -42,21 +42,21 @@ struct Benchmark_Parameter
   enum Mode
   {
     MODE_DEFAULT,
-    MODE_BUILD_PCD,
+    MODE_BUILD_PCF,
     MODE_BUILD_LINEAR,
     MODE_INTERSECT_CUBE,
     MODE_INTERSECT_LINEAR,
-    MODE_INTERSECT_PCD,
+    MODE_INTERSECT_PCF,
     MODE_FIND_CUBE,
-    MODE_SORT_PCD,
+    MODE_SORT_PCF,
     MODE_SORT_LINEAR,
-    MODE_INSERT_ROTATE_PCD,
-    MODE_VISUALIZER_PCD,
-    MODE_LOAD_PCD,
+    MODE_INSERT_ROTATE_PCF,
+    MODE_VISUALIZER_PCF,
+    MODE_LOAD_PCF,
     MODE_MALLOC
   };
 
-  std::string pcd_file;
+  std::string pc_file;
   std::vector<Vector3f> points;
   uint32_t num_points;
   uint32_t num_runs;
@@ -70,11 +70,11 @@ struct Benchmark_Parameter
 
   Benchmark_Parameter()
   {
-    pcd_file = "";
+    pc_file = "";
     points = std::vector<Vector3f>();
     num_points = 0;
     num_runs = 0;
-    mode = MODE_BUILD_PCD;
+    mode = MODE_BUILD_PCF;
     robot_cube_side_length_from = 0;
     robot_cube_side_length_to = 0;
     command = "";
@@ -86,7 +86,7 @@ struct Benchmark_Parameter
   __host__
     friend std::ostream& operator<<(std::ostream& out, const Benchmark_Parameter& parameter)
   {
-    out << "pcd_file: " << parameter.pcd_file << std::endl << "num_points: " << parameter.num_points
+    out << "pc_file: " << parameter.pc_file << std::endl << "num_points: " << parameter.num_points
         << std::endl << "num_runs: " << parameter.num_runs << std::endl << "mode: " << parameter.mode
         << std::endl << "robot_cube_side_length_from: " << parameter.robot_cube_side_length_from << std::endl
         << "robot_cube_side_length_to: " << parameter.robot_cube_side_length_to << std::endl << "command: "
@@ -105,7 +105,7 @@ struct Provider_Parameter
 {
   enum Mode
   {
-    MODE_NONE, MODE_LOAD_PCD, MODE_KINECT_LIVE, MODE_PTU_LIVE, MODE_KINECT_PLAYBACK, MODE_RANDOM_PLAN, MODE_ROS, MODE_DESERIALIZE
+    MODE_NONE, MODE_LOAD_PCF, MODE_KINECT_LIVE, MODE_PTU_LIVE, MODE_KINECT_PLAYBACK, MODE_RANDOM_PLAN, MODE_ROS, MODE_DESERIALIZE
   };
 
   enum Type
@@ -118,7 +118,7 @@ struct Provider_Parameter
      eMT_Deterministc, eMT_Probabilistic, eMT_BitVector
    };
 
-  std::string pcd_file;
+  std::string pc_file;
   std::string kinect_id;
   std::vector<Vector3f> points;
   uint32_t num_points;
@@ -153,7 +153,7 @@ struct Provider_Parameter
 
   Provider_Parameter()
   {
-    pcd_file.clear();
+    pc_file.clear();
     kinect_id.clear();
     points = std::vector<Vector3f>();
     num_points = 0;
@@ -200,9 +200,9 @@ struct Provider_Parameter
         "Each new run configuration/mode has to start with the 'shm' argument. The other arguments can be in any order.\n");
     printf(
         "   -shm #: (0-2) The number of the shared memory segment to use for communicating with the visualizer.\n");
-    printf("   -m #: (load_pcd, kinect_live, ptu_live, kinect_playback, ros, deserialize) Mode of the application\n");
+    printf("   -m #: (load_pc, kinect_live, ptu_live, kinect_playback, ros, deserialize) Mode of the application\n");
     printf("   -fps #: (0-30) Frames per second for a mode which uses the Kinect. Default 1 fps\n");
-    printf("   -f #: (file name) File to use for 'load_pcd' or 'kinect_playback' mode.\n");
+    printf("   -f #: (file name) File to use for 'load_pc' or 'kinect_playback' mode.\n");
     printf("   -id #: (identifier) Identifer string for the OpenNIGrabber.\n");
     printf(
         "   -resTree #: (1-x) Voxel side length in mm for the smallest voxel of the NTree. Default 10 mm\n");
@@ -213,8 +213,8 @@ struct Provider_Parameter
     printf("   -c: Collide this data structure with the one of the next 'shm' number.\n");
     printf(
         "   -mem #: (0-x) Max. memory in MB for the VoxelMap, Octree. Default is 0 MB and means no limit.\n");
-    printf("   -free: Frees the bounding-box for a map loaded with 'load_pcd'\n");
-    printf("   -swap_x_z: Swap x and z axis for 'load_pcd'\n");
+    printf("   -free: Frees the bounding-box for a map loaded with 'load_pc'\n");
+    printf("   -swap_x_z: Swap x and z axis for 'load_pc'\n");
     printf(
         "   -rebuild #: Number of frames before a rebuild of the NTree. Default is -1 and therefore only rebuilds if necessary.\n");
     printf("   -noFreeSpace: Dont't compute the free space. Only use occupied voxel.\n");
@@ -233,7 +233,7 @@ struct Provider_Parameter
 
 bool parseArguments(std::vector<Provider_Parameter>& parameter, int argc, char **argv, bool report_error = true);
 
-bool readPCD(std::vector<Provider_Parameter>& parameter);
+bool readPcFile(std::vector<Provider_Parameter>& parameter);
 
 }
 
@@ -336,7 +336,7 @@ struct BuildResult
   gpu_voxels::Vector3ui center;
 };
 
-bool readPCD(std::string file_name, std::vector<Vector3f>& points, uint32_t& num_points, bool swap_x_z = false);
+bool readPcFile(std::string file_name, std::vector<Vector3f>& points, uint32_t& num_points, bool swap_x_z = false);
 
 }
 }

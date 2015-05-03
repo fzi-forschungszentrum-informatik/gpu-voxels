@@ -482,8 +482,8 @@ void Visualizer::registerVoxelMap(voxelmap::AbstractVoxelMap* map, uint32_t inde
   glm::vec3 t = m_cur_context->m_camera->getCameraTarget();
   if (t.x == -0.000001f && t.x == t.y && t.y == t.z)
   {
-    m_cur_context->m_camera->setCameraTarget(vec3(d.x / 2.f, 0.f, d.y / 2.f));
-    m_cur_context->m_camera->setCameraTargetOfInitContext(vec3(d.x / 2.f, 0.f, d.y / 2.f));
+    m_cur_context->m_camera->setCameraTarget(vec3(d.x / 2.f, d.y / 2.f, 0.f));
+    m_cur_context->m_camera->setCameraTargetOfInitContext(vec3(d.x / 2.f, d.y / 2.f, 0.f));
     createFocusPointVBO();
   }
   m_cur_context->m_voxel_maps.push_back(con);
@@ -1930,29 +1930,29 @@ void Visualizer::printPositionOfVoxelUnderMouseCurser(int32_t xpos, int32_t ypos
       n_pos = n_pos * d;
       Vector3ui end_pos = n_pos + d - Vector3ui(1);
 
-      std::cout << "Start voxel position x: " << n_pos.x << " y: " << n_pos.z << " z: " << n_pos.y
+      std::cout << "Start voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z
           << std::endl;
-      std::cout << "Start voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.z * scale << unit
-          << " z: " << n_pos.y * scale << unit << std::endl;
-      std::cout << "End voxel position x: " << end_pos.x << " y: " << end_pos.z << " z: " << end_pos.y
+      std::cout << "Start voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
+          << " z: " << n_pos.z * scale << unit << std::endl;
+      std::cout << "End voxel position x: " << end_pos.x << " y: " << end_pos.y << " z: " << end_pos.z
           << std::endl;
-      std::cout << "End voxel distance x: " << end_pos.x * scale << unit << " y: " << end_pos.z * scale
-          << unit << " z: " << end_pos.y * scale << unit << std::endl;
+      std::cout << "End voxel distance x: " << end_pos.x * scale << unit << " y: " << end_pos.y * scale
+          << unit << " z: " << end_pos.z * scale << unit << std::endl;
     }
     else
     {
-      std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.z << " z: " << n_pos.y << std::endl;
-      std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.z * scale << unit
-          << " z: " << n_pos.y * scale << unit << std::endl;
+      std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
+      std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
+          << " z: " << n_pos.z * scale << unit << std::endl;
     }
 
   }
   if (found_in_octree)
   {
     std::cout << "Found voxel in octree: " << m_cur_context->m_octrees[data_index]->m_map_name << std::endl;
-    std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.z << " z: " << n_pos.y << std::endl;
-    std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.z * scale << unit
-        << " z: " << n_pos.y * scale << unit << std::endl;
+    std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
+    std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
+        << " z: " << n_pos.z * scale << unit << std::endl;
   }
 }
 

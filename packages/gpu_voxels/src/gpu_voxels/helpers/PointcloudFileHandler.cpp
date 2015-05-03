@@ -50,10 +50,19 @@ bool PointcloudFileHandler::loadPointCloud(const std::string _path, const bool u
                     const Vector3f &offset_XYZ, const float scaling)
 {
   std::string path;
+
+  // if param is true, prepend the environment variable GPU_VOXELS_MODEL_PATH
   if(use_model_path)
   {
     path = (getGpuVoxelsPath() / boost::filesystem::path(_path)).string();
+  }else{
+    path = _path;
   }
+
+  LOGGING_INFO_C(
+      Gpu_voxels_helpers,
+      GpuVoxelsMap,
+      "Loading Pointcloud file " << path << " ..." << endl);
 
   // is the file a simple xyz file?
   std::size_t found = path.find(std::string("xyz"));

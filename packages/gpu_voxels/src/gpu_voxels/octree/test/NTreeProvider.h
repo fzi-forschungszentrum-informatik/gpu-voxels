@@ -107,6 +107,8 @@ protected:
   thrust::device_vector<Voxel> *d_free_space_voxel2;
   thrust::device_vector<Voxel> *d_object_voxel2;
   bool m_internal_buffer_1;
+  thrust::device_vector<Cube> *m_d_cubes_1;
+  thrust::device_vector<Cube> *m_d_cubes_2;
 };
 
 }

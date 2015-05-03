@@ -53,3 +53,15 @@ V 0.5 (2015-04-13):
 - Moved some DH computation code in preparation for URDF support.
 - Reimplemented function to move focus point in Viewer.
 - Removed dead code and dead files.
+
+V 0.51 (2015-04-24):
+====================
+- Synced readme files.
+
+V 0.6 (2015-04-24):
+===================
+- Fixed crahses of octree_provider command line interface resulting from race-conditions.
+- Fixed flickering in Visualizer when drawing more then one Octree. Resulted from same race-conditions as above.
+- Corrected axis order in visualizer console output.
+- Fixed model loading path when not using GPU_VOXELS_MODEL_PATH
+- Changed argument handling in command line interface for loading models from PCD only to more general pointcloud files.

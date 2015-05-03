@@ -90,7 +90,7 @@ int main(int argc, char **argv)
   uint32_t num_points;
   std::vector<Vector3f> points;
   std::string pcd_file = "./pointcloud_0002.pcd";
-  NTree::Test::readPCD(pcd_file, points, num_points);
+  NTree::Test::readPcFile(pcd_file, points, num_points);
 
   NTree::Test::run(points, num_points);
 

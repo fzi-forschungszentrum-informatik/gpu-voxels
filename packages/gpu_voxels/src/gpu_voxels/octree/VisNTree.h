@@ -52,6 +52,8 @@ protected:
   uint32_t* m_shm_numCubes;
   bool* m_shm_bufferSwapped;
   bool m_internal_buffer_1;
+  thrust::device_vector<Cube> *m_d_cubes_1;
+  thrust::device_vector<Cube> *m_d_cubes_2;
 };
 }
 
