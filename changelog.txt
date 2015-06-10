@@ -65,3 +65,18 @@ V 0.6 (2015-04-24):
 - Corrected axis order in visualizer console output.
 - Fixed model loading path when not using GPU_VOXELS_MODEL_PATH
 - Changed argument handling in command line interface for loading models from PCD only to more general pointcloud files.
+
+V 0.7 (2015-06-10):
+===================
+- Added URDF parser and interfaces to load ROS robots.
+- Added URDF example program with HoLLiE robot model and URDF file.
+- Unified API for DH-Parameter and URDF robots.
+- Added name lookup to MetaPointClouds.
+- Restructured CMake files to generate more descriptive report about missing libs.
+- Fixed missing thrust include.
+- Fixed color gradient in visualizer.
+- Fixed DH transformations for prismatic links.
+
+V 0.71 (2015-06-10):
+====================
+- Updated this changelog.
