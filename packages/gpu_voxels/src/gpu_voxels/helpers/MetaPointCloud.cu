@@ -12,6 +12,7 @@
  */
 //----------------------------------------------------------------------
 #include "MetaPointCloud.h"
+#include <cstdlib>
 
 namespace gpu_voxels {
 
@@ -101,7 +102,8 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
 
 }
 
-MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_files, const bool use_model_path)
+
+void MetaPointCloud::addClouds(const std::vector<std::string> &_point_cloud_files, bool use_model_path)
 {
   std::vector<std::vector<Vector3f> > *point_clouds = new std::vector<std::vector<Vector3f> >(
       _point_cloud_files.size());
@@ -131,6 +133,37 @@ MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_file
   delete point_clouds;
 }
 
+
+MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_files, bool use_model_path)
+{
+  addClouds(_point_cloud_files, use_model_path);
+}
+
+MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_files,
+               const std::vector<std::string> &_point_cloud_names, bool use_model_path)
+
+{
+  addClouds(_point_cloud_files, use_model_path);
+
+  if(_point_cloud_files.size() == _point_cloud_names.size())
+  {
+    for(size_t i = 0; i < _point_cloud_files.size(); i++)
+    {
+      m_point_cloud_names[i] = _point_cloud_names[i];
+    }
+  }else{
+    LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud,
+                    "Number of names differs to number of pointcloud files!" << icl_core::logging::endl);
+  }
+}
+
+
+MetaPointCloud::MetaPointCloud()
+{
+  const std::vector<uint32_t> _point_cloud_sizes(0,0);
+  init(_point_cloud_sizes);
+}
+
 MetaPointCloud::MetaPointCloud(const std::vector<uint32_t> &_point_cloud_sizes)
 {
   init(_point_cloud_sizes);
@@ -139,7 +172,7 @@ MetaPointCloud::MetaPointCloud(const std::vector<uint32_t> &_point_cloud_sizes)
 MetaPointCloud::MetaPointCloud(const MetaPointCloud &other)
 {
   init(other.getPointcloudSizes());
-
+  m_point_cloud_names = other.getCloudNames();
   for (uint16_t i = 0; i < other.getNumberOfPointclouds(); i++)
   {
     updatePointCloud(i, other.getPointCloud(i), other.getPointcloudSize(i), false);
@@ -150,7 +183,7 @@ MetaPointCloud::MetaPointCloud(const MetaPointCloud &other)
 MetaPointCloud::MetaPointCloud(const MetaPointCloud *other)
 {
   init(other->getPointcloudSizes());
-
+  m_point_cloud_names = other->getCloudNames();
   for (uint16_t i = 0; i < other->getNumberOfPointclouds(); i++)
   {
     updatePointCloud(i, other->getPointCloud(i), other->getPointcloudSize(i), false);
@@ -197,7 +230,7 @@ void MetaPointCloud::addCloud(uint32_t cloud_size)
   delete tmp_clouds;
 }
 
-void MetaPointCloud::addCloud(std::vector<Vector3f> cloud, bool sync)
+void MetaPointCloud::addCloud(const std::vector<Vector3f> &cloud, bool sync, const std::string& name )
 {
   // Allocate mem and restore old data
   addCloud(cloud.size());
@@ -206,10 +239,37 @@ void MetaPointCloud::addCloud(std::vector<Vector3f> cloud, bool sync)
   memcpy(m_point_clouds_local->clouds_base_addresses[m_num_clouds-1], cloud.data(),
          sizeof(Vector3f) * m_point_clouds_local->cloud_sizes[m_num_clouds-1]);
 
+  if(!name.empty())
+  {
+    m_point_cloud_names[m_num_clouds-1] = name;
+  }
+
   if (sync)
   {
     syncToDevice(m_num_clouds-1);
   }
+}
+
+std::string MetaPointCloud::getCloudName(uint16_t i) const
+{
+  std::map<uint16_t, std::string>::const_iterator it = m_point_cloud_names.find(i);
+  if(it != m_point_cloud_names.end())
+  {
+    return it->second;
+  }
+  return std::string();
+}
+
+int16_t MetaPointCloud::getCloudNumber(const std::string& name) const
+{
+  for (std::map<uint16_t, std::string>::const_iterator it=m_point_cloud_names.begin(); it!=m_point_cloud_names.end(); ++it)
+  {
+    if(name.compare(it->second) == 0)
+    {
+      return it->first;
+    }
+  }
+  return -1;
 }
 
 void MetaPointCloud::destruct()
@@ -275,7 +335,12 @@ void MetaPointCloud::syncToDevice(uint16_t cloud)
 
 void MetaPointCloud::updatePointCloud(uint16_t cloud, const std::vector<Vector3f> &pointcloud, bool sync)
 {
-    updatePointCloud(cloud, pointcloud.data(), pointcloud.size(), sync);
+  updatePointCloud(cloud, pointcloud.data(), pointcloud.size(), sync);
+}
+
+void MetaPointCloud::updatePointCloud(const std::string cloud_name, const std::vector<Vector3f> &pointcloud, bool sync)
+{
+  updatePointCloud(getCloudNumber(cloud_name), pointcloud.data(), pointcloud.size(), sync);
 }
 
 void MetaPointCloud::updatePointCloud(uint16_t cloud, const Vector3f* pointcloud, uint32_t pointcloud_size,
@@ -343,8 +408,50 @@ uint32_t MetaPointCloud::getAccumulatedPointcloudSize() const
   return m_accumulated_pointcloud_size;
 }
 
-void MetaPointCloud::debugPointCloud()
+const std::map<uint16_t, std::string> MetaPointCloud::getCloudNames() const
 {
+  return m_point_cloud_names;
+}
+
+void MetaPointCloud::debugPointCloud() const
+{
+
+  printf("================== hostMetaPointCloud DBG ================== \n");
+
+  printf("hostDebugMetaPointCloud DBG: NumClouds: %d \n", m_num_clouds);
+
+  printf("hostDebugMetaPointCloud DBG: m_dev_ptr_to_clouds_base_addresses: %p \n",
+          m_point_clouds_local->clouds_base_addresses);
+
+  for(int i = 0; i < m_point_clouds_local->num_clouds; i++)
+  {
+      printf("hostDebugMetaPointCloud DBG: '%s' CloudSize[%d]: %d, clouds_base_addresses[%d]: %p \n",
+             this->getCloudName(i).c_str(),
+             i, m_point_clouds_local->cloud_sizes[i],
+             i, m_point_clouds_local->clouds_base_addresses[i]);
+
+      if (m_point_clouds_local->cloud_sizes[i] > 0)
+      {
+        Vector3f min_xyz = m_point_clouds_local->clouds_base_addresses[i][0];
+        Vector3f max_xyz = m_point_clouds_local->clouds_base_addresses[i][0];
+        for (uint32_t j = 1; j < m_point_clouds_local->cloud_sizes[i]; j++)
+        {
+          min_xyz.x = std::min(min_xyz.x, m_point_clouds_local->clouds_base_addresses[i][j].x);
+          min_xyz.y = std::min(min_xyz.y, m_point_clouds_local->clouds_base_addresses[i][j].y);
+          min_xyz.z = std::min(min_xyz.z, m_point_clouds_local->clouds_base_addresses[i][j].z);
+
+          max_xyz.x = std::max(max_xyz.x, m_point_clouds_local->clouds_base_addresses[i][j].x);
+          max_xyz.y = std::max(max_xyz.y, m_point_clouds_local->clouds_base_addresses[i][j].y);
+          max_xyz.z = std::max(max_xyz.z, m_point_clouds_local->clouds_base_addresses[i][j].z);
+        }
+
+        printf("hostDebugMetaPointCloud DBG: Cloud %d bounds: Min[%f, %f, %f], Max[%f, %f, %f] \n",
+               i, min_xyz.x, min_xyz.y, min_xyz.z, max_xyz.x, max_xyz.y, max_xyz.z);
+      }
+  }
+
+  printf("================== END hostDebugMetaPointCloud DBG ================== \n");
+
   kernelDebugMetaPointCloud<<< 1,1 >>>(m_dev_ptr_to_point_clouds_struct);
 }
 

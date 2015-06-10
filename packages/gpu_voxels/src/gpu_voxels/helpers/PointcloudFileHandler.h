@@ -38,6 +38,11 @@
 namespace gpu_voxels {
 namespace file_handling {
 
+/*! Read environment variable GPU_VOXELS_MODEL_PATH
+ *  \returns the path
+ */
+boost::filesystem::path getGpuVoxelsPath();
+
 class PointcloudFileHandler
 {
 public:
@@ -58,11 +63,6 @@ public:
    */
   bool loadPointCloud(const std::string _path, const bool use_model_path, std::vector<Vector3f> &points, const bool shift_to_zero = false,
                       const Vector3f &offset_XYZ = Vector3f(), const float scaling = 1.0);
-
-  /*! Read environment variable GPU_VOXELS_MODEL_PATH
-   *  \returns the path
-   */
-  boost::filesystem::path getGpuVoxelsPath();
 
 private:
   /*!

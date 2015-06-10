@@ -232,6 +232,23 @@ std::vector<double> CudaMath::interpolateLinear(const std::vector<double>& joint
   return result;
 }
 
+
+JointValueMap CudaMath::interpolateLinear(const JointValueMap& joint_state1,
+                                          const JointValueMap& joint_state2, float ratio)
+{
+  assert(joint_state1.size() == joint_state2.size());
+
+  JointValueMap result(joint_state1);
+  for (JointValueMap::const_iterator it=joint_state1.begin();
+       it!=joint_state1.end(); ++it)
+  {
+    result[it->first] = interpolateLinear(joint_state1.at(it->first),
+                                          joint_state2.at(it->first), ratio);
+  }
+  return result;
+}
+
+
 struct TransformPointWithMatrix4f
 {
 	Matrix4f m_matrix;

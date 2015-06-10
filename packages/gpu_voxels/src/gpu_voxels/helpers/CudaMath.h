@@ -177,6 +177,13 @@ public:
    */
   static double interpolateLinear(double value1, double value2, double ratio);
 
+  /*! Interpolate linear between the robot JointValueMaps \a joint_state1 and \a joint_state2
+   *  using the given \a ratio.
+   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
+   *  middle.
+   */
+  static JointValueMap interpolateLinear(const JointValueMap& joint_state1,
+                                         const JointValueMap& joint_state2, float ratio);
 
   /*! Interpolate linear between the robot joint vectors \a joint_state1 and \a joint_state2
    *  using the given \a ratio.

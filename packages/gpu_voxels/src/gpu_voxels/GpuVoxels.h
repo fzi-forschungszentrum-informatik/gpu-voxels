@@ -52,8 +52,10 @@
 #include <gpu_voxels/octree/Octree.h>
 #include <gpu_voxels/primitive_array/PrimitiveArray.h>
 
-#include <gpu_voxels/robot/KinematicLink.h>
-#include <gpu_voxels/robot/KinematicChain.h>
+#include <gpu_voxels/robot/robot_interface.h>
+#include <gpu_voxels/robot/urdf_robot/urdf_robot.h>
+#include <gpu_voxels/robot/dh_robot/KinematicLink.h>
+#include <gpu_voxels/robot/dh_robot/KinematicChain.h>
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/containers/vector.hpp>
@@ -75,10 +77,10 @@ typedef ManagedMaps::iterator ManagedMapsIterator;
 typedef std::map<std::string, ManagedPrimitiveArray > ManagedPrimitiveArrays;
 typedef ManagedPrimitiveArrays::iterator ManagedPrimitiveArraysIterator;
 
-typedef boost::shared_ptr<KinematicLink> KinematicLinkSharedPtr;
+typedef boost::shared_ptr<robot::KinematicLink> KinematicLinkSharedPtr;
 
-typedef boost::shared_ptr<KinematicChain> KinematicChainSharedPtr;
-typedef std::map<std::string, KinematicChainSharedPtr > ManagedRobots;
+typedef boost::shared_ptr<robot::RobotInterface> RobotInterfaceSharedPtr;
+typedef std::map<std::string, RobotInterfaceSharedPtr > ManagedRobots;
 typedef ManagedRobots::iterator ManagedRobotsIterator;
 
 
@@ -102,7 +104,8 @@ public:
 
   /*!
    * \brief addMap Add a new map to GVL.
-   * \param map_type Choose between a representation: Octree, Voxelmap, Voxellist are possible
+   * \param map_type Choose between a representation: Octree, Voxelmap,
+   * Voxellist are possible
    * \param map_name The name of the map for later identification
    * \return Returns true, if adding was successful, false otherwise
    */
@@ -136,9 +139,12 @@ public:
   GpuVoxelsMapSharedPtr getMap(const std::string &map_name);
 
   /*!
-   * \brief visualizeMap Visualizes the map only if necessary. That's the case if it's enforced by \code force_repaint = true or the visualizer requested it.
+   * \brief visualizeMap Visualizes the map only if necessary.
+   * That's the case if it's enforced by \code force_repaint = true
+   * or the visualizer requested it.
    * \param map_name Name of the map, that should be visualized.
-   * \param force_repaint True to force a repainting of the map. e.g. needed to visualize changed map data
+   * \param force_repaint True to force a repainting of the map. e.g. needed
+   * to visualize changed map data
    * \return Returns true, if there was work to do, false otherwise.
    */
   bool visualizeMap(const std::string &map_name, const bool force_repaint = true);
@@ -153,31 +159,72 @@ public:
   bool visualizePrimitivesArray(const std::string &prim_array_name, const bool force_repaint = true);
 
   /*!
-   * \brief addRobot Define a robot with its geometries and kinematic structure
+   * \brief addRobot Define a robot with its geometries and kinematic structure via DH parameter.
+   * Important: \code link_names have to be the same as \code paths_to_pointclouds if the pointclouds
+   * should get transformed by the kinematic!
    * \param robot_name Name of the robot, used as handler
-   * \param dh_params DH representation of the robots kinematics. Has to be of the same dimensionality as the \code robot_cloude
+   * \param link_names Vector of unique names of the rigid bodies of all links.
+   * \param dh_params DH representation of the robots kinematics.
+   * Has to be of the same dimensionality as the \code robot_cloud
    * \param paths_to_pointclouds Files on disk that hold the pointcloud representation of the robot geometry
+   * \param use_model_path Search pointcloud files in directory specified by GPU_VOXELS_MODEL_PATH environment variable
    * \return true, if robot was added, false otherwise
    */
-  bool addRobot(const std::string &robot_name, const std::vector<DHParameters> &dh_params, const std::vector<std::string> &paths_to_pointclouds, const bool use_model_path);
+  bool addRobot(const std::string &robot_name, const std::vector<std::string> &link_names,
+                const std::vector<robot::DHParameters> &dh_params,
+                const std::vector<std::string> &paths_to_pointclouds, const bool use_model_path);
 
   /*!
-   * \brief addRobot Define a robot with its geometries and kinematic structure
+   * \brief addRobot Define a robot with its geometries and kinematic structure via DH parameter.
+   * Important: \code link_names have to be the same as \code paths_to_pointclouds if the pointclouds
+   * should get transformed by the kinematic!
    * \param robot_name Name of the robot, used as handler
-   * \param dh_params DH representation of the robots kinematics. Has to be of the same dimensionality as the \code robot_cloude
-   * \param robot_cloud Metapointcloud representation of the robot links
+   * \param link_names Vector of unique names of the rigid bodies of all links.
+   * \param dh_params DH representation of the robots kinematics.
+   * \param pointclouds Already existing \code MetaPointCloud of the robot's links with matching \code link_names
    * \return true, if robot was added, false otherwise
    */
-  bool addRobot(const std::string &robot_name, const std::vector<DHParameters> &dh_params, const MetaPointCloud &robot_cloud);
+  bool addRobot(const std::string &robot_name, const std::vector<std::string> &link_names,
+                const std::vector<robot::DHParameters> &dh_params,
+                const MetaPointCloud &pointclouds);
 
   /*!
-   * \brief updateRobotPose Changes the robot joint configuration. Call \code insertRobotIntoMap() afterwards!
-   * \param robot_name Name of the robot to update
-   * \param joint_values Vector of new joint angles
-   * \param new_base_pose 6D Base link pose of the robot
+   * \brief addRobot Define a robot with its geometries and kinematic structure via a ROS URDF file.
+   * During parsing all meshses get replaced by pointclouds with the same name.
+   * \param robot_name Name of the robot, used as handler
+   * \param path_to_urdf_file Path to the URDF to load.
+   * \param use_model_path Search URDF file in path specified in GPU_VOXELS_MODEL_PATHe nvironment variable
+   * \return true, if robot was added, false otherwise
+   */
+  bool addRobot(const std::string &robot_name, const std::string &path_to_urdf_file, const bool use_model_path);
+
+  /*!
+   * \brief setRobotConfiguration Changes the robot joint configuration and triggers the transformation
+   * of all joint's pointclouds. Call \code insertRobotIntoMap() afterwards!
+   * \param jointmap Map of jointnames and values. Not required to contain all joints of the robot.
    * \return true, if update was successful
    */
-  bool updateRobotPose(std::string robot_name, std::vector<float> joint_values, Matrix4f *new_base_pose = NULL);
+  bool setRobotConfiguration(std::string robot_name, const std::map<std::string, float> &jointmap);
+
+  /*!
+   * \brief updateRobotPart Changes the geometry of a single robot link. This is useful when changing a tool,
+   * grasping an object of when interpreting sensor data from an onboard sensor as a robot link.
+   * Caution: This function requires intensive memory access, if the size of the pointcloud changes!
+   * Call \code insertRobotIntoMap() afterwards!
+   * \param robot_name Name of the robot beeing modified
+   * \param link Index of the link that is modified
+   * \param pointcloud New pointcloud of the link. May differ in size. In that case, the function has higher runtime.
+   * \return true, if robot was modified, false otherwise
+   */
+  bool updateRobotPart(std::string robot_name, const std::string &link_name, const std::vector<Vector3f> pointcloud);
+
+  /**
+   * @brief getRobotConfiguration Query the current configuration of a robot
+   * @param robot_name The robot's identifier
+   * @param jointmap Map with joint values. Missing joints will be added to map.
+   * @return True if robot with given identifier exists, false otherwise.
+   */
+  bool getRobotConfiguration(const std::string& robot_name, std::map<std::string, float> &jointmap);
 
   /*!
    * \brief insertRobotIntoMap Writes a robot with its current pose into a map
@@ -196,18 +243,6 @@ public:
   * \param points_per_voxel Point density. This is only relevant to test probabilistic maps.
   */
   bool insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &corner_max, std::string map_name, const VoxelType voxel_type, uint16_t points_per_voxel = 1);
-
-  /*!
-   * \brief updateRobotPart Changes the geometry of a single robot link. This is useful when changing a tool,
-   * grasping an object of when interpreting sensor data from an onboard sensor as a robot link.
-   * Caution: This function requires intensive memory access, if the size of the pointcloud changes!
-   * Call \code insertRobotIntoMap() afterwards!
-   * \param robot_name Name of the robot beeing modified
-   * \param link Index of the link that is modified
-   * \param pointcloud New pointcloud of the link
-   * \return true, if robot was modified, false otherwise
-   */
-  bool updateRobotPart(std::string robot_name, size_t link, const std::vector<Vector3f> pointcloud);
 
   /*!
    * \brief addPrimitives

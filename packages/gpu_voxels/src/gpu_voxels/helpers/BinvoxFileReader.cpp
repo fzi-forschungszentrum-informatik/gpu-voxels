@@ -82,6 +82,7 @@ bool BinvoxFileReader::readPointCloud(const std::string filename, std::vector<Ve
     }
     else if (line.compare("scale") == 0) {
       *input >> scale;
+      scale = scale / width;
     }
     else {
       LOGGING_INFO(Gpu_voxels_helpers, "Binvox: unrecognized keyword [" << line << "], skipping" << endl);
@@ -149,7 +150,7 @@ bool BinvoxFileReader::readPointCloud(const std::string filename, std::vector<Ve
         if(voxels[index] == 1)
         {
           //std::cout << "Point at " << scale*x << ", " << scale*y << ", " << scale*z << std::endl;
-          points.push_back(Vector3f(scale*x, scale*y, scale*z));
+          points.push_back(Vector3f(scale*x + tx, scale*y + ty, scale*z + tz));
         }
         index++;
       }

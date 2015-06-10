@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
    * of your GPU. Even if an empty Octree is small, a
    * Voxelmap will always require the full memory.
    */
-  gvl = new GpuVoxels(200, 200, 200, 0.01);
+  gvl = new GpuVoxels(200, 200, 100, 0.01);
 
   /*
    * Now we add a map, that will represent the robot.
@@ -94,59 +94,71 @@ int main(int argc, char* argv[])
   }
 
   /*
-   * Of course, we need a robot. At this point, it would be helpful
-   * to e.g. rely on KDL or something to parse DH params and be consistent
-   * to your robot description.
-   * In this example, we simply hardcode a robot:
+   * Of course, we need a robot. At this point, you can choose between
+   * describing your robot via ROS URDF or via conventional DH parameter.
+   * In this example, we simply hardcode a DH robot:
    */
 
-  // First, we load the robot geometry which contains 6 links:
-  size_t rob_dim = 7;
-  std::vector<std::string> paths_to_pointclouds(rob_dim);
-  paths_to_pointclouds[0] = "arm_0_link.xyz";
-  paths_to_pointclouds[1] = "arm_1_link.xyz";
-  paths_to_pointclouds[2] = "arm_2_link.xyz";
-  paths_to_pointclouds[3] = "arm_3_link.xyz";
-  paths_to_pointclouds[4] = "arm_4_link.xyz";
-  paths_to_pointclouds[5] = "arm_5_link.xyz";
-  paths_to_pointclouds[6] = "arm_6_link.xyz";
-  MetaPointCloud myRobotCloud(paths_to_pointclouds, true);
+  // First, we load the robot geometry which contains 9 links with 7 geometries:
+  // Geometries are required to have the same names as links, if they should get transformed.
+  std::vector<std::string> linknames(10);
+  std::vector<std::string> paths_to_pointclouds(7);
+  linknames[0] = "z_translation";
+  linknames[1] = "y_translation";
+  linknames[2] = "x_translation";
+  linknames[3] = paths_to_pointclouds[0] = "arm_0_link.xyz";
+  linknames[4] = paths_to_pointclouds[1] = "arm_1_link.xyz";
+  linknames[5] = paths_to_pointclouds[2] = "arm_2_link.xyz";
+  linknames[6] = paths_to_pointclouds[3] = "arm_3_link.xyz";
+  linknames[7] = paths_to_pointclouds[4] = "arm_4_link.xyz";
+  linknames[8] = paths_to_pointclouds[5] = "arm_5_link.xyz";
+  linknames[9] = paths_to_pointclouds[6] = "arm_6_link.xyz";
 
-  std::vector<DHParameters> dh_params(rob_dim);
-                                          // _d,_theta,_a,_alpha,_value
-  dh_params[0] = DHParameters(0.0, 0.0, 0.0,     1.5708, 0.0); // build an arm from 6 segments
-  dh_params[1] = DHParameters(0.0,  0.0, 0.35,  -3.1415, 0.0); //
-  dh_params[2] = DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0); //
-  dh_params[3] = DHParameters(0.0,  0.0, 0.365, -1.5708, 0.0); //
-  dh_params[4] = DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0); //
-  dh_params[5] = DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); //
-  dh_params[6] = DHParameters(0.0,  0.0, 0.0,    0.0,    0.0); //
+  std::vector<robot::DHParameters> dh_params(10);
+                                   // _d,  _theta,  _a,   _alpha, _value, _type
+  dh_params[0] = robot::DHParameters(0.0,  0.0,    0.0,   -1.5708, 0.0, robot::PRISMATIC); // Params for Y translation
+  dh_params[1] = robot::DHParameters(0.0, -1.5708, 0.0,   -1.5708, 0.0, robot::PRISMATIC); // Params for X translation
+  dh_params[2] = robot::DHParameters(0.0,  1.5708, 0.0,    1.5708, 0.0, robot::PRISMATIC); // Params for first Robot axis (visualized by 0_link)
+  dh_params[3] = robot::DHParameters(0.0,  1.5708, 0.0,    1.5708, 0.0, robot::REVOLUTE);  // Params for second Robot axis (visualized by 1_link)
+  dh_params[4] = robot::DHParameters(0.0,  0.0,    0.35,  -3.1415, 0.0, robot::REVOLUTE);  //
+  dh_params[5] = robot::DHParameters(0.0,  0.0,    0.0,    1.5708, 0.0, robot::REVOLUTE);  //
+  dh_params[6] = robot::DHParameters(0.0,  0.0,    0.365, -1.5708, 0.0, robot::REVOLUTE);  //
+  dh_params[7] = robot::DHParameters(0.0,  0.0,    0.0,    1.5708, 0.0, robot::REVOLUTE);  //
+  dh_params[8] = robot::DHParameters(0.0,  0.0,    0.0,    0.0,    0.0, robot::REVOLUTE);  // Params for last Robot axis (visualized by 6_link)
+  dh_params[9] = robot::DHParameters(0.0,  0.0,    0.0,    0.0,    0.0, robot::REVOLUTE);  // Params for the not viusalized tool
 
-  gvl->addRobot("myRobot", dh_params, myRobotCloud);
-
-  // define a position for the robot
-  gpu_voxels::Matrix4f new_base_pose;
-  new_base_pose.a11 = 1;
-  new_base_pose.a22 = 1;
-  new_base_pose.a33 = 1;
-  new_base_pose.a44 = 1;
-
-  new_base_pose.a14 += 1.2;
-  new_base_pose.a24 += 1.2;
-  new_base_pose.a34 += 1.2;
-
-  std::vector<float> myRobotJointValues(rob_dim, 0.0);
+  gvl->addRobot("myRobot", linknames, dh_params, paths_to_pointclouds, true);
 
   // initialize the joint interpolation
-  std::vector<float> min_joint_values(rob_dim, -1.0);
-  std::vector<float> max_joint_values(rob_dim, 1.5);
+  // not all joints have to be specified
   std::size_t counter = 0;
   const float ratio_delta = 0.01;
+
+  JointValueMap min_joint_values;
+  min_joint_values["z_translation"] = 0.0; // moves along the Z axis
+  min_joint_values["y_translation"] = 1.0; // moves along the Y Axis
+  min_joint_values["x_translation"] = 1.0; // moves along the X Axis
+  min_joint_values["arm_0_link.xyz"] = -1.0;
+  min_joint_values["arm_1_link.xyz"] = -1.0;
+  min_joint_values["arm_2_link.xyz"] = -1.0;
+  min_joint_values["arm_3_link.xyz"] = -1.0;
+  min_joint_values["arm_4_link.xyz"] = -1.0;
+
+  JointValueMap max_joint_values;
+  max_joint_values["z_translation"] = 0.0; // moves along the Z axis
+  max_joint_values["y_translation"] = 1.0; // moves along the Y axis
+  max_joint_values["x_translation"] = 1.0; // moves along the X Axis
+  max_joint_values["arm_0_link.xyz"] = 1.5;
+  max_joint_values["arm_1_link.xyz"] = 1.5;
+  max_joint_values["arm_2_link.xyz"] = 1.5;
+  max_joint_values["arm_3_link.xyz"] = 1.5;
+  max_joint_values["arm_4_link.xyz"] = 1.5;
 
   /*
    * Now we enter "normal" operation
    * and make the robot move.
    */
+  JointValueMap myRobotJointValues;
   while(true)
   {
     /*
@@ -157,12 +169,7 @@ int main(int argc, char* argv[])
 
     myRobotJointValues = gpu_voxels::CudaMath::interpolateLinear(min_joint_values, max_joint_values, ratio_delta * counter++);
 
-    // we could also make it drive around:
-    //new_base_pose.a14 += 0.02;
-    //new_base_pose.a24 += 0.02;
-    //new_base_pose.a34 += 0.00;
-
-    gvl->updateRobotPose("myRobot", myRobotJointValues, &new_base_pose);
+    gvl->setRobotConfiguration("myRobot", myRobotJointValues);
 
     gvl->insertRobotIntoMap("myRobot", "myRobotMap", eVT_OCCUPIED);
 

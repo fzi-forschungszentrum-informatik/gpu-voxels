@@ -51,6 +51,7 @@
 #include <thrust/count.h>
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/fill.h>
+#include <thrust/extrema.h>
 
 #include <gpu_voxels/octree/cub/cub.cuh>
 

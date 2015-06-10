@@ -20,12 +20,11 @@
  *
  */
 //----------------------------------------------------------------------
-#ifndef ICL_PLANNING_GPU_KERNELS_KINEMATIC_OPERATIONS_H_INCLUDED
-#define ICL_PLANNING_GPU_KERNELS_KINEMATIC_OPERATIONS_H_INCLUDED
+#ifndef GPU_VOXELS_ROBOT_KERNELS_KINEMATIC_OPERATIONS_H_INCLUDED
+#define GPU_VOXELS_ROBOT_KERNELS_KINEMATIC_OPERATIONS_H_INCLUDED
 
 #include <cuda_runtime.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
-#include <gpu_voxels/robot/KinematicLink.h>
 
 namespace gpu_voxels {
 
@@ -48,7 +47,7 @@ void kernelKinematicChainTransform(uint8_t chain_size, uint8_t joint_to_transfor
  * Same as kernelUpdateTransformations, but the Transformation is not computed inside the kernel *
  */
 __global__
-void kernelKinematicChainTransform(uint8_t chain_size, uint8_t joint_to_transform, const Matrix4f* transformation, const MetaPointCloudStruct *point_clouds, MetaPointCloudStruct *transformed_point_clouds);
+void kernelKinematicChainTransform(uint8_t joint_to_transform, const Matrix4f* transformation, const MetaPointCloudStruct *point_clouds, MetaPointCloudStruct *transformed_point_clouds);
 
 
 

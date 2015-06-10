@@ -57,10 +57,6 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
 
 ICMAKER_EXTERNAL_DEPENDENCIES(
   CUDA
-  OpenNI
-  Boost_SYSTEM
-  PCL
-  OpenNI
   )
 
 ICMAKER_BUILD_LIBRARY()
@@ -99,7 +95,8 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
   icl_core_config
   icl_core_logging
   gpu_voxels_core
-  gpu_voxels_robot
+  gpu_voxels_dh_robot
+  gpu_voxels_urdf_robot
   gpu_voxels_voxelmap
   gpu_voxels_octree
   gpu_voxels_primitive_array
@@ -108,10 +105,6 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
 
 ICMAKER_EXTERNAL_DEPENDENCIES(
   CUDA
-  OpenNI
-  Boost_SYSTEM
-  PCL
-  OpenNI
   )
 
 ICMAKER_BUILD_LIBRARY()

@@ -189,10 +189,11 @@ GpuVoxelsMapSharedPtr GpuVoxels::getMap(const std::string &map_name)
 }
 
 // ---------- Robot Stuff ------------
-
 bool GpuVoxels::addRobot(const std::string &robot_name,
-                         const std::vector<DHParameters> &dh_params,
-                         const MetaPointCloud &robot_clouds)
+                         const std::vector<std::string> &link_names,
+                         const std::vector<robot::DHParameters> &dh_params,
+                         const std::vector<std::string> &paths_to_pointclouds,
+                         const bool use_model_path)
 {
   // check if robot with same name already exists
   ManagedRobotsIterator it = m_managed_robots.find(robot_name);
@@ -202,40 +203,53 @@ bool GpuVoxels::addRobot(const std::string &robot_name,
     return false;
   }
 
-  std::vector<KinematicLinkSharedPtr> robot_links;
+  m_managed_robots.insert(
+      std::pair<std::string, RobotInterfaceSharedPtr>(
+          robot_name, RobotInterfaceSharedPtr(
+            new robot::KinematicChain(link_names, dh_params, paths_to_pointclouds, use_model_path))));
 
-  for (uint32_t i = 0; i < dh_params.size(); ++i)
+  return true;
+}
+
+bool GpuVoxels::addRobot(const std::string &robot_name, const std::vector<std::string> &link_names,
+              const std::vector<robot::DHParameters> &dh_params,
+              const MetaPointCloud &pointclouds)
+{
+  // check if robot with same name already exists
+  ManagedRobotsIterator it = m_managed_robots.find(robot_name);
+  if (it != m_managed_robots.end())
   {
-    KinematicLinkSharedPtr link = KinematicLinkSharedPtr(new KinematicLink(REVOLUTE));
-
-    link->setDHParam(dh_params[i].d, dh_params[i].theta, dh_params[i].a, dh_params[i].alpha,
-                     dh_params[i].value);
-
-    robot_links.push_back(link);
-
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Robot with name '" << robot_name << "' already exists." << endl);
+    return false;
   }
-
-  Matrix4f base_position;
-  base_position.setIdentity();
 
   m_managed_robots.insert(
-      std::pair<std::string, KinematicChainSharedPtr>(
-          robot_name, KinematicChainSharedPtr(new KinematicChain(robot_links, robot_clouds, base_position))));
+      std::pair<std::string, RobotInterfaceSharedPtr>(
+          robot_name, RobotInterfaceSharedPtr(
+            new robot::KinematicChain(link_names, dh_params, pointclouds))));
 
   return true;
 
 }
 
-bool GpuVoxels::addRobot(const std::string &robot_name,
-                         const std::vector<DHParameters> &dh_params,
-                         const std::vector<std::string> &paths_to_pointclouds,
-                         const bool use_model_path)
+bool GpuVoxels::addRobot(const std::string &robot_name, const std::string &path_to_urdf_file, const bool use_model_path)
 {
-  MetaPointCloud robot_clouds(paths_to_pointclouds, use_model_path);
-  return addRobot(robot_name, dh_params, robot_clouds);
+  // check if robot with same name already exists
+  ManagedRobotsIterator it = m_managed_robots.find(robot_name);
+  if (it != m_managed_robots.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Robot with name '" << robot_name << "' already exists." << endl);
+    return false;
+  }
+
+  m_managed_robots.insert(
+      std::pair<std::string, RobotInterfaceSharedPtr>(
+          robot_name, RobotInterfaceSharedPtr(new robot::UrdfRobot(path_to_urdf_file, use_model_path))));
+
+  return true;
 }
 
-bool GpuVoxels::updateRobotPart(std::string robot_name, size_t link, const std::vector<Vector3f> pointcloud)
+bool GpuVoxels::updateRobotPart(std::string robot_name, const std::string &link_name, const std::vector<Vector3f> pointcloud)
 {
   ManagedRobotsIterator it = m_managed_robots.find(robot_name);
   if (it == m_managed_robots.end())
@@ -244,12 +258,12 @@ bool GpuVoxels::updateRobotPart(std::string robot_name, size_t link, const std::
     return false;
   }
 
-  it->second->updatePointcloud(link, pointcloud);
+  it->second->updatePointcloud(link_name, pointcloud);
   return true;
 }
 
-bool GpuVoxels::updateRobotPose(std::string robot_name, std::vector<float> joint_values,
-                                Matrix4f* new_base_pose)
+bool GpuVoxels::setRobotConfiguration(std::string robot_name,
+                                const std::map<std::string, float> &jointmap)
 {
   ManagedRobotsIterator it = m_managed_robots.find(robot_name);
   if (it == m_managed_robots.end())
@@ -257,15 +271,19 @@ bool GpuVoxels::updateRobotPose(std::string robot_name, std::vector<float> joint
     LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find robot '" << robot_name << "'" << endl);
     return false;
   }
+  it->second->setConfiguration(jointmap);
+  return true;
+}
 
-  if (new_base_pose == 0)
+bool GpuVoxels::getRobotConfiguration(const std::string& robot_name, std::map<std::string, float> &jointmap)
+{
+  ManagedRobotsIterator rob_it = m_managed_robots.find(robot_name);
+  if (rob_it == m_managed_robots.end())
   {
-    it->second->setConfiguration(joint_values);
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find robot '" << robot_name << "'" << endl);
+    return false;
   }
-  else
-  {
-    it->second->setConfiguration(*new_base_pose, joint_values);
-  }
+  rob_it->second->getConfiguration(jointmap);
   return true;
 }
 
@@ -284,8 +302,7 @@ bool GpuVoxels::insertRobotIntoMap(std::string robot_name, std::string map_name,
     return false;
   }
 
-  //map_it->second.map_shared_ptr->insertRobotConfiguration(rob_it->second->getTransformedLinks(), false);
-  map_it->second.map_shared_ptr->insertMetaPointCloud(*rob_it->second->getTransformedLinks(), voxel_type);
+  map_it->second.map_shared_ptr->insertMetaPointCloud(*rob_it->second->getTransformedClouds(), voxel_type);
 
   return true;
 }
@@ -379,27 +396,6 @@ VisProvider* GpuVoxels::getVisualization(const std::string &map_name)
   }
   return it->second.vis_provider_shared_ptr.get();
 }
-
-
-//void GpuVoxels::insertConfiguration(std::string map_name, std::string chain_name, ie::Voxel::Context context)
-//{
-//  if((map_list.count(map_name) == 0) || (m_chain_list.count(chain_name) == 0))
-//  {
-//      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Map or Chain not found" << endl);
-//      return;
-//  }
-//  lock();
-
-//  RobotMap* rob_map = static_cast<ie::RobotMap*>(map_list[map_name]);
-//  KinematicChain* chain = m_chain_list[chain_name];
-
-//  rob_map->insertConfiguration(chain->getKinematicChainSize(),
-//                                         chain->getPointCloudSizesPtr(),
-//                                         chain->getPointCloudSizesDevicePtr(),
-//                                         chain->getTransformedPointCloudsDevicePtr(),
-//                                         false, context);
-//  unlock();
-//}
 
 void GpuVoxels::getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z, float& voxel_side_length)
 {

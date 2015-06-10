@@ -18,7 +18,6 @@ ICMAKER_ADD_HEADERS(
   GlobalLock.h
   cuda_datatypes.h
   common_defines.h
-  Kinect.h
   cuda_handling.h
   CudaMath.h
   cuda_handling.hpp
@@ -36,7 +35,6 @@ ICMAKER_ADD_HEADERS(
 ICMAKER_ADD_SOURCES(
   GlobalLock.cpp
   cuda_datatypes.cpp
-  Kinect.cpp
   PointcloudFileHandler.cpp
   BinvoxFileReader.cpp
   PcdFileReader.cpp
@@ -71,13 +69,25 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
   gpu_voxels_logging
   )
 
-ICMAKER_EXTERNAL_DEPENDENCIES(
+ICMAKER_EXTERNAL_DEPENDENCIES(EXPORT
   CUDA
-  OpenNI
-  Boost_SYSTEM
   PCL
+  )
+
+ICMAKER_DEPENDENCIES( OPTIONAL
   OpenNI
   )
+
+IF(OpenNI_FOUND)
+  ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_KINECT_SUPPORT_)
+  ICMAKER_ADD_SOURCES(
+    Kinect.cpp
+  )
+  ICMAKER_ADD_HEADERS(
+    Kinect.h
+  )
+ENDIF(OpenNI_FOUND)
+
 
 ICMAKER_BUILD_LIBRARY()
 ICMAKER_INSTALL_HEADERS(gpu_voxels/helpers)

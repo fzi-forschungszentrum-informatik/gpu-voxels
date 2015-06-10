@@ -1,6 +1,15 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This program is free software licensed under the CDDL
+// (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
+// You can find a copy of this license in LICENSE.txt in the top
+// directory of the source code.
+//
+// © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
+//
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -28,27 +37,25 @@ void kernelKinematicChainTransform(uint8_t chain_size, uint8_t joint_to_transfor
 	//use the overloaded version with fewer parameters instead
   uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
-  
-   Matrix4f transformation;
-
+  Matrix4f transformation;
 
 //  if (i==1) printf("transform (%u): (%f, %f, %f, %f)\n", sizeof(transformation), transformation.a11, transformation.a12, transformation.a13, transformation.a14);
 
   if (joint_to_transform > 0)   // not basis
   {
-	// set d and theta part for current joint
-	transformation = local_transformations[joint_to_transform-1];
+    // set d and theta part for current joint
+    transformation = local_transformations[joint_to_transform-1];
 
-	// append full dh parameters of other joints
-	for (uint32_t j = joint_to_transform-1; j>=1; j--)
-	{
-	   transformation = dh_transformations[j-1] * transformation;
-//      transformation.leftMultiply(dh_transformations[j-1]);
-	}
+    // append full dh parameters of other joints
+    for (uint32_t j = joint_to_transform-1; j>=1; j--)
+    {
+       transformation = dh_transformations[j-1] * transformation;
+  //      transformation.leftMultiply(dh_transformations[j-1]);
+    }
   }
-  else  // basis
+    else  // basis
   {
-	transformation.setIdentity();
+    transformation.setIdentity();
   }	
 //  transformation.leftMultiply(*basis_transformation);
   transformation = (*basis_transformation) * transformation;
@@ -69,34 +76,18 @@ void kernelKinematicChainTransform(uint8_t chain_size, uint8_t joint_to_transfor
     // increment by number of all threads that are running
     i += blockDim.x * gridDim.x;
   }
-
 }
 
-
-
-
 __global__
-void kernelKinematicChainTransform(uint8_t chain_size, uint8_t joint_to_transform, const Matrix4f* transformation,                                   
+void kernelKinematicChainTransform(uint8_t joint_to_transform, const Matrix4f* transformation_,
                                    const MetaPointCloudStruct *point_clouds, MetaPointCloudStruct *transformed_point_clouds)
 {
+  // copying the transformation matrix to local memory might be faster than accessing it from the global memory
+  Matrix4f transformation;
+  transformation = *transformation_;
+
   uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
-// copying the transformation matrix to shared memory might be faster than accessing it from the global memory
-// but the copying in the next lines doesnt work for some reason
-//  __shared__ Matrix4f cache_transformation;
-//    
-//  if(threadIdx.x < 16)				//Matrix4f should contain 16 * 4 bytes of memory
-//  {
-//	  uint32_t* ptr1 = (uint32_t*)(&cache_transformation);
-//	  uint32_t* ptr2 = (uint32_t*)transformation;
-////	  ptr1 += threadIdx.x;
-////	  ptr2 += threadIdx.x;
-//	  
-//	  
-//	  *(ptr1 + threadIdx.x) = *(ptr2 + threadIdx.x);
-//  }
-//  __syncthreads();  
-  
 //  if (i==1) printf("transform (%u): (%f, %f, %f, %f)\n", sizeof(transformation), transformation.a11, transformation.a12, transformation.a13, transformation.a14);
 
   // if more than max_nr_of_blocks points are in ptcloud we need a loop
@@ -104,12 +95,15 @@ void kernelKinematicChainTransform(uint8_t chain_size, uint8_t joint_to_transfor
   {
 
 //    applyTransform(transformation, point_clouds[joint_to_transform][i], transformed_point_clouds[joint_to_transform][i]);
-    transformed_point_clouds->clouds_base_addresses[joint_to_transform][i] = (*transformation) * point_clouds->clouds_base_addresses[joint_to_transform][i];
+    transformed_point_clouds->clouds_base_addresses[joint_to_transform][i] = transformation * point_clouds->clouds_base_addresses[joint_to_transform][i];
 //    if (i==1)
-//      printf("transforming (%f, %f, %f) --> (%f, %f, %f)",
-//             point_clouds[joint_to_transform][i].x, point_clouds[joint_to_transform][i].y, point_clouds[joint_to_transform][i].z,
-//             transformed_point_clouds[joint_to_transform][i].x, transformed_point_clouds[joint_to_transform][i].y, transformed_point_clouds[joint_to_transform][i].z);
-//     transformed_point_clouds[joint_to_transform][i] = transformation * point_clouds[joint_to_transform][i];
+//      printf("transforming (%f, %f, %f) --> (%f, %f, %f)\n",
+//             point_clouds->clouds_base_addresses[joint_to_transform][i].x,
+//             point_clouds->clouds_base_addresses[joint_to_transform][i].y,
+//             point_clouds->clouds_base_addresses[joint_to_transform][i].z,
+//             transformed_point_clouds->clouds_base_addresses[joint_to_transform][i].x,
+//             transformed_point_clouds->clouds_base_addresses[joint_to_transform][i].y,
+//             transformed_point_clouds->clouds_base_addresses[joint_to_transform][i].z);
 
     // increment by number of all threads that are running
     i += blockDim.x * gridDim.x;

@@ -103,7 +103,7 @@ ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_)
 ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
 
 ICMAKER_INTERNAL_DEPENDENCIES(
-  gpu_voxels_robot
+  gpu_voxels_dh_robot
   gpu_voxels_core
   gpu_voxels_voxelmap # REMOVE THIS LATER
   gpu_voxels_vis_interface

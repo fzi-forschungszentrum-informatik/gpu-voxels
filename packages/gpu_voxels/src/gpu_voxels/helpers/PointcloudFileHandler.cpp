@@ -171,7 +171,7 @@ void PointcloudFileHandler::shiftPointCloudToZero(std::vector<Vector3f> &points)
 }
 
 
-boost::filesystem::path PointcloudFileHandler::getGpuVoxelsPath()
+boost::filesystem::path getGpuVoxelsPath()
 {
   char const* tmp = std::getenv("GPU_VOXELS_MODEL_PATH");
   if (tmp == NULL)

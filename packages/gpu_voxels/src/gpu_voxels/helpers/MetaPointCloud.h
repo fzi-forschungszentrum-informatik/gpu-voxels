@@ -43,17 +43,27 @@ class MetaPointCloud
 {
 public:
 
-  MetaPointCloud(const std::vector<std::string> &_point_cloud_files, const bool use_model_path);
+  MetaPointCloud();
+  MetaPointCloud(const std::vector<std::string> &_point_cloud_files, bool use_model_path);
+  MetaPointCloud(const std::vector<std::string> &_point_cloud_files,
+                 const std::vector<std::string> &_point_cloud_names, bool use_model_path);
   MetaPointCloud(const std::vector<uint32_t> &_point_cloud_sizes);
   MetaPointCloud(const std::vector< std::vector<Vector3f> > &point_clouds);
   MetaPointCloud(const MetaPointCloud &other);
   MetaPointCloud(const MetaPointCloud *other);
 
+
   //! Destructor
   ~MetaPointCloud();
 
   void addCloud(uint32_t cloud_size);
-  void addCloud(std::vector<Vector3f> cloud, bool sync = false);
+  void addCloud(const std::vector<Vector3f> &cloud, bool sync = false, const std::string &name = "");
+  void addClouds(const std::vector<std::string> &_point_cloud_files, bool use_model_path);
+  std::string getCloudName(uint16_t i) const;
+  const std::map<uint16_t, std::string> getCloudNames() const;
+  int16_t getCloudNumber(const std::string& name) const;
+
+
 
   /*!
    * \brief syncToDevice copies a specific map to the GPU
@@ -73,10 +83,20 @@ public:
    * Call syncToDevice() after updating all clouds or set sync to true
    * to only sync this current cloud to the GPU.
    * \param cloud Id of the cloud to update
-   * \param pointcloud The new cloud
+   * \param pointcloud The new cloud. May differ in size.
    * \param sync If set to true, only this modified cloud is synced to the GPU.
    */
   void updatePointCloud(uint16_t cloud, const std::vector<Vector3f> &pointcloud, bool sync = false);
+
+  /*!
+   * \brief updatePointCloud This updates a specific cloud on the host.
+   * Call syncToDevice() after updating all clouds or set sync to true
+   * to only sync this current cloud to the GPU.
+   * \param cloud_name Name of the cloud to update
+   * \param pointcloud The new cloud. May differ in size.
+   * \param sync If set to true, only this modified cloud is synced to the GPU.
+   */
+  void updatePointCloud(const std::string cloud_name, const std::vector<Vector3f> &pointcloud, bool sync = false);
 
   /*!
    * \brief updatePointCloud This updates a specific cloud on the host.
@@ -89,6 +109,10 @@ public:
    */
   void updatePointCloud(uint16_t cloud, const Vector3f* pointcloud, uint32_t pointcloud_size, bool sync = false);
 
+  /*!
+   * \brief getNumberOfPointclouds
+   * \return Number of clouds in the MetaPointCloud
+   */
   uint16_t getNumberOfPointclouds() const { return m_point_clouds_local->num_clouds; }
 
   /*!
@@ -129,7 +153,7 @@ public:
    */
   const MetaPointCloudStruct* getDeviceConstPointer() const { return m_dev_ptr_to_point_clouds_struct; }
 
-  void debugPointCloud();
+  void debugPointCloud() const;
 
 private:
 
@@ -146,6 +170,7 @@ private:
   void destruct();
 
   std::vector<uint32_t> m_point_cloud_sizes; //basically only needed for copy constructor
+  std::map<uint16_t, std::string> m_point_cloud_names;
 
   uint32_t m_accumulated_pointcloud_size;
   uint16_t m_num_clouds;

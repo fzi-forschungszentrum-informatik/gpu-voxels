@@ -13,11 +13,6 @@
 # ----- library gpu_voxels_visualization_core -----
 ICMAKER_SET("gpu_voxels_visualization_core")
 
-FIND_PACKAGE(GLEW)
-FIND_PACKAGE(GLM)
-FIND_PACKAGE(OpenGL)
-FIND_PACKAGE(GLUT)
-
 ICMAKER_ADD_HEADERS(
   Utils.h
   shader.h
@@ -107,15 +102,11 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
 
 ICMAKER_EXTERNAL_DEPENDENCIES(
   CUDA
-  OpenNI
-  Boost_SYSTEM
-  PCL
   )
 
 
 # LibRT is needed for Boost Interprocess on POSIX systems
 IF(UNIX AND NOT APPLE)
-  FIND_PACKAGE(LibRt)
   ICMAKER_EXTERNAL_DEPENDENCIES(
     LibRt
     )

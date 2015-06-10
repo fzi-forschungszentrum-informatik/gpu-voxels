@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
    * of your GPU. Even if an empty Octree is small, a
    * Voxelmap will always require the full memory.
    */
-  gvl = new GpuVoxels(500, 500, 200, 0.01);
+  gvl = new GpuVoxels(200, 200, 100, 0.02);
 
   /*
    * Now we add a map, that will represent the robot.
@@ -97,68 +97,104 @@ int main(int argc, char* argv[])
   /*
    * Lets create a kinect driver and an according pointcloud.
    * To allow easy transformation of the Kinect pose,
-   * we declare it as a robot.
+   * we declare it as a robot and model a pan-tilt-unit.
    */
   Kinect* kinect = new Kinect(identifier);
   kinect->run();
-  std::vector<DHParameters> kinect_dh_params(1);
-  kinect_dh_params[0] = DHParameters(0.0, 0.0, 0.0, 0.0, 0.0);
-  std::vector<uint32_t> sizes(1, 640*480);
-  MetaPointCloud myKinectCloud(sizes);
-  gvl->addRobot("kinectData", kinect_dh_params, myKinectCloud);
+  std::vector<std::string> kinect_link_names(6);
+  kinect_link_names[0] = "z_translation";
+  kinect_link_names[1] = "y_translation";
+  kinect_link_names[2] = "x_translation";
+  kinect_link_names[3] = "pan";
+  kinect_link_names[4] = "tilt";
+  kinect_link_names[5] = "kinect";
+
+  std::vector<robot::DHParameters> kinect_dh_params(6);
+  kinect_dh_params[0] = robot::DHParameters(0.0,  0.0,    0.0,   -1.5708, 0.0, robot::PRISMATIC); // Params for Y translation
+  kinect_dh_params[1] = robot::DHParameters(0.0, -1.5708, 0.0,   -1.5708, 0.0, robot::PRISMATIC); // Params for X translation
+  kinect_dh_params[2] = robot::DHParameters(0.0,  1.5708, 0.0,    1.5708, 0.0, robot::PRISMATIC); // Params for Pan axis
+  kinect_dh_params[3] = robot::DHParameters(0.0,  1.5708, 0.0,    1.5708, 0.0, robot::REVOLUTE);  // Params for Tilt axis
+  kinect_dh_params[4] = robot::DHParameters(0.0,  0.0,    0.0,   -3.1415, 0.0, robot::REVOLUTE);  // Params for Kinect
+  kinect_dh_params[5] = robot::DHParameters(0.0,  0.0,    0.0,    0.0,    0.0, robot::REVOLUTE);  // Pseudo Param
+
+  JointValueMap kinect_joints;
+  kinect_joints["z_translation"] = 0.6; // moves along the Z axis
+  kinect_joints["y_translation"] = 1.0; // moves along the Y Axis
+  kinect_joints["x_translation"] = 1.0; // moves along the X Axis
+  kinect_joints["pan"]  = -0.7;
+  kinect_joints["tilt"] = 0.5;
+
+  std::vector<Vector3f> kinect_pc(1, 640*480);
+  MetaPointCloud myKinectCloud;
+  myKinectCloud.addCloud(kinect_pc, true, kinect_link_names[5]);
+
+  gvl->addRobot("kinectData", kinect_link_names, kinect_dh_params, myKinectCloud);
+
 
   /*
-   * Of course, we need another robot. At this point, it would be helpful
-   * to e.g. rely on KDL or something to parse DH params and be consistent
-   * to your robot description.
-   * In this example, we simply hardcode a robot.
-   * The environment variable GPU_VOXELS_MODEL_PATH is checked
-   * to ensure that the robot parts can be loaded.
+   * Of course, we need a robot. At this point, you can choose between
+   * describing your robot via ROS URDF or via conventional DH parameter.
+   * In this example, we simply hardcode a DH robot:
    */
 
-  size_t rob_dim = 7;
-  // this loads the segment models from pointclouds
-  std::vector<std::string> paths_to_pointclouds(rob_dim);
-  paths_to_pointclouds[0] = "arm_0_link.xyz";
-  paths_to_pointclouds[1] = "arm_1_link.xyz";
-  paths_to_pointclouds[2] = "arm_2_link.xyz";
-  paths_to_pointclouds[3] = "arm_3_link.xyz";
-  paths_to_pointclouds[4] = "arm_4_link.xyz";
-  paths_to_pointclouds[5] = "arm_5_link.xyz";
-  paths_to_pointclouds[6] = "arm_6_link.xyz";
-  MetaPointCloud myRobotCloud(paths_to_pointclouds, true);
+  // First, we load the robot geometry which contains 9 links with 7 geometries:
+  // Geometries are required to have the same names as links, if they should get transformed.
+  std::vector<std::string> linknames(10);
+  std::vector<std::string> paths_to_pointclouds(7);
+  linknames[0] = "z_translation";
+  linknames[1] = "y_translation";
+  linknames[2] = "x_translation";
+  linknames[3] = paths_to_pointclouds[0] = "arm_0_link.xyz";
+  linknames[4] = paths_to_pointclouds[1] = "arm_1_link.xyz";
+  linknames[5] = paths_to_pointclouds[2] = "arm_2_link.xyz";
+  linknames[6] = paths_to_pointclouds[3] = "arm_3_link.xyz";
+  linknames[7] = paths_to_pointclouds[4] = "arm_4_link.xyz";
+  linknames[8] = paths_to_pointclouds[5] = "arm_5_link.xyz";
+  linknames[9] = paths_to_pointclouds[6] = "arm_6_link.xyz";
 
-  // this is the DH description of the robots kinematic
-  std::vector<DHParameters> dh_params(rob_dim);
-                                          // _d,_theta,_a,_alpha,_value
-  dh_params[0] = DHParameters(0.0, 0.0, 0.0,     1.5708, 0.0); // build an arm from 6 segments
-  dh_params[1] = DHParameters(0.0,  0.0, 0.35,  -3.1415, 0.0);
-  dh_params[2] = DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0);
-  dh_params[3] = DHParameters(0.0,  0.0, 0.365, -1.5708, 0.0);
-  dh_params[4] = DHParameters(0.0,  0.0, 0.0,    1.5708, 0.0);
-  dh_params[5] = DHParameters(0.0,  0.0, 0.0,    0.0,    0.0);
-  dh_params[6] = DHParameters(0.0,  0.0, 0.0,    0.0,    0.0);
+  std::vector<robot::DHParameters> dh_params(10);
+                                   // _d,  _theta,  _a,   _alpha, _value, _type
+  dh_params[0] = robot::DHParameters(0.0,  0.0,    0.0,   -1.5708, 0.0, robot::PRISMATIC); // Params for Y translation
+  dh_params[1] = robot::DHParameters(0.0, -1.5708, 0.0,   -1.5708, 0.0, robot::PRISMATIC); // Params for X translation
+  dh_params[2] = robot::DHParameters(0.0,  1.5708, 0.0,    1.5708, 0.0, robot::PRISMATIC); // Params for first Robot axis (visualized by 0_link)
+  dh_params[3] = robot::DHParameters(0.0,  1.5708, 0.0,    1.5708, 0.0, robot::REVOLUTE);  // Params for second Robot axis (visualized by 1_link)
+  dh_params[4] = robot::DHParameters(0.0,  0.0,    0.35,  -3.1415, 0.0, robot::REVOLUTE);  //
+  dh_params[5] = robot::DHParameters(0.0,  0.0,    0.0,    1.5708, 0.0, robot::REVOLUTE);  //
+  dh_params[6] = robot::DHParameters(0.0,  0.0,    0.365, -1.5708, 0.0, robot::REVOLUTE);  //
+  dh_params[7] = robot::DHParameters(0.0,  0.0,    0.0,    1.5708, 0.0, robot::REVOLUTE);  //
+  dh_params[8] = robot::DHParameters(0.0,  0.0,    0.0,    0.0,    0.0, robot::REVOLUTE);  // Params for last Robot axis (visualized by 6_link)
+  dh_params[9] = robot::DHParameters(0.0,  0.0,    0.0,    0.0,    0.0, robot::REVOLUTE);  // Params for the not viusalized tool
 
-  // now we add the robot to the management
-  gvl->addRobot("myRobot", dh_params, myRobotCloud);
-
-  // to allow a motion of the robot we need some poses and joint angles:
-  gpu_voxels::Matrix4f new_base_pose;
-  new_base_pose.a11 = 1;
-  new_base_pose.a22 = 1;
-  new_base_pose.a33 = 1;
-  new_base_pose.a44 = 1;
-  new_base_pose.a14 += 0;
-  new_base_pose.a24 += 2;
-  new_base_pose.a34 += 0.5;
-
-  std::vector<float> myRobotJointValues(rob_dim, 0.0);
+  gvl->addRobot("myRobot", linknames, dh_params, paths_to_pointclouds, true);
 
   // initialize the joint interpolation
-  std::vector<float> min_joint_values(rob_dim, -1.0);
-  std::vector<float> max_joint_values(rob_dim, 1.5);
   std::size_t counter = 0;
   const float ratio_delta = 0.02;
+
+  JointValueMap min_joint_values;
+  min_joint_values["z_translation"] = 0.0; // moves along the Z axis
+  min_joint_values["y_translation"] = 0.5; // moves along the Y Axis
+  min_joint_values["x_translation"] = 0.5; // moves along the X Axis
+  min_joint_values["arm_0_link.xyz"] = 1.0;
+  min_joint_values["arm_1_link.xyz"] = 1.0;
+  min_joint_values["arm_2_link.xyz"] = 1.0;
+  min_joint_values["arm_3_link.xyz"] = 1.0;
+  min_joint_values["arm_4_link.xyz"] = 1.0;
+  min_joint_values["arm_5_link.xyz"] = 1.0;
+  min_joint_values["arm_6_link.xyz"] = 1.0;
+
+  JointValueMap max_joint_values;
+  max_joint_values["z_translation"] = 0.0; // moves along the Z axis
+  max_joint_values["y_translation"] = 2.5; // moves along the Y axis
+  max_joint_values["x_translation"] = 2.5; // moves along the X Axis
+  max_joint_values["arm_0_link.xyz"] = 1.5;
+  max_joint_values["arm_1_link.xyz"] = 1.5;
+  max_joint_values["arm_2_link.xyz"] = 1.5;
+  max_joint_values["arm_3_link.xyz"] = 1.5;
+  max_joint_values["arm_4_link.xyz"] = 1.5;
+  max_joint_values["arm_5_link.xyz"] = 1.5;
+  max_joint_values["arm_6_link.xyz"] = 1.5;
+
   const int num_swept_volumes = 50;//voxelmap::BIT_VECTOR_LENGTH;
 
   /*
@@ -170,19 +206,17 @@ int main(int argc, char* argv[])
    * so we can later identify, which pose created a collision.
    */
   LOGGING_INFO(Gpu_voxels, "Generating Swept Volume..." << endl);
+  JointValueMap myRobotJointValues;
   for (int i = 0; i < num_swept_volumes; ++i)
   {
+
     myRobotJointValues = gpu_voxels::CudaMath::interpolateLinear(min_joint_values, max_joint_values,
                                                                  ratio_delta * counter++);
-    new_base_pose.a14 += 0.05;
-    new_base_pose.a24 += 0.05;
-    new_base_pose.a34 += 0.00;
 
-    gvl->updateRobotPose("myRobot", myRobotJointValues, &new_base_pose);
+    gvl->setRobotConfiguration("myRobot", myRobotJointValues);
     VoxelType v = VoxelType(eVT_SWEPT_VOLUME_START + 1 + i);
     gvl->insertRobotIntoMap("myRobot", "myRobotMap", v);
   }
-
 
   /*
    * MAIN LOOP:
@@ -192,18 +226,11 @@ int main(int argc, char* argv[])
   LOGGING_INFO(Gpu_voxels, "Starting collision detection..." << endl);
   while (true)
   {
-    std::vector<float> joints(1, 0.0);
-    gpu_voxels::Matrix4f kinect_base_pose;
-
-    // Rotate the kinect 90 Degrees about the X-Axis:
-    kinect_base_pose = gpu_voxels::roll(M_PI_2);
-    kinect_base_pose.a14 = 1;
-    kinect_base_pose.a24 = 1;
-    kinect_base_pose.a34 = 1;
-    kinect_base_pose.a44 = 1;
-
-    gvl->updateRobotPose("kinectData", joints, &kinect_base_pose);
-    gvl->updateRobotPart("kinectData", 0, kinect->getDataPtr());
+    // Insert Kinect data (in cam-coordinate system)
+    gvl->updateRobotPart("kinectData", "kinect", kinect->getDataPtr());
+    // Call setRobotConfiguration to trigger transformation of Kinect data:
+    gvl->setRobotConfiguration("kinectData", kinect_joints);
+    // Insert the Kinect data (now in world coordinates) into the map
     gvl->insertRobotIntoMap("kinectData", "myEnvironmentMap", eVT_OCCUPIED);
 
     size_t num_cols = 0;

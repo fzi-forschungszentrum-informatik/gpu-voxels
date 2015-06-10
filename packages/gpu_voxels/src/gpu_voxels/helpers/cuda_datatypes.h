@@ -27,8 +27,11 @@
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <iostream>
+#include <iomanip>
 #include <stdint.h> // for fixed size datatypes
 #include <vector>
+#include <map>
+#include <string>
 
 namespace gpu_voxels {
 
@@ -383,6 +386,20 @@ struct Matrix4f
     a31 = 0;    a32 = 0;    a33 = 1;    a34 = 0;
     a41 = 0;    a42 = 0;    a43 = 0;    a44 = 1;
   }
+
+  __host__
+     friend std::ostream& operator<<(std::ostream& out, const Matrix4f& matrix)
+  {
+    out.precision(3);
+    out << "\n" << std::fixed <<
+        "[" << std::setw(10) << matrix.a11 << ", " << std::setw(10) << matrix.a12 << ", " << std::setw(10) << matrix.a13 << ", " << std::setw(10) << matrix.a14 << ",\n"
+        " " << std::setw(10) << matrix.a21 << ", " << std::setw(10) << matrix.a22 << ", " << std::setw(10) << matrix.a23 << ", " << std::setw(10) << matrix.a24 << ",\n"
+        " " << std::setw(10) << matrix.a31 << ", " << std::setw(10) << matrix.a32 << ", " << std::setw(10) << matrix.a33 << ", " << std::setw(10) << matrix.a34 << ",\n"
+        " " << std::setw(10) << matrix.a41 << ", " << std::setw(10) << matrix.a42 << ", " << std::setw(10) << matrix.a43 << ", " << std::setw(10) << matrix.a44 << "]"
+        << std::endl;
+    return out;
+  }
+
 };
 
 struct Matrix4d
@@ -790,6 +807,8 @@ struct MetaPointCloudStruct
     {
     }
 };
+
+typedef std::map<std::string, float > JointValueMap;
 
 } // end of namespace
 #endif
