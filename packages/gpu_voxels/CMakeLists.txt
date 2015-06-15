@@ -35,7 +35,8 @@ FIND_PACKAGE(PCL)
 FIND_PACKAGE(ROS)
 
 # Dependencies for Kinect support
-FIND_PACKAGE(OpenNI)
+FIND_PACKAGE(OpenNi)
+#FIND_PACKAGE(OpenNi2)
 
 MESSAGE(STATUS "--------------------------------------------------------------------------")
 MESSAGE(STATUS "------------------------ GPU Voxels configuration ------------------------")
@@ -65,11 +66,17 @@ ELSE(ROS_FOUND)
   MESSAGE(STATUS "[WARNING] Building GPU-Voxels without ROS connections. ROS not found.")
 ENDIF(ROS_FOUND)
 
-IF(OpenNI_FOUND)
+#IF(OPENNI2_FOUND)
+#  MESSAGE(STATUS "[OK]      Building GPU-Voxels with Kinect support. OpenNI2 was found.")
+#ELSE(OPENNI2_FOUND)
+#  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without Kinect support. OpenNI2 not found.")
+#ENDIF(OPENNI2_FOUND)
+
+IF(OPENNI_FOUND)
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with Kinect support. OpenNI was found.")
-ELSE(OpenNI_FOUND)
+ELSE(OPENNI_FOUND)
   MESSAGE(STATUS "[WARNING] Building GPU-Voxels without Kinect support. OpenNI not found.")
-ENDIF(OpenNI_FOUND)
+ENDIF(OPENNI_FOUND)
 
 IF(Octomap_FOUND)
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with Octomap support. Octomap found.")

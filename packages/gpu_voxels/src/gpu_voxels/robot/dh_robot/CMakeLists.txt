@@ -56,3 +56,6 @@ ICMAKER_INSTALL_HEADERS(gpu_voxels/robot/dh_robot)
 ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/robot/kernels
   ../kernels/KinematicOperations.h
 )
+ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/robot/
+  ../robot_interface.h
+)

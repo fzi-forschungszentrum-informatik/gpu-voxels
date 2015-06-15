@@ -23,6 +23,7 @@ IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
       robot_joint.h
       robot_link.h
       urdf_robot.h
+      robot_to_gpu.h
     )
 
   ICMAKER_ADD_SOURCES(
@@ -70,6 +71,9 @@ IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
   # Include files here that are needed when the package is installed.
   ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/robot/kernels
     ../kernels/KinematicOperations.h
+  )
+  ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/robot/
+    ../robot_interface.h
   )
 
 ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
