@@ -119,7 +119,7 @@ void KinematicChain::setConfiguration(const JointValueMap &jointmap)
     if(pc_num != -1)
     {
       size_t pc_size = m_links_meta_cloud->getPointcloudSize(pc_num);
-      m_math.computeLinearLoad(pc_size, &m_blocks, &m_threads_per_block);
+      computeLinearLoad(pc_size, &m_blocks, &m_threads_per_block);
       //    printf("for joint %u: blocks = %u, threads = %u\n", i, m_blocks, m_threads_per_block);
       //    printf("    to address %u points in cloud.\n", m_point_cloud_sizes[i]);
       //First inserting the Link with the current transformation
@@ -142,6 +142,17 @@ void KinematicChain::setConfiguration(const JointValueMap &jointmap)
   cudaDeviceSynchronize();
 }
 
+
+void KinematicChain::getJointNames(std::vector<std::string> &jointnames)
+{
+  jointnames.clear();
+  for (std::map<std::string, KinematicLinkSharedPtr>::const_iterator it=m_links.begin();
+       it!=m_links.end(); ++it)
+  {
+    jointnames.push_back(it->first);
+  }
+}
+
 void KinematicChain::getConfiguration(JointValueMap &jointmap)
 {
   for (std::map<std::string, KinematicLinkSharedPtr>::const_iterator it=m_links.begin();
@@ -149,6 +160,18 @@ void KinematicChain::getConfiguration(JointValueMap &jointmap)
   {
     jointmap[it->first] = it->second->getJointValue();
   }
+}
+
+void KinematicChain::getLowerJointLimits(JointValueMap &lower_limits)
+{
+  LOGGING_ERROR_C(RobotLog, KinematicChain,
+                  "getLowerJointLimits not implemented for DH-Robot!" << endl);
+}
+
+void KinematicChain::getUpperJointLimits(JointValueMap &upper_limits)
+{
+  LOGGING_ERROR_C(RobotLog, KinematicChain,
+                  "getUpperJointLimits not implemented for DH-Robot!" << endl);
 }
 
 /* private helper functions */

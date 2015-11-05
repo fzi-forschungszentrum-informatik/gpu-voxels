@@ -35,8 +35,11 @@
 #  define ICL_CORE_CONFIG_HAS_ENHANCED_CONFIG_MACROS
 #  define ICL_CORE_CONFIG_TYPEOF(value) decltype(value)
 # else
-#  pragma message("The CONFIG_VALUE convenience macros are only available in Visual Studio 2010 and newer.")
-#  define ICL_CORE_CONFIG_TYPEOF(value) THIS_FEATURE_IS_NOT_AVAILABLE_ON_YOUR_COMPILER
+#  include <boost/typeof/typeof.hpp>
+#  define ICL_CORE_CONFIG_HAS_ENHANCED_CONFIG_MACROS
+#  define ICL_CORE_CONFIG_TYPEOF(value) BOOST_TYPEOF(value)
+//#  pragma message("The CONFIG_VALUE convenience macros are only available in Visual Studio 2010 and newer.")
+//#  define ICL_CORE_CONFIG_TYPEOF(value) THIS_FEATURE_IS_NOT_AVAILABLE_ON_YOUR_COMPILER
 # endif
 #else
 # define ICL_CORE_CONFIG_HAS_ENHANCED_CONFIG_MACROS

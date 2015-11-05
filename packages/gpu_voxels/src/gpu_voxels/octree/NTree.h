@@ -32,17 +32,17 @@
 // internal includes
 #include <gpu_voxels/octree/DataTypes.h>
 #include <gpu_voxels/octree/Voxel.h>
-#include <gpu_voxels/octree/VoxelTypeFlags.h>
 #include <gpu_voxels/octree/Morton.h>
 #include <gpu_voxels/octree/NTreeData.h>
-#include <gpu_voxels/octree/VoxelList.h>
 #include <gpu_voxels/octree/EnvironmentNodes.h>
 #include <gpu_voxels/octree/EnvNodesProbabilistic.h>
 #include <gpu_voxels/octree/DefaultCollider.h>
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
+#include <gpu_voxels/helpers/BitVector.h>
 #include <gpu_voxels/voxelmap/VoxelMap.h>
 #include <gpu_voxels/voxelmap/TemplateVoxelMap.h>
+#include <gpu_voxels/voxellist/TemplateVoxelList.h>
 #include <gpu_voxels/vis_interface/VisualizerInterface.h>
 
 /**
@@ -136,7 +136,7 @@ public:
   void build(thrust::device_vector<Vector3ui>& d_points, const bool free_bounding_box = false);
 
   void transformPointsToVoxel(gpu_voxels::Vector3ui* points, uint32_t num_points,
-                              thrust::host_vector<VoxelID>& voxel);
+                              thrust::host_vector<OctreeVoxelID>& voxel);
   void print();
   void print2();
   void find(thrust::device_vector<Vector3ui> voxel, void** resultNode,
@@ -152,22 +152,9 @@ public:
   voxel_count intersect(thrust::host_vector<Vector3ui>& h_voxel);
 
   /**
-   * @brief intersect Intersect NTree with VoxelList. Optionally keeps track of the VoxelTypeFlags to distinguish between different swept-volumes.
-   * @tparam VTF_SIZE Size parameter for VoxelTypeFlags<VTF_SIZE>
-   * @tparam set_collision_flag Boolean whether to compute set the collision flag of the NTree
-   * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting VoxelTypeFlags
-   * @param voxel_list VoxelList to intersect with
-   * @param h_result_voxelTypeFlags Colliding voxel types if use_voxelTypeFlags set to true
-   * @return Returns the number of collisions
-   */
-  template<int VTF_SIZE, bool set_collision_flag, bool compute_voxelTypeFlags>
-  voxel_count intersect(VoxelList<VTF_SIZE>& voxel_list, VoxelTypeFlags<VTF_SIZE>* h_result_voxelTypeFlags =
-                            NULL);
-
-  /**
    * @brief intersect_sparse Intersect NTree and VoxelMap by checking every occupied voxel of the VoxelMap in the NTree. Performs good for a sparsely occupied VoxelMap.
    * @tparam set_collision_flag Boolean whether to compute set the collision flag of the NTree
-   * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting VoxelTypeFlags
+   * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting BitVector
    * @tparam VoxelType The type of the voxel of the given voxelmap.
    * @tparam use_execution_context Use the execution context of voxel_map.
    * @param voxel_map VoxelMap to collide with
@@ -182,10 +169,43 @@ public:
                                gpu_voxels::Vector3ui offset = gpu_voxels::Vector3ui(0, 0, 0));
 
   /**
-   * @brief intersect_load_balance Intersect NTree and VoxelMap by traversing the NTree with load balance and look-up occupied voxel in the VoxelMap.
-   * @tparam VTF_SIZE Size parameter for VoxelTypeFlags<VTF_SIZE>
+   * @brief intersect_sparse Intersect NTree and VoxelList by checking every voxel of the VoxelList in the NTree.
    * @tparam set_collision_flag Boolean whether to compute set the collision flag of the NTree
-   * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting VoxelTypeFlags
+   * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting BitVector
+   * @tparam VoxelType The type of the voxel of the given voxellist.
+   * @tparam use_execution_context Use the execution context of voxel_map.
+   * @param voxel_map voxellist to collide with
+   * @param h_result_voxel The resulting reduced voxel if compute_voxelTypeFlags=true
+   * @param min_level Min level used for traversal
+   * @param offset Offset that gets added to the voxellist coordinates
+   * @return Returns the number of collisions
+   */
+  template<bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+  voxel_count intersect_sparse(gpu_voxels::voxellist::TemplateVoxelList<VoxelType, MapVoxelID>& voxel_map,
+                               BitVectorVoxel* h_result_voxel = NULL, const uint32_t min_level = 0,
+                               gpu_voxels::Vector3ui offset = gpu_voxels::Vector3ui(0, 0, 0));
+
+  /**
+   * @brief intersect_morton Intersect NTree and MortonVoxelList by checking every voxel of the MortonVoxelList in the NTree.
+   * @tparam set_collision_flag Boolean whether to compute set the collision flag of the NTree
+   * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting BitVector
+   * @tparam VoxelType The type of the voxel of the given voxellist.
+   * @tparam use_execution_context Use the execution context of voxel_map.
+   * @param voxel_map voxellist to collide with
+   * @param h_result_voxel The resulting reduced voxel if compute_voxelTypeFlags=true
+   * @param min_level Min level used for traversal
+   * @param offset Offset that gets added to the voxellist coordinates
+   * @return Returns the number of collisions
+   */
+  template<bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+  voxel_count intersect_morton(gpu_voxels::voxellist::TemplateVoxelList<VoxelType, OctreeVoxelID>& voxel_list,
+                               BitVectorVoxel* h_result_voxel = NULL, const uint32_t min_level = 0);
+
+  /**
+   * @brief intersect_load_balance Intersect NTree and VoxelMap by traversing the NTree with load balance and look-up occupied voxel in the VoxelMap.
+   * @tparam VTF_SIZE Size parameter for BitVector<VTF_SIZE>
+   * @tparam set_collision_flag Boolean whether to compute set the collision flag of the NTree
+   * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting BitVector
    * @tparam VoxelType The type of the voxel. For RobotVoxel the 'voxelType' is used and for Voxel 'occupancy_planning'/ 'occupancy_execution'
    * @tparam use_execution_context Use the execution context of voxel_map.
    * @param voxel_map VoxelMap to collide with
@@ -195,10 +215,10 @@ public:
    * @return Returns the number of collisions
    */
   template<int vft_size, bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
-  voxel_count intersect_load_balance(gpu_voxels::voxelmap::VoxelMap& voxel_map,
+  voxel_count intersect_load_balance(gpu_voxels::voxelmap::ProbVoxelMap& voxel_map,
                                      gpu_voxels::Vector3ui offset = gpu_voxels::Vector3ui(0, 0, 0),
                                      const uint32_t min_level = 0,
-                                     VoxelTypeFlags<vft_size>* h_result_voxelTypeFlags = NULL);
+                                     BitVector<vft_size>* h_result_voxelTypeFlags = NULL);
 
   template<typename o_InnerNode, typename o_LeafNode>
   voxel_count intersect(NTree<branching_factor, level_count, o_InnerNode, o_LeafNode>* other);
@@ -215,7 +235,7 @@ public:
    * @return Returns the number of collisions. This number represents the volume in collision by the number of voxels (voxel with the size of the NTree resolution).
    */
   template<typename o_InnerNode, typename o_LeafNode, typename Collider>
-  VoxelID intersect_load_balance(NTree<branching_factor, level_count, o_InnerNode, o_LeafNode>* other,
+  OctreeVoxelID intersect_load_balance(NTree<branching_factor, level_count, o_InnerNode, o_LeafNode>* other,
                                      const uint32_t min_level, Collider collider = DefaultCollider(), bool mark_collisions = true,
                                      double* balance_overhead = NULL, int* num_balance_tasks = NULL);
 
@@ -233,7 +253,7 @@ public:
 
   void propagate_bottom_up(thrust::device_vector<Voxel>& d_voxel_vector, uint32_t level = 0);
 
-  void propagate_bottom_up(VoxelID* d_voxel_id, voxel_count num_voxel, uint32_t level = 0);
+  void propagate_bottom_up(OctreeVoxelID* d_voxel_id, voxel_count num_voxel, uint32_t level = 0);
 
   /**
    * Restores the tree invariant by propagating the status flags top-down and bottom-up using the load balancing concept.
@@ -284,9 +304,9 @@ public:
    * ############# Some templated helpers #############
    */
 
-  struct Trafo_NodeData_to_VoxelID
+  struct Trafo_NodeData_to_OctreeVoxelID
   {
-    __host__ __device__ VoxelID operator()(NodeData x)
+    __host__ __device__ OctreeVoxelID operator()(NodeData x)
     {
       return x.m_voxel_id;
     }
@@ -310,7 +330,7 @@ public:
 //        else
 //          tmp = ns_FREE;
 //      }
-//      c.m_type = statusToVoxelType(tmp);
+//      c.m_type = statusToBitVoxelMeaning(tmp);
 //      return c;
 //    }
 //  };
@@ -379,16 +399,16 @@ public:
     }
   };
 
-  struct Trafo_VoxelID
+  struct Trafo_OctreeVoxelID
   {
     uint32_t m_scale;
 
-    __host__ __device__ Trafo_VoxelID(uint32_t scale)
+    __host__ __device__ Trafo_OctreeVoxelID(uint32_t scale)
     {
       m_scale = scale;
     }
 
-    __host__ __device__ VoxelID operator()(VoxelID x)
+    __host__ __device__ OctreeVoxelID operator()(OctreeVoxelID x)
     {
       gpu_voxels::Vector3ui coorinates;
       inv_morton_code60(x, coorinates);
@@ -401,7 +421,7 @@ public:
     __host__ __device__
     bool operator()(const Cube x)
     {
-      return x.m_type == gpu_voxels::eVT_COLLISION;
+      return x.m_type_vector.getBit(gpu_voxels::eBVM_COLLISION);
     }
   };
 
@@ -413,12 +433,12 @@ public:
     }
 
     __host__ __device__
-    ComputeFreeSpaceData(VoxelID* voxel_id, BasicData* basic_data, voxel_count count) :
+    ComputeFreeSpaceData(OctreeVoxelID* voxel_id, BasicData* basic_data, voxel_count count) :
         m_voxel_id(voxel_id), m_basic_data(basic_data), m_count(count)
     {
     }
 
-    VoxelID* m_voxel_id;
+    OctreeVoxelID* m_voxel_id;
     BasicData* m_basic_data;
     voxel_count m_count;
   };
@@ -456,8 +476,8 @@ public:
       c.m_position = swap_corrdoinates_for_visualizer(c.m_position); // TODO: get rid of this
 
       c.m_side_length = getVoxelSideLength<branching_factor>(x.m_level);
-      c.m_type = statusToVoxelType(m_mapping_lookup, x.m_basic_data.m_status);
-      //      if (c.m_type != gpu_voxels::eVT_OCCUPIED && c.m_type != gpu_voxels::eVT_SWEPT_VOLUME_END && c.m_type != gpu_voxels::eVT_UNDEFINED)
+      c.m_type_vector.setBit(statusToBitVoxelMeaning(m_mapping_lookup, x.m_basic_data.m_status));
+      //      if (c.m_type != gpu_voxels::eBVM_OCCUPIED && c.m_type != gpu_voxels::eVT_SWEPT_VOLUME_END && c.m_type != gpu_voxels::eVT_UNDEFINED)
       //        printf("Type %u Status %u\n", c.m_type, x.m_basic_data.m_status);
       return c;
     }
@@ -477,8 +497,8 @@ public:
         status |= ns_OCCUPIED;
       else if (x.m_basic_data.m_occupancy < THRESHOLD_OCCUPANCY)
         status |= ns_FREE;
-      c.m_type = statusToVoxelType(m_mapping_lookup, status);
-      //      if (c.m_type != gpu_voxels::eVT_OCCUPIED && c.m_type != gpu_voxels::eVT_SWEPT_VOLUME_END && c.m_type != gpu_voxels::eVT_UNDEFINED)
+      c.m_type_vector.setBit(statusToBitVoxelMeaning(m_mapping_lookup, status));
+      //      if (c.m_type != gpu_voxels::eBVM_OCCUPIED && c.m_type != gpu_voxels::eVT_SWEPT_VOLUME_END && c.m_type != gpu_voxels::eVT_UNDEFINED)
       //        printf("Type %u Status %u\n", c.m_type, x.m_basic_data.m_status);
       return c;
     }
@@ -498,7 +518,7 @@ protected:
    */
   void computeFreeSpaceViaRayCast_VoxelList(
       thrust::device_vector<Voxel>& d_occupied_voxel, gpu_voxels::Vector3ui sensor_origin,
-      thrust::host_vector<thrust::pair<VoxelID*, voxel_count> >& h_packed_levels);
+      thrust::host_vector<thrust::pair<OctreeVoxelID*, voxel_count> >& h_packed_levels);
 
   /*
    * Method needed for inserting new sensor data. Computes the free space by ray casting and inserts it into the tree.
@@ -512,14 +532,14 @@ protected:
    * Inserts the given voxel in the tree and updates their occupancy. The given voxel have to be sorted by their id.
    */
   template<bool SET_UPDATE_FLAG, typename BasicData, typename Iterator1, typename Iterator2>
-  void insertVoxel(VoxelID* d_voxel_vector, Iterator1 d_set_basic_data, Iterator2 d_reset_basic_data,
+  void insertVoxel(OctreeVoxelID* d_voxel_vector, Iterator1 d_set_basic_data, Iterator2 d_reset_basic_data,
                    voxel_count num_voxel, uint32_t target_level);
 
   void init_const_memory();
 
   void packVoxel_Map_and_List(
       MapProperties<typename InnerNode::RayCastType, branching_factor>& map_properties,
-      thrust::host_vector<thrust::pair<VoxelID*, voxel_count> >& h_packed_levels, voxel_count num_free_voxel,
+      thrust::host_vector<thrust::pair<OctreeVoxelID*, voxel_count> >& h_packed_levels, voxel_count num_free_voxel,
       uint32_t min_level);
 
   void packVoxel_Map(MapProperties<typename InnerNode::RayCastType, branching_factor>& map_properties,

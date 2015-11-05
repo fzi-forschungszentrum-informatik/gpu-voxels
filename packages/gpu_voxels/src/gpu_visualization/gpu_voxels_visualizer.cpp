@@ -76,6 +76,21 @@ uint32_t getNumberOfVoxelmapsFromSharedMem()
   return res;
 }
 
+uint32_t getNumberOfVoxellistsFromSharedMem()
+{
+  uint32_t res = 0;
+  try
+  {
+    SharedMemoryManagerVoxelLists shm_manager_voxellists;
+    res = shm_manager_voxellists.getNumberOfVoxelListsToDraw();
+  } catch (interprocess_exception& e)
+  {
+    LOGGING_DEBUG(Visualization, "Couldn't open the shared memory segment of the voxel lists!" << endl);
+    return 0;
+  }
+  return res;
+}
+
 uint32_t getNumberOfPrimitiveArraysFromSharedMem()
 {
   uint32_t res = 0;
@@ -140,11 +155,11 @@ void registerVoxelmapFromSharedMemory(uint32_t index)
       switch (map_type)
       {
         case MT_BITVECTOR_VOXELMAP:
-          voxel_map = new voxelmap::BitVectorVoxelMap((voxelmap::BitVectorVoxel*) dev_data_pointer, dim,
+          voxel_map = new voxelmap::BitVectorVoxelMap((BitVectorVoxel*) dev_data_pointer, dim,
                                                       voxel_side_length, MT_BITVECTOR_VOXELMAP);
           break;
         case MT_PROBAB_VOXELMAP:
-          voxel_map = new voxelmap::ProbVoxelMap((voxelmap::ProbabilisticVoxel*) dev_data_pointer, dim,
+          voxel_map = new voxelmap::ProbVoxelMap((ProbabilisticVoxel*) dev_data_pointer, dim,
                                                  voxel_side_length, MT_PROBAB_VOXELMAP);
           break;
         default:
@@ -161,6 +176,31 @@ void registerVoxelmapFromSharedMemory(uint32_t index)
   } catch (interprocess_exception& e)
   {
     LOGGING_DEBUG(Visualization, "Couldn't open the shared memory segment of the voxel maps!" << endl);
+    return;
+  }
+}
+
+void registerVoxellistFromSharedMemory(uint32_t index)
+{
+  try
+  {
+    SharedMemoryManagerVoxelLists shm_manager_voxellists;
+    std::string map_name;
+
+    if (!shm_manager_voxellists.getVoxelListName(map_name, index))
+    {
+      LOGGING_WARNING(
+          Visualization,
+          "Couldn't find mem_segment "<< shm_variable_name_voxellist_name << index << " or the name is empty! Using a default name."<< endl);
+    }
+
+    LOGGING_INFO(
+          Visualization,
+          "Providing a voxellist called \""<< map_name << "\"" << endl);
+    vis->registerVoxelList(index, map_name);
+  } catch (interprocess_exception& e)
+  {
+    LOGGING_DEBUG(Visualization, "Couldn't open the shared memory segment of the voxel lists!" << endl);
     return;
   }
 }
@@ -208,6 +248,13 @@ int32_t main(int32_t argc, char* argv[])
   for (uint32_t i = 0; i < num_voxelmaps; i++)
   {
     registerVoxelmapFromSharedMemory(i);
+  }
+
+  uint32_t num_voxellists = getNumberOfVoxellistsFromSharedMem();
+  LOGGING_INFO(Visualization, "Number of voxel lists that will be drawn: " << num_voxellists << endl);
+  for (uint32_t i = 0; i < num_voxellists; i++)
+  {
+    registerVoxellistFromSharedMemory(i);
   }
 
   uint32_t num_octrees = getNumberOfOctreesFromSharedMem();

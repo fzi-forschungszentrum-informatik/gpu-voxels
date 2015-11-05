@@ -382,15 +382,24 @@ bool readPcFile(vector<Provider_Parameter>& parameter)
             || parameter[i].mode == Provider_Parameter::MODE_KINECT_PLAYBACK))
     {
       printf("File name missing!\n");
-      return true;
+      return false;
     }
     else if(!parameter[i].pc_file.empty() && parameter[i].mode != Provider_Parameter::MODE_KINECT_PLAYBACK
         && parameter[i].mode != Provider_Parameter::MODE_DESERIALIZE)
     {
-      bool res = Test::readPcFile(parameter[i].pc_file, parameter[i].points, parameter[i].num_points,
-                    parameter[i].swap_x_z);
+
+      bool res = file_handling::PointcloudFileHandler::Instance()->loadPointCloud(parameter[i].pc_file, true, parameter[i].points);
       if(res)
+      {
+        parameter[i].num_points = parameter[i].points.size();
+        if (parameter[i].swap_x_z)
+        {
+          for (size_t j = 0; j < parameter[i].num_points; ++j)
+            parameter[i].points[j] = Vector3f(parameter[i].points[j].z, parameter[i].points[j].y, parameter[i].points[j].x);
+        }
+
         return true;
+      }
     }
   }
   return false;
@@ -532,26 +541,6 @@ bool parseArguments(Bech_Parameter& parameter, int argc, char **argv, bool repor
 
 }
 
-namespace Test {
-
-bool readPcFile(string file_name, vector<Vector3f>& points, uint32_t& num_points, bool swap_x_z)
-{ 
-  points.resize(num_points);
-  file_handling::PointcloudFileHandler::Instance()->loadPointCloud(file_name, false, points);
-
-  if (swap_x_z)
-  {
-    for (size_t i = 0; i < num_points; ++i)
-      points[i] = Vector3f(points[i].z, points[i].y, points[i].x);
-  }
-  else
-  {
-    for (size_t i = 0; i < num_points; ++i)
-      points[i] = Vector3f(points[i].x, points[i].y, points[i].z);
-  }
-  return false;
-}
-}
 
 }
 }

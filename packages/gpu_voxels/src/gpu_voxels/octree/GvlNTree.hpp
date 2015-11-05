@@ -25,7 +25,7 @@
 
 #include <gpu_voxels/octree/GvlNTree.h>
 #include <gpu_voxels/octree/Octree.h>
-#include <gpu_voxels/voxelmap/BitVoxel.hpp>
+#include <gpu_voxels/voxel/BitVoxel.hpp>
 
 namespace gpu_voxels {
 namespace NTree {
@@ -45,11 +45,11 @@ GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::~GvlNTree()
 
 // ------ BEGIN Global API functions ------
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertGlobalData(
-    const std::vector<Vector3f> &point_cloud, VoxelType voxelType)
+void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCloud(
+    const std::vector<Vector3f> &point_cloud, BitVoxelMeaning voxelType)
 {
   if (voxelType != 0)
-    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_VT_0 << endl);
+    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_0 << endl);
   else
   {
     // Copy points to gpu and tranform to voxel coordinates
@@ -109,7 +109,7 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
     if (_voxelmap == NULL)
       LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'VoxelList' failed!" << endl);
 
-    num_collisions = this->template intersect_sparse<true, false, voxelmap::ProbabilisticVoxel>(
+    num_collisions = this->template intersect_sparse<true, false, ProbabilisticVoxel>(
         *_voxelmap, NULL, 0, offset);
 //    num_collisions = this->template intersect_load_balance<VOXELMAP_FLAG_SIZE, true, false, gpu_voxels::Voxel, true>(
 //        *_voxelmap);
@@ -119,22 +119,33 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
     voxelmap::BitVectorVoxelMap* _voxelmap = dynamic_cast<voxelmap::BitVectorVoxelMap*>(map);
     if (_voxelmap == NULL)
       LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelMap' failed!" << endl);
-    num_collisions = this->template intersect_sparse<true, false, voxelmap::BitVectorVoxel>(*_voxelmap, NULL, 0, offset);
+    num_collisions = this->template intersect_sparse<true, false, BitVectorVoxel>(*_voxelmap, NULL, 0, offset);
     //    num_collisions = this->template intersect_load_balance<VOXELMAP_FLAG_SIZE, true, false, gpu_voxels::Voxel, true>(
     //        *_voxelmap);
   }
-  else if (type == MT_BITVECTOR_MORTON_VOXELLIST || type == MT_PROBAB_MORTON_VOXELLIST)
+  else if (type == MT_BITVECTOR_MORTON_VOXELLIST)
   {
-    VoxelList<VOXELLIST_FLAGS_SIZE> *_voxellist = dynamic_cast<VoxelList<VOXELLIST_FLAGS_SIZE>*>(map);
+    voxellist::BitVectorMortonVoxelList* _voxellist = dynamic_cast<voxellist::BitVectorMortonVoxelList*>(map);
     if (_voxellist == NULL)
-      LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'VoxelList' failed!" << endl);
+      LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorMortonVoxelList' failed!" << endl);
     if(offset != Vector3ui())
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
+      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OFFSET_ON_WRONG_DATA_STRUCTURE << endl);
 
-    num_collisions = this->template intersect<VOXELLIST_FLAGS_SIZE, true, false>(*_voxellist);
+    // This previously used "intersect<BIT_VECTOR_LENGTH, true, false>" which itself utilized a more effective kernel.
+    num_collisions = this->template intersect_morton<true, false, BitVectorVoxel>(*_voxellist);
   }
-  else if (type == MT_BITVECTOR_VOXELLIST || type == MT_PROBAB_VOXELLIST)
-    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+  else if (type == MT_BITVECTOR_VOXELLIST)
+  {
+    voxellist::BitVectorVoxelList* _voxellist = dynamic_cast<voxellist::BitVectorVoxelList*>(map);
+    if (_voxellist == NULL)
+      LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelList' failed!" << endl);
+
+    num_collisions = this->template intersect_sparse<true, false, BitVectorVoxel>(*_voxellist, NULL, 0, offset);
+  }
+  else if (type == MT_PROBAB_VOXELLIST || type == MT_PROBAB_MORTON_VOXELLIST)
+  {
+    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
+  }
   else
     LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
 
@@ -143,7 +154,7 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithTypes(
-    const GpuVoxelsMapSharedPtr other, voxelmap::BitVectorVoxel& types_in_collision, float coll_threshold, const Vector3ui &offset)
+    const GpuVoxelsMapSharedPtr other, BitVectorVoxel& types_in_collision, float coll_threshold, const Vector3ui &offset)
 {
   size_t num_collisions = SSIZE_MAX;
   GpuVoxelsMap* map = other.get();
@@ -155,11 +166,46 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
     if (_voxelmap == NULL)
       LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelMap' failed!" << endl);
 
-    num_collisions = this->template intersect_sparse<true, true, voxelmap::BitVectorVoxel>(*_voxelmap, &types_in_collision, 0, offset);
+    num_collisions = this->template intersect_sparse<true, true, BitVectorVoxel>(*_voxelmap, &types_in_collision, 0, offset);
+  }
+  else if (type == MT_BITVECTOR_VOXELLIST)
+  {
+    voxellist::BitVectorVoxelList* _voxellist = dynamic_cast<voxellist::BitVectorVoxelList*>(map);
+    if (_voxellist == NULL)
+      LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelList' failed!" << endl);
+
+    num_collisions = this->template intersect_sparse<true, true, BitVectorVoxel>(*_voxellist, &types_in_collision, 0, offset);
   }
   else
     LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
 
+  return num_collisions;
+}
+
+template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
+size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithBitcheck(
+    const GpuVoxelsMapSharedPtr other, const u_int8_t margin, const Vector3ui &offset)
+{
+  size_t num_collisions = SSIZE_MAX;
+
+  switch (other->getMapType())
+  {
+    case MT_BITVECTOR_VOXELMAP:
+    {
+      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+      break;
+    }
+    case MT_BITVECTOR_OCTREE:
+    {
+      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+      break;
+    }
+    default:
+    {
+      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
+      break;
+    }
+  }
   return num_collisions;
 }
 
@@ -173,10 +219,10 @@ bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertRobotCo
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertMetaPointCloud(
-    const MetaPointCloud &meta_point_cloud, VoxelType voxelType)
+    const MetaPointCloud &meta_point_cloud, BitVoxelMeaning voxelType)
 {
   if (voxelType != 0)
-    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_VT_0 << endl);
+    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_0 << endl);
 
   // Get adress from device
   Vector3f* d_points = NULL;
@@ -194,14 +240,30 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertMetaPoi
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertMetaPointCloud(
-    const MetaPointCloud& meta_point_cloud, const std::vector<VoxelType>& voxel_types)
+    const MetaPointCloud& meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings)
 {
   /* Basically this is a dummy implementation since the method can't be left abstract.
      However, I'm not sure whether this functionality makes sense here, so I didn't
      implement it.
    */
-  LOGGING_WARNING_C(OctreeLog, NTree, "This functionality is not implemented, yet. The pointcloud will be inserted with the first VoxelType." << endl);
-  insertMetaPointCloud(meta_point_cloud, voxel_types.front());
+  LOGGING_WARNING_C(OctreeLog, NTree, "This functionality is not implemented, yet. The pointcloud will be inserted with the first BitVoxelMeaning." << endl);
+  insertMetaPointCloud(meta_point_cloud, voxel_meanings.front());
+}
+
+template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
+bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::merge(
+    const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset, const BitVoxelMeaning* new_meaning)
+{
+  LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+  return false;
+}
+
+template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
+bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::merge(
+    const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset, const BitVoxelMeaning* new_meaning)
+{
+  LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+  return false;
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
@@ -217,10 +279,10 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::clearMap()
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::clearVoxelType(VoxelType voxel_type)
+void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
 {
-  if (voxel_type != 0)
-    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_VT_0 << endl);
+  if (voxel_meaning != 0)
+    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_0 << endl);
   else
     clearMap();
 }
@@ -283,37 +345,40 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxelDa
     thrust::device_vector<Vector3ui> &d_voxels)
 {
   uint32_t num_points = d_voxels.size();
-  if (this->m_has_data)
+  if(num_points > 0)
   {
-    // Have to insert voxels and adjust occupancy since there are already some voxels in the NTree
-    // Transform voxel coordinates to morton code
-    thrust::device_vector<VoxelID> d_voxels_morton(num_points);
-    kernel_toMortonCode<<<this->numBlocks, this->numThreadsPerBlock>>>(D_PTR(d_voxels), num_points,
-    D_PTR(d_voxels_morton));
-    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+    if (this->m_has_data)
+    {
+      // Have to insert voxels and adjust occupancy since there are already some voxels in the NTree
+      // Transform voxel coordinates to morton code
+      thrust::device_vector<OctreeVoxelID> d_voxels_morton(num_points);
+      kernel_toMortonCode<<<this->numBlocks, this->numThreadsPerBlock>>>(D_PTR(d_voxels), num_points,
+      D_PTR(d_voxels_morton));
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-    // Sort and remove duplicates
-    // TODO: remove thrust::unique() and adapt NTree::insert() to handle duplicates in the input data
-    thrust::sort(d_voxels_morton.begin(), d_voxels_morton.end());
-    thrust::device_vector<VoxelID>::iterator new_end = thrust::unique(d_voxels_morton.begin(),
-                                                                      d_voxels_morton.end());
-    size_t num_voxel_unique = new_end - d_voxels_morton.begin();
+      // Sort and remove duplicates
+      // TODO: remove thrust::unique() and adapt NTree::insert() to handle duplicates in the input data
+      thrust::sort(d_voxels_morton.begin(), d_voxels_morton.end());
+      thrust::device_vector<OctreeVoxelID>::iterator new_end = thrust::unique(d_voxels_morton.begin(),
+                                                                        d_voxels_morton.end());
+      size_t num_voxel_unique = new_end - d_voxels_morton.begin();
 
-    // Insert voxels
-    typename base::BasicData tmp;
-    getHardInsertResetData(tmp);
-    thrust::constant_iterator<typename base::BasicData> reset_data(tmp);
-    getOccupiedData(tmp);
-    thrust::constant_iterator<typename base::BasicData> set_basic_data(tmp);
-    this->template insertVoxel<true, typename base::BasicData>(D_PTR(d_voxels_morton), set_basic_data,reset_data, num_voxel_unique, 0);
+      // Insert voxels
+      typename base::BasicData tmp;
+      getHardInsertResetData(tmp);
+      thrust::constant_iterator<typename base::BasicData> reset_data(tmp);
+      getOccupiedData(tmp);
+      thrust::constant_iterator<typename base::BasicData> set_basic_data(tmp);
+      this->template insertVoxel<true, typename base::BasicData>(D_PTR(d_voxels_morton), set_basic_data,reset_data, num_voxel_unique, 0);
 
-    // Recover tree invariant
-    this->propagate(uint32_t(num_voxel_unique));
-  }
-  else
-  {
-    // Use plain this->build since NTree is empty
-    this->build(d_voxels, false);
+      // Recover tree invariant
+      this->propagate(uint32_t(num_voxel_unique));
+    }
+    else
+    {
+      // Use plain this->build since NTree is empty
+      this->build(d_voxels, false);
+    }
   }
 }
 

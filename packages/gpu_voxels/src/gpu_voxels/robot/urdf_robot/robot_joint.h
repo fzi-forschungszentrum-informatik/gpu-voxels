@@ -101,12 +101,16 @@ public:
   void resetPoseCalculated() { pose_calculated_ = false; }
   void setJointValue(float joint_value);
   float getJointValue() { return joint_value_; }
+  double getLowerJointLimit() { return lower_joint_limit_; }
+  double getUpperJointLimit() { return upper_joint_limit_; }
 
 protected:
   Robot* robot_;
   std::string name_;
   std::string parent_link_name_;
   std::string child_link_name_;
+  double lower_joint_limit_;
+  double upper_joint_limit_;
 
 private:
   bool pose_calculated_;

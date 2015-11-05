@@ -77,22 +77,24 @@ using namespace gpu_voxels;
 //LP 32
 //IP 32
 
-int main(int argc, char **argv)
-{
-//  printf("N %u\n", sizeof(N));
-//  printf("L %u\n", sizeof(L));
-//  printf("I %u\n", sizeof(I));
-//  printf("NP %u\n", sizeof(NP));
-//  printf("LP %u\n", sizeof(LP));
-//  printf("IP %u\n", sizeof(IP));
+//int main(int argc, char **argv)
+//{
+////  printf("N %u\n", sizeof(N));
+////  printf("L %u\n", sizeof(L));
+////  printf("I %u\n", sizeof(I));
+////  printf("NP %u\n", sizeof(NP));
+////  printf("LP %u\n", sizeof(LP));
+////  printf("IP %u\n", sizeof(IP));
+////  return 0;
+
+//  uint32_t num_points;
+//  std::vector<Vector3f> points;
+//  std::string pcd_file = "./pointcloud_0002.pcd";
+//  if(NTree::Test::readPcFile(pcd_file, points, num_points))
+//  {
+//    NTree::Test::run(points, num_points);
+//  }else{
+//    std::cout << "Error in reading test data from pointcloud" << std::endl;
+//  }
 //  return 0;
-
-  uint32_t num_points;
-  std::vector<Vector3f> points;
-  std::string pcd_file = "./pointcloud_0002.pcd";
-  NTree::Test::readPcFile(pcd_file, points, num_points);
-
-  NTree::Test::run(points, num_points);
-
-  return 0;
-}
+//}

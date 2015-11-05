@@ -10,6 +10,7 @@
 //
 // © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
 //
+
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -25,6 +26,7 @@
 
 #include <stdlib.h>
 #include <algorithm>
+#include <sstream>
 
 #include <icl_core/TimeSpan.h>
 
@@ -96,7 +98,7 @@ double PerformanceMonitor::measurement(string timer_name, string description, st
   {
     TimeStamp end = TimeStamp::now();
     TimeSpan d(end - monitor->m_timer[timer_name]);
-    double double_ms = d.toNSec() / 1000000.0d;
+    double double_ms = d.toNSec() / 1000000.0;
     monitor->addEvent(prefix, description, double_ms);
 
     if (getInstance()->m_print_stop)
@@ -129,7 +131,7 @@ double PerformanceMonitor::startStop(string timer_name, string description, stri
     {
       TimeStamp end = TimeStamp::now();
       TimeSpan d(end - start);
-      double double_ms = d.toNSec() / 1000000.0d;
+      double double_ms = d.toNSec() / 1000000.0;
       monitor->addEvent(prefix, description, double_ms);
       monitor->m_timer[timer_name] = end;
       if (getInstance()->m_print_stop)

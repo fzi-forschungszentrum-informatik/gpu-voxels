@@ -233,7 +233,7 @@ void NTreeProvider::init(Provider_Parameter& parameter)
   m_shm_numCubes = m_segment.find_or_construct<uint32_t>(
       string(shm_variable_name_number_cubes + m_shared_mem_id).c_str())(0);
   m_shm_bufferSwapped = m_segment.find_or_construct<bool>(
-      string(shm_variable_name_buffer_swapped + m_shared_mem_id).c_str())(false);
+      string(shm_variable_name_octree_buffer_swapped + m_shared_mem_id).c_str())(false);
   *m_shm_bufferSwapped = false;
 
   const uint32_t blocks = parameter.num_blocks > 0 ? parameter.num_blocks : NUM_BLOCKS;
@@ -443,11 +443,11 @@ void NTreeProvider::collide_wo_locking()
           if (m_parameter->save_collisions)
           {
             printf("Collide with collisions\n");
-            num_collisions = m_ntree->intersect_sparse<true, false, voxelmap::ProbabilisticVoxel>(
+            num_collisions = m_ntree->intersect_sparse<true, false, ProbabilisticVoxel>(
                 *_voxelmap, NULL, m_min_level, voxelmap_offset);
           }
           else
-            num_collisions = m_ntree->intersect_sparse<false, false, voxelmap::ProbabilisticVoxel>(
+            num_collisions = m_ntree->intersect_sparse<false, false, ProbabilisticVoxel>(
                 *_voxelmap, NULL, m_min_level, voxelmap_offset);
         }
       }

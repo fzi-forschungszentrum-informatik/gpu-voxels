@@ -117,14 +117,14 @@ int main(int argc, char* argv[])
   kinect_dh_params[4] = robot::DHParameters(0.0,  0.0,    0.0,   -3.1415, 0.0, robot::REVOLUTE);  // Params for Kinect
   kinect_dh_params[5] = robot::DHParameters(0.0,  0.0,    0.0,    0.0,    0.0, robot::REVOLUTE);  // Pseudo Param
 
-  JointValueMap kinect_joints;
+  robot::JointValueMap kinect_joints;
   kinect_joints["z_translation"] = 0.6; // moves along the Z axis
   kinect_joints["y_translation"] = 1.0; // moves along the Y Axis
   kinect_joints["x_translation"] = 1.0; // moves along the X Axis
   kinect_joints["pan"]  = -0.7;
   kinect_joints["tilt"] = 0.5;
 
-  std::vector<Vector3f> kinect_pc(1, 640*480);
+  std::vector<Vector3f> kinect_pc(640*480);
   MetaPointCloud myKinectCloud;
   myKinectCloud.addCloud(kinect_pc, true, kinect_link_names[5]);
 
@@ -144,13 +144,13 @@ int main(int argc, char* argv[])
   linknames[0] = "z_translation";
   linknames[1] = "y_translation";
   linknames[2] = "x_translation";
-  linknames[3] = paths_to_pointclouds[0] = "arm_0_link.xyz";
-  linknames[4] = paths_to_pointclouds[1] = "arm_1_link.xyz";
-  linknames[5] = paths_to_pointclouds[2] = "arm_2_link.xyz";
-  linknames[6] = paths_to_pointclouds[3] = "arm_3_link.xyz";
-  linknames[7] = paths_to_pointclouds[4] = "arm_4_link.xyz";
-  linknames[8] = paths_to_pointclouds[5] = "arm_5_link.xyz";
-  linknames[9] = paths_to_pointclouds[6] = "arm_6_link.xyz";
+  linknames[3] = paths_to_pointclouds[0] = "hollie/arm_0_link.xyz";
+  linknames[4] = paths_to_pointclouds[1] = "hollie/arm_1_link.xyz";
+  linknames[5] = paths_to_pointclouds[2] = "hollie/arm_2_link.xyz";
+  linknames[6] = paths_to_pointclouds[3] = "hollie/arm_3_link.xyz";
+  linknames[7] = paths_to_pointclouds[4] = "hollie/arm_4_link.xyz";
+  linknames[8] = paths_to_pointclouds[5] = "hollie/arm_5_link.xyz";
+  linknames[9] = paths_to_pointclouds[6] = "hollie/arm_6_link.xyz";
 
   std::vector<robot::DHParameters> dh_params(10);
                                    // _d,  _theta,  _a,   _alpha, _value, _type
@@ -171,31 +171,31 @@ int main(int argc, char* argv[])
   std::size_t counter = 0;
   const float ratio_delta = 0.02;
 
-  JointValueMap min_joint_values;
+  robot::JointValueMap min_joint_values;
   min_joint_values["z_translation"] = 0.0; // moves along the Z axis
   min_joint_values["y_translation"] = 0.5; // moves along the Y Axis
   min_joint_values["x_translation"] = 0.5; // moves along the X Axis
-  min_joint_values["arm_0_link.xyz"] = 1.0;
-  min_joint_values["arm_1_link.xyz"] = 1.0;
-  min_joint_values["arm_2_link.xyz"] = 1.0;
-  min_joint_values["arm_3_link.xyz"] = 1.0;
-  min_joint_values["arm_4_link.xyz"] = 1.0;
-  min_joint_values["arm_5_link.xyz"] = 1.0;
-  min_joint_values["arm_6_link.xyz"] = 1.0;
+  min_joint_values["hollie/arm_0_link.xyz"] = 1.0;
+  min_joint_values["hollie/arm_1_link.xyz"] = 1.0;
+  min_joint_values["hollie/arm_2_link.xyz"] = 1.0;
+  min_joint_values["hollie/arm_3_link.xyz"] = 1.0;
+  min_joint_values["hollie/arm_4_link.xyz"] = 1.0;
+  min_joint_values["hollie/arm_5_link.xyz"] = 1.0;
+  min_joint_values["hollie/arm_6_link.xyz"] = 1.0;
 
-  JointValueMap max_joint_values;
+  robot::JointValueMap max_joint_values;
   max_joint_values["z_translation"] = 0.0; // moves along the Z axis
   max_joint_values["y_translation"] = 2.5; // moves along the Y axis
   max_joint_values["x_translation"] = 2.5; // moves along the X Axis
-  max_joint_values["arm_0_link.xyz"] = 1.5;
-  max_joint_values["arm_1_link.xyz"] = 1.5;
-  max_joint_values["arm_2_link.xyz"] = 1.5;
-  max_joint_values["arm_3_link.xyz"] = 1.5;
-  max_joint_values["arm_4_link.xyz"] = 1.5;
-  max_joint_values["arm_5_link.xyz"] = 1.5;
-  max_joint_values["arm_6_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_0_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_1_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_2_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_3_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_4_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_5_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_6_link.xyz"] = 1.5;
 
-  const int num_swept_volumes = 50;//voxelmap::BIT_VECTOR_LENGTH;
+  const int num_swept_volumes = 50;// < BIT_VECTOR_LENGTH;
 
   /*
    * SWEPT VOLUME:
@@ -206,15 +206,15 @@ int main(int argc, char* argv[])
    * so we can later identify, which pose created a collision.
    */
   LOGGING_INFO(Gpu_voxels, "Generating Swept Volume..." << endl);
-  JointValueMap myRobotJointValues;
+  robot::JointValueMap myRobotJointValues;
   for (int i = 0; i < num_swept_volumes; ++i)
   {
 
-    myRobotJointValues = gpu_voxels::CudaMath::interpolateLinear(min_joint_values, max_joint_values,
-                                                                 ratio_delta * counter++);
+    myRobotJointValues = gpu_voxels::interpolateLinear(min_joint_values, max_joint_values,
+                                                       ratio_delta * counter++);
 
     gvl->setRobotConfiguration("myRobot", myRobotJointValues);
-    VoxelType v = VoxelType(eVT_SWEPT_VOLUME_START + 1 + i);
+    BitVoxelMeaning v = BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 1 + i);
     gvl->insertRobotIntoMap("myRobot", "myRobotMap", v);
   }
 
@@ -231,16 +231,16 @@ int main(int argc, char* argv[])
     // Call setRobotConfiguration to trigger transformation of Kinect data:
     gvl->setRobotConfiguration("kinectData", kinect_joints);
     // Insert the Kinect data (now in world coordinates) into the map
-    gvl->insertRobotIntoMap("kinectData", "myEnvironmentMap", eVT_OCCUPIED);
+    gvl->insertRobotIntoMap("kinectData", "myEnvironmentMap", eBVM_OCCUPIED);
 
     size_t num_cols = 0;
-    voxelmap::BitVectorVoxel collision_types;
+    BitVectorVoxel collision_types;
     num_cols = gvl->getMap("myEnvironmentMap")->collideWithTypes(gvl->getMap("myRobotMap"), collision_types, 1.0f);
     LOGGING_INFO(Gpu_voxels, "Collsions: " << num_cols << endl);
 
     printf("Voxel types in collision:\n");
     DrawTypes draw_types;
-    for(size_t i = 0; i < voxelmap::BIT_VECTOR_LENGTH; ++i)
+    for(size_t i = 0; i < BIT_VECTOR_LENGTH; ++i)
     {
       if(collision_types.bitVector().getBit(i))
       {

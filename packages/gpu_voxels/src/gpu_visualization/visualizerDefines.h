@@ -34,8 +34,6 @@ static const size_t SIZE_OF_TRANSLATION_VECTOR = 4*sizeof(float);
 // if a buffer gets resized the new size will be : new_size + BUFFER_SIZE_FACTOR * new_size
 static const float BUFFER_SIZE_FACTOR = 0.1f;
 
-static const size_t MAX_DRAW_TYPES = 256;
-
 } //end of namespace visualization
 } //end of namespace gpu_voxels
 

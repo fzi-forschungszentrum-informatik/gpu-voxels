@@ -163,10 +163,10 @@ int main( int argc, char* argv[] )
   printf("\n\n Test %u:\n", test_results.size()+1);
   printf("\n--- Collision check that should NOT cause a collision ---\n");
   env_map->insertBoxByIndices(Vector3ui(1, 1, 1), Vector3ui(3, 3, 3),
-                              Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                              Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   robot_map->insertBoxByIndices(Vector3ui(4, 4, 4), Vector3ui(8, 8, 8),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   printf("Collision check...\n");
   collision = env_map->collisionCheck(col_check_threshold, robot_map, col_check_threshold, Voxel::eC_EXECUTION);
@@ -188,10 +188,10 @@ int main( int argc, char* argv[] )
   printf("\n\n Test %u:\n", test_results.size()+1);
   printf("\n--- Collision check that should NOT cause a collision ---\n");
   env_map->insertBoxByIndices(Vector3ui(0, 0, 0), Vector3ui(5, 5, 5),
-                              Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                              Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   robot_map->insertBoxByIndices(Vector3ui(8, 8, 8), Vector3ui(9, 9, 9),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   printf("Collision check...\n");
   collision = env_map->collisionCheck(col_check_threshold, robot_map, col_check_threshold, Voxel::eC_EXECUTION);
@@ -213,10 +213,10 @@ int main( int argc, char* argv[] )
   printf("\n\n Test %u:\n", test_results.size()+1);
   printf("\n--- Collision check that should NOT cause a collision ---\n");
   env_map->insertBoxByIndices(Vector3ui(1, 3, 3), Vector3ui(2, 3, 3),
-                              Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                              Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   robot_map->insertBoxByIndices(Vector3ui(5, 4, 4), Vector3ui(8, 5, 5),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   printf("Collision check...\n");
   collision = env_map->collisionCheck(col_check_threshold, robot_map, col_check_threshold, Voxel::eC_EXECUTION);
@@ -241,10 +241,10 @@ int main( int argc, char* argv[] )
   printf("\n\n Test %u:\n", test_results.size()+1);
   printf("\n--- Collision check that SHOULD cause a collision ---\n");
   env_map->insertBoxByIndices(Vector3ui(1, 1, 1), Vector3ui(4, 4, 4),
-                              Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                              Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   robot_map->insertBoxByIndices(Vector3ui(4, 4, 4), Vector3ui(8, 8, 8),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
 
   printf("Collision check...\n");
@@ -273,10 +273,10 @@ int main( int argc, char* argv[] )
   printf("\n\n Test %u:\n", test_results.size()+1);
   printf("\n--- Collision check that SHOULD cause a collision ---\n");
   env_map->insertBoxByIndices(Vector3ui(4, 5, 6), Vector3ui(7, 8, 9),
-                              Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                              Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   robot_map->insertBoxByIndices(Vector3ui(3, 3, 3), Vector3ui(7, 7, 7),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
 
   printf("Collision check...\n");
@@ -365,7 +365,7 @@ int main( int argc, char* argv[] )
 
   // b) insert data that should not cause collision
   robot_map->insertBoxByIndices(Vector3ui(1, 1, 1), Vector3ui(2, 2, 2),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   printf("Collision check...\n");
   collision = env_map->collisionCheck(col_check_threshold, robot_map, col_check_threshold, Voxel::eC_EXECUTION);
@@ -383,7 +383,7 @@ int main( int argc, char* argv[] )
   printf("\n--- Inserting robot data that SHOULD cause a collision ---\n");
 
   robot_map->insertBoxByIndices(Vector3ui(3, 3, 3), Vector3ui(8, 8, 8),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   printf("Collision check...\n");
   collision = env_map->collisionCheck(col_check_threshold, robot_map, col_check_threshold, Voxel::eC_EXECUTION);
@@ -475,7 +475,7 @@ int main( int argc, char* argv[] )
 
   printf("Inserting a robot.\n");
     robot_map->insertBoxByIndices(Vector3ui(3, 3, 3), Vector3ui(8, 8, 8),
-                                  Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                  Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   for (uint32_t y=0; y<sensor.data_height; y++)
   {
@@ -530,7 +530,7 @@ int main( int argc, char* argv[] )
 
   printf("Inserting a small robot, where sensor data will only partly be identical to robot.\n");
   robot_map->insertBoxByIndices(Vector3ui(2, 2, 2), Vector3ui(6, 5, 5),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   for (uint32_t y=0; y<sensor.data_height; y++)
   {
@@ -585,7 +585,7 @@ int main( int argc, char* argv[] )
 
   printf("Inserting a robot.\n");
   robot_map->insertBoxByIndices(Vector3ui(3, 3, 3), Vector3ui(8, 8, 8),
-                                  Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                  Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   for (uint32_t y=0; y<sensor.data_height; y++)
   {
@@ -640,7 +640,7 @@ int main( int argc, char* argv[] )
 
   printf("Inserting a small robot, where sensor data will only partly be identical to robot.\n");
   robot_map->insertBoxByIndices(Vector3ui(2, 2, 2), Vector3ui(6, 5, 5),
-                                Voxel::eC_EXECUTION, Voxel::eVT_OCCUPIED);
+                                Voxel::eC_EXECUTION, Voxel::eBVM_OCCUPIED);
 
   for (uint32_t y=0; y<sensor.data_height; y++)
   {

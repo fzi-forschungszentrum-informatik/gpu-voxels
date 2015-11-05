@@ -117,7 +117,7 @@ public:
   typedef KernelParameters KernelParams;
 
   __device__
-  static void doLoadBalancedWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static void doLoadBalancedWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                                  Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     uint32_t insert_count_tid0 = 0; // number of new work items only maintained for thread 0
@@ -127,13 +127,13 @@ public:
     bool a_active = false, b_active = false, end_here = false;
     if (variables.is_active)
     {
-      a_active = shared_mem.work_item_cache[constants.work_index].a_active;
-      a_node = shared_mem.work_item_cache[constants.work_index].a;
+      a_active = shared_mem->work_item_cache[constants.work_index].a_active;
+      a_node = shared_mem->work_item_cache[constants.work_index].a;
       a_node += constants.work_lane * a_active;
-      b_active = shared_mem.work_item_cache[constants.work_index].b_active;
-      b_node = shared_mem.work_item_cache[constants.work_index].b;
+      b_active = shared_mem->work_item_cache[constants.work_index].b_active;
+      b_node = shared_mem->work_item_cache[constants.work_index].b;
       b_node += constants.work_lane * b_active;
-      end_here = (kernel_params.min_level >= shared_mem.work_item_cache[constants.work_index].level);
+      end_here = (kernel_params.min_level >= shared_mem->work_item_cache[constants.work_index].level);
       is_last_level = (a_node->hasStatus(ns_LAST_LEVEL) | b_node->hasStatus(ns_LAST_LEVEL)) & !end_here;
       insert_work_item = kernel_params.collider.collide(*a_node, *b_node) & !is_last_level
           & (a_node->hasStatus(ns_PART) | b_node->hasStatus(ns_PART)) & !end_here;
@@ -145,7 +145,7 @@ public:
             & ((!a_node->hasStatus(ns_PART) & !b_node->hasStatus(ns_PART)) | end_here)))
     {
       variables.my_num_collisions +=
-          const_voxel_at_level[shared_mem.work_item_cache[constants.work_index].level];
+          const_voxel_at_level[shared_mem->work_item_cache[constants.work_index].level];
       if (set_collision_flag)
       {
         if (a_active)
@@ -165,13 +165,13 @@ public:
       {
         const uint32_t my_work_item = i / leafs_per_work;
         const uint32_t my_inner_node = (i % leafs_per_work) / branching_factor;
-        a_temp = shared_mem.work_item_cache[my_work_item].a;
-        const bool a_temp_active = shared_mem.work_item_cache[my_work_item].a_active;
+        a_temp = shared_mem->work_item_cache[my_work_item].a;
+        const bool a_temp_active = shared_mem->work_item_cache[my_work_item].a_active;
         a_temp += my_inner_node * a_temp_active;
-        b_temp = shared_mem.work_item_cache[my_work_item].b;
-        const bool b_temp_active = shared_mem.work_item_cache[my_work_item].b_active;
+        b_temp = shared_mem->work_item_cache[my_work_item].b;
+        const bool b_temp_active = shared_mem->work_item_cache[my_work_item].b_active;
         b_temp += my_inner_node * b_temp_active;
-        if ((shared_mem.work_item_cache[my_work_item].level == 1)
+        if ((shared_mem->work_item_cache[my_work_item].level == 1)
             & kernel_params.collider.collide(*a_temp, *b_temp)
             & (a_temp->hasStatus(ns_PART) | b_temp->hasStatus(ns_PART)))
         {
@@ -213,7 +213,7 @@ public:
       }
     }
 
-    uint32_t all_votes = thread_prefix<num_threads / WARP_SIZE>(shared_volatile_mem.block_votes,
+    uint32_t all_votes = thread_prefix<num_threads / WARP_SIZE>(shared_volatile_mem->block_votes,
                                                                 constants.thread_id,
                                                                 insert_count_tid0,
                                                                 insert_work_item);
@@ -222,25 +222,25 @@ public:
     if (variables.is_active & insert_work_item)
     {
       const uint32_t warp_local_index = __popc(all_votes << (WARP_SIZE - constants.warp_lane));
-      const uint32_t inter_warp_index = shared_volatile_mem.block_votes[constants.warp_id];
-      WorkItem* stackPointer = &shared_mem.my_work_stack[shared_mem.num_stack_work_items + inter_warp_index + warp_local_index];
+      const uint32_t inter_warp_index = shared_volatile_mem->block_votes[constants.warp_id];
+      WorkItem* stackPointer = &shared_mem->my_work_stack[shared_mem->num_stack_work_items + inter_warp_index + warp_local_index];
       a_active &= a_node->hasStatus(ns_PART);
       InnerNode1* a_children = a_active ? ((InnerNode1*) a_node->getChildPtr()) : a_node;
       b_active &= b_node->hasStatus(ns_PART);
       InnerNode2* b_children = b_active ? ((InnerNode2*) b_node->getChildPtr()) : b_node;
       *stackPointer = WorkItem(a_children, b_children,
-                               shared_mem.work_item_cache[constants.work_index].level - 1, a_active,
+                               shared_mem->work_item_cache[constants.work_index].level - 1, a_active,
                                b_active);
     }
     __syncthreads();
 
     if (constants.thread_id == 0)
-      shared_mem.num_stack_work_items += insert_count_tid0;
+      shared_mem->num_stack_work_items += insert_count_tid0;
     __syncthreads();
   }
 
   __device__
-  static void doReductionWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static void doReductionWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     // todo is a shared memory reduction more efficient in this case?

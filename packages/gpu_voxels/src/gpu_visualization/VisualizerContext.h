@@ -34,7 +34,7 @@
 #include <gpu_voxels/voxelmap/VoxelMap.h>
 
 #include <gpu_visualization/VoxelmapContext.h>
-#include <gpu_visualization/OctreeContext.h>
+#include <gpu_visualization/CubelistContext.h>
 #include <gpu_visualization/PrimitiveArrayContext.h>
 
 namespace gpu_voxels {
@@ -72,8 +72,8 @@ struct VisualizerContext
       m_light_intensity(2500.f)
   {
     m_draw_types = thrust::host_vector<uint8_t>(MAX_DRAW_TYPES, 0);
-    m_draw_types[eVT_OCCUPIED] = (uint8_t) 1;
-    m_draw_types[eVT_COLLISION] = (uint8_t) 1;
+    m_draw_types[eBVM_OCCUPIED] = (uint8_t) 1;
+    m_draw_types[eBVM_COLLISION] = (uint8_t) 1;
   }
 
   ~VisualizerContext()
@@ -82,7 +82,11 @@ struct VisualizerContext
     {
       delete *it;
     }
-    for (std::vector<OctreeContext*>::iterator it = m_octrees.begin(); it != m_octrees.end(); ++it)
+    for (std::vector<CubelistContext*>::iterator it = m_voxel_lists.begin(); it != m_voxel_lists.end(); ++it)
+    {
+      delete *it;
+    }
+    for (std::vector<CubelistContext*>::iterator it = m_octrees.begin(); it != m_octrees.end(); ++it)
     {
       delete *it;
     }
@@ -96,8 +100,11 @@ struct VisualizerContext
   // the voxel maps of this context
   std::vector<VoxelmapContext*> m_voxel_maps;
 
+  // the voxel lists of this context
+  std::vector<CubelistContext*> m_voxel_lists;
+
   // the voxel maps of this context
-  std::vector<OctreeContext*> m_octrees;
+  std::vector<CubelistContext*> m_octrees;
 
   // the primitive arrays of this context
   std::vector<PrimitiveArrayContext*> m_prim_arrays;
@@ -160,6 +167,7 @@ struct VisualizerContext
   //  i-th byte represents if type i should be drawn
   thrust::host_vector<uint8_t> m_draw_types;
   thrust::device_vector<uint8_t> m_d_draw_types;
+  //BitVector<MAX_DRAW_TYPES> m_meanings_to_draw; // <== This should replace the draw_types
   // stores the segment position for each type
   thrust::host_vector<uint8_t> m_prefixes;
   thrust::device_vector<uint8_t> m_d_prefixes;

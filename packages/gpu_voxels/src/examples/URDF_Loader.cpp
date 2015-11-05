@@ -68,13 +68,14 @@ int main(int argc, char* argv[])
   gvl = new GpuVoxels(200, 200, 200, 0.01); // ==> 200 Voxels, each one is 10 mm in size so the map represents 2x2x2 meter
 
   // Add a map:
-  gvl->addMap(MT_BITVECTOR_OCTREE, "myOctree");
+  //gvl->addMap(MT_BITVECTOR_OCTREE, "myOctree");
+  gvl->addMap(MT_BITVECTOR_VOXELLIST, "myBitVoxellist");
 
   // And a robot, generated from a ROS URDF file:
   gvl->addRobot("myUrdfRobot", "hollie.urdf", true);
 
   // Define some joint values:
-  JointValueMap min_joint_values;
+  robot::JointValueMap min_joint_values;
   min_joint_values["hollie_plain_base_theta_joint"] = 0.0;
   min_joint_values["hollie_plain_base_x_joint"] = 3;
   min_joint_values["hollie_plain_base_y_joint"] = 2;
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
   min_joint_values["hollie_plain_right_arm_3_joint"] = 0.0;
   min_joint_values["hollie_plain_right_arm_4_joint"] = 0.0;
 
-  JointValueMap max_joint_values;
+  robot::JointValueMap max_joint_values;
   max_joint_values["hollie_plain_base_theta_joint"] = 1.0;
   max_joint_values["hollie_plain_base_x_joint"] = 4;
   max_joint_values["hollie_plain_base_y_joint"] = 5;
@@ -109,31 +110,33 @@ int main(int argc, char* argv[])
   /*
    * Now we start the main loop, that will animate and the scene.
    */
-  JointValueMap myRobotJointValues;
+  robot::JointValueMap myRobotJointValues;
   int counter = 0;
   int inc = +1;
   while(true)
   {
-    myRobotJointValues = gpu_voxels::CudaMath::interpolateLinear(min_joint_values, max_joint_values,
-                                                                 0.01 * (counter += inc));
+    myRobotJointValues = gpu_voxels::interpolateLinear(min_joint_values, max_joint_values,
+                                                       0.01 * (counter += inc));
     if(counter > 100) inc = -1;
     if(counter < 1)   inc = +1;
 
     // update the robot joints:
     gvl->setRobotConfiguration("myUrdfRobot", myRobotJointValues);
     // insert the robot into the map:
-    gvl->insertRobotIntoMap("myUrdfRobot", "myOctree", eVT_OCCUPIED);
+    gvl->insertRobotIntoMap("myUrdfRobot", "myBitVoxellist", eBVM_OCCUPIED);
+
+    std::cout << "Mem usage of Voxellist in Byte after insertion of robot: " << gvl->getMap("myBitVoxellist")->getMemoryUsage() << std::endl;
 
     // generate info:
     printf(".");
     fflush(stdout);
 
     // tell the visualier that the map has changed:
-    gvl->visualizeMap("myOctree");
+    gvl->visualizeMap("myBitVoxellist");
 
     usleep(30000);
 
 //    // reset the map:
-    gvl->clearMap("myOctree");
+    gvl->clearMap("myBitVoxellist");
   }
 }

@@ -34,7 +34,7 @@
 #include <gpu_voxels/helpers/CudaMath.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/voxelmap/AbstractVoxelMap.h>
-#include <gpu_voxels/voxelmap/DefaultCollider.h>
+#include <gpu_voxels/voxel/DefaultCollider.h>
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 
 
@@ -106,15 +106,15 @@ public:
   }
 
   //! gets an offset in pointer arithmetics
-  Voxel* getVoxelPtrOffset(const Vector3ui &coordinates)
+  ptrdiff_t getVoxelPtrOffset(const Vector3ui &coordinates)
   {
-    return (Voxel*) (intptr_t)(coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x);
+    return (coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x);
   }
 
   //! gets an offset in pointer arithmetics
-  Voxel* getVoxelPtrOffset(uint32_t x, uint32_t y, uint32_t z)
+  ptrdiff_t getVoxelPtrOffset(uint32_t x, uint32_t y, uint32_t z)
   {
-    return (Voxel*) (intptr_t)(z * m_dim.x * m_dim.y + y * m_dim.x + x);
+    return (z * m_dim.x * m_dim.y + y * m_dim.x + x);
   }
 
   //! get pointer to specific voxel on device given the coordinates
@@ -130,29 +130,10 @@ public:
                      (coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x));
   }
 
-  //! get the number of bytes that is required for the voxelmap
-  virtual inline uint32_t getMemorySizeInByte()
-  {
-    return m_dim.x * m_dim.y * m_dim.z * sizeof(Voxel);
-  }
-
   //! get the number of voxels held in the voxelmap
   inline uint32_t getVoxelMapSize()
   {
     return m_dim.x * m_dim.y * m_dim.z;
-  }
-
-  //! get pointer to array of data available for visualization
-  inline Voxel* getVisualizationDataPtr()
-  {
-    return m_visualization_data;
-  }
-
-  /*! get pointer to boolean that signals
-   *  if data for visualization is available */
-  inline __host__ bool* getVisualizationDataAvailablePtr()
-  {
-    return &m_visualization_data_available;
   }
 
   //! get the side length of the voxels.
@@ -166,15 +147,12 @@ public:
    * This might be necessary for combination with other operations to ensure
    * that the map did not change since it was cleared.
    */
-  void clearVoxelMapRemoteLock(uint8_t voxeltype);
+  void clearVoxelMapRemoteLock(BitVoxelMeaning voxel_meaning);
 //  //! use a kernel call and print data from within
 //  __host__
 //  void printVoxelMapDataFromDevice();
   //! print data array to screen for debugging (low performance)
-  void printVoxelMapData();
-//  //! update host memory with current device data
-//  __host__
-//  void copyMapForVisualization();
+  virtual void printVoxelMapData();
 
 //  //! write log for data / performance measurement
 //  __host__
@@ -229,11 +207,11 @@ public:
     /*==================================================*/
 //  __host__
 //   void insertBox(Vector3f cartesian_from, Vector3f cartesian_to,
-//                  VoxelType voxeltype, uint8_t occupancy = 255);
+//                  BitVoxelMeaning voxelmeaning, uint8_t occupancy = 255);
 
 //   __host__
 //   void insertBoxByIndices(Vector3ui indices_from, Vector3ui indices_to,
-//                           VoxelType voxeltype, uint8_t occupancy = 255);
+//                           BitVoxelMeaning voxelmeaning, uint8_t occupancy = 255);
 
 //   __host__
 //   float getVoxelSideLength();
@@ -246,40 +224,44 @@ public:
 
 //   void insertBitmapByIndices(uint32_t size, uint32_t* index_list, uint64_t* bitmaps);
 
-  virtual void insertPointCloud(const std::vector<Vector3f> &points, const uint32_t voxel_type);
-
 
   // ------ BEGIN Global API functions ------
-  virtual void insertGlobalData(const std::vector<Vector3f> &point_cloud, VoxelType voxelType);
+  virtual void insertPointCloud(const std::vector<Vector3f> &point_cloud, BitVoxelMeaning voxelmeaning);
 
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map.
    * @param meta_point_cloud The MetaPointCloud to insert
-   * @param voxel_type Voxel type of all voxels
+   * @param voxel_meaning Voxel meaning of all voxels
    */
-  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, VoxelType voxelType);
+  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, BitVoxelMeaning voxel_meaning);
 
   virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map. Each pointcloud
-   * inside the MetaPointCloud will get it's own voxel type as given in the voxel_types
-   * parameter. The number of pointclouds in the MetaPointCloud and the size of voxel_types
+   * inside the MetaPointCloud will get it's own voxel meaning as given in the voxel_meanings
+   * parameter. The number of pointclouds in the MetaPointCloud and the size of voxel_meanings
    * have to be identical.
    * @param meta_point_cloud The MetaPointCloud to insert
-   * @param voxel_types Vector with voxel types
+   * @param voxel_meanings Vector with voxel meanings
    */
-  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<VoxelType>& voxel_types);
+  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings);
 
   virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0, const Vector3ui &offset = Vector3ui());
 
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  types_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
+  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui()) = 0;
 
-  // insertRobotConfiguration ==> See below at rob specific functions
+  virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3ui &offset = Vector3ui());
 
-  virtual std::size_t getMemoryUsage();
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui(), const BitVoxelMeaning* new_meaning = NULL);
+
+  virtual std::size_t getMemoryUsage()
+  {
+    return m_dim.x * m_dim.y * m_dim.z * sizeof(Voxel);
+  }
 
   virtual void clearMap();
-  //! set voxel occupancies for a specific voxeltype to zero
+  //! set voxel occupancies for a specific voxelmeaning to zero
 
   virtual void writeToDisk(const std::string path);
 
@@ -290,23 +272,6 @@ public:
   virtual Vector3f getMetricDimensions();
 
   // ------ END Global API functions ------
-
-//   __host__
-//   template< typename T>
-//   static void copyOnDevice(T* array, uint32_t size)
-//   {
-//
-//
-//
-//   }
-
-//   /*! Copies map information into a map with a different size.
-//    * The Destination Map must alwas have a bigger or equal voxel side length as the source map.
-//    */
-//   __host__
-//   static void copyVoxelMapDifferentSize(VoxelMap* destination, VoxelMap* source, bool with_bitvector);
-
-   Voxel* m_visualization_data;
 
    //------------------- Env Map specific functions: -------------------
    void initSensorSettings(const Sensor& sensor);
@@ -409,7 +374,6 @@ protected:
   float m_voxel_side_length;
   uint32_t m_voxelmap_size;
   //uint32_t m_num_points;
-  CudaMath m_math;
   uint32_t m_blocks;
   uint32_t m_threads;
   uint32_t m_alternative_blocks;
@@ -430,9 +394,6 @@ protected:
   //! performance measurement elapsed time
   float m_elapsed_time;
 
-  //! indicated if new visualization data needs to be rendered
-  bool m_visualization_data_available;
-
   /* ======== Variables with content on device ======== */
 
   /*! VoxelMap data on device.
@@ -441,21 +402,6 @@ protected:
 
   /* some variables are mirrored on device to reduce
    * copy overhead when access from kernels is necessary  */
-
-  //! mirror of m_dev_data
-  Voxel** m_dev_data_pointer;
-
-  //! mirror of m_dim
-  Vector3ui* m_dev_dim;
-
-  //! mirror of m_limits
-  Vector3f* m_dev_limits;
-
-  //! mirror of m_dev_data
-  float* m_dev_voxel_side_length;
-
-  //! mirror of m_voxelmap_size
-  uint32_t* m_dev_voxelmap_size;
 
   //! results of collision check on device
   bool* m_dev_collision_check_results;

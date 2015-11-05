@@ -49,7 +49,7 @@ void killhandler(int)
 
 void callback(std::vector<Vector3f>& transformed_point_cloud)
 {
-    gvl->getMap("myEnvironmentMap")->insertGlobalData(transformed_point_cloud, eVT_OCCUPIED);
+    gvl->getMap("myEnvironmentMap")->insertPointCloud(transformed_point_cloud, eBVM_OCCUPIED);
     gvl->visualizeMap("myEnvironmentMap");
 
     // only visualize the current data, since the data examples used for testing are not in sync

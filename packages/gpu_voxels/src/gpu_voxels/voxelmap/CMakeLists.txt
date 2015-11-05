@@ -14,12 +14,8 @@
 ICMAKER_SET("gpu_voxels_voxelmap" IDE_FOLDER ${GPU_VOXELS_IDE_FOLDER})
 
 ICMAKER_ADD_HEADERS(
-  AbstractVoxel.h
   AbstractVoxelMap.h
-  BitVoxel.h
   BitVoxelMap.h
-  DefaultCollider.h
-  ProbabilisticVoxel.h
   ProbVoxelMap.h
   TemplateVoxelMap.h
   VoxelMap.h
@@ -33,23 +29,14 @@ ICMAKER_ADD_CUDA_FILES(
   kernels/VoxelMapOperations.h
   kernels/VoxelMapOperations.hpp
   kernels/VoxelMapOperations.cu
-  AbstractVoxel.h
   AbstractVoxelMap.cu
   AbstractVoxelMap.h
-  BitVoxel.h
-  BitVoxel.hpp
   BitVoxelMap.h
   BitVoxelMap.hpp
-  DefaultCollider.cu
-  DefaultCollider.h
-  DefaultCollider.hpp
-  ProbabilisticVoxel.h
-  ProbabilisticVoxel.hpp
   ProbVoxelMap.h
   ProbVoxelMap.hpp
   TemplateVoxelMap.h
   TemplateVoxelMap.hpp
-  voxelmap_testcases.cu
   VoxelMap.cu
   VoxelMap.h
   VoxelMap.hpp
@@ -67,6 +54,7 @@ ICMAKER_INTERNAL_DEPENDENCIES(
   gpu_voxels_logging
   gpu_voxels_helpers
   gpu_voxels_core
+  gpu_voxels_voxel
   )
 
 ICMAKER_EXTERNAL_DEPENDENCIES(

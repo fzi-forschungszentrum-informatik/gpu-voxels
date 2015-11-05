@@ -125,6 +125,14 @@ public:
    */
   void moveFocusPointFromMouseInput(int32_t xpos, int32_t ypos);
 
+  /**
+   * @brief moveFocusPointVerticalFromMouseInput
+   * Moves the focus point in z direction
+   * \param xpos Mouse X Position
+   * \param ypos Mouse Y Position
+   */
+  void moveFocusPointVerticalFromMouseInput(int32_t xpos, int32_t ypos);
+
   /*!
    * \brief updateViewMatrixFromMouseInput
    * Update the view matrix.

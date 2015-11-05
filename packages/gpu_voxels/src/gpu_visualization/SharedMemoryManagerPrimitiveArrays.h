@@ -41,6 +41,7 @@ class SharedMemoryManagerPrimitiveArrays
 {
 public:
   SharedMemoryManagerPrimitiveArrays();
+  ~SharedMemoryManagerPrimitiveArrays();
   uint32_t getNumberOfPrimitiveArraysToDraw();
   bool getPrimitivePositions(const uint32_t index, Vector4f **d_positions, uint32_t& size, primitive_array::PrimitiveType& type);
   bool hasPrimitiveBufferChanged(const uint32_t index);

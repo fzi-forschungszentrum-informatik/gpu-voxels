@@ -27,7 +27,7 @@ bool matrix_equal(Matrix4f a, Matrix4f b)
 
 BOOST_AUTO_TEST_SUITE(cudaMath)
 
-BOOST_AUTO_TEST_CASE(MatrixEqual)
+BOOST_AUTO_TEST_CASE(matrix_equality)
 {
   Matrix4f matrix = Matrix4f(0.9751700, -0.218711, -0.0347626, 10, /**/
                              0.1976770, 0.930432, -0.3085770, 11,/**/
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(MatrixEqual)
   BOOST_CHECK(matrix_equal(matrix, matrix));
 }
 
-BOOST_AUTO_TEST_CASE(transpose)
+BOOST_AUTO_TEST_CASE(matrix_transpose)
 {
   Matrix4f result;
   Matrix4f matrix = Matrix4f(0.9751700, -0.218711, -0.0347626, 10, /**/
@@ -48,14 +48,13 @@ BOOST_AUTO_TEST_CASE(transpose)
                                      -0.218711, 0.930432, 0.294044, 0,/**/
                                      -0.0347626, -0.3085770, 0.9505640, 0,/**/
                                      10, 11, 12, 1);/**/
-  CudaMath* cuda_math = new CudaMath();
 
-  cuda_math->transpose(matrix, result);
+  transpose(matrix, result);
 
   BOOST_CHECK(matrix_equal(result, correct_result));
 
 }
-BOOST_AUTO_TEST_CASE(multiply)
+BOOST_AUTO_TEST_CASE(matrix_multiply)
 {
 
   Matrix4f result;

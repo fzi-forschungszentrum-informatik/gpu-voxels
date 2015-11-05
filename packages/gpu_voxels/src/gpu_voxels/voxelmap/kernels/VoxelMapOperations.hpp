@@ -24,7 +24,7 @@
 #define ICL_PLANNING_GPU_KERNELS_VOXELMAP_OPERATIONS_HPP_INCLUDED
 
 #include "VoxelMapOperations.h"
-#include <gpu_voxels/voxelmap/BitVoxel.hpp>
+#include <gpu_voxels/voxel/BitVoxel.hpp>
 
 namespace gpu_voxels {
 namespace voxelmap {
@@ -88,8 +88,6 @@ void kernelCollideVoxelMaps(Voxel* voxelmap, const uint32_t voxelmap_size, Other
     if (collider.collide(voxelmap[i], other_map[i]))
     {
       temp = true;
-//      voxelmap[i].voxeltype = eVT_COLLISION;
-//      voxelmap[i].occupancy = 255;
     }
     i += blockDim.x * gridDim.x;
   }
@@ -122,7 +120,7 @@ void kernelCollideVoxelMaps(Voxel* voxelmap, const uint32_t voxelmap_size, Other
  * Voxels are considered occupied for values
  * greater or equal given thresholds.
  *
- * Collision info is stored within eVT_COLLISION model for 'other_map'.
+ * Collision info is stored within eBVM_COLLISION model for 'other_map'.
  * Warning: Original model is modified!
  */
 template<class Voxel, class OtherVoxel, class Collider>
@@ -138,14 +136,15 @@ void kernelCollideVoxelMapsDebug(Voxel* voxelmap, const uint32_t voxelmap_size, 
 
   while (i < voxelmap_size)
   {
-    // todo / note: at the moment collision check is only used for DYNAMIC and SWEPT VOLUME type, static is used for debugging
+    // todo / note: at the moment collision check is only used for DYNAMIC and SWEPT VOLUME meaning, static is used for debugging
     const bool collision = collider.collide(voxelmap[i], other_map[i]);
     if (collision) // store collision info
     {
-//#ifndef DISABLE_STORING_OF_COLLISIONS
+#ifndef DISABLE_STORING_OF_COLLISIONS
 //      other_map[i].occupancy = 255;
-//      other_map[i].voxeltype = eVT_COLLISION;
-//#endif
+//      other_map[i].insert(eBVM_COLLISION); // sets m_occupancy = MAX_PROBABILITY for prob voxels
+      voxelmap[i].insert(eBVM_COLLISION); // sets m_occupancy = MAX_PROBABILITY for prob voxels
+#endif
       cache[cache_index] += 1;
     }
     i += blockDim.x * gridDim.x;
@@ -183,28 +182,32 @@ void kernelCollideVoxelMapsDebug(Voxel* voxelmap, const uint32_t voxelmap_size, 
 
 template<std::size_t length, class Collider>
 __global__
-void kernelCollideVoxelMapsBitvector(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-                                     BitVoxel<length>* other_map, uint32_t loop_size, Collider collider,
-                                     BitVector<length>* results)
+void kernelCollideVoxelMapsBitvector(BitVoxel<length>* voxelmap, const uint32_t voxelmap_size,
+                                     BitVoxel<length>* other_map, Collider collider,
+                                     BitVector<length>* results, uint16_t* num_collisions, const uint16_t sv_offset)
 {
   extern __shared__ BitVector<length> cache[]; //[cMAX_NR_OF_THREADS_PER_BLOCK];
-  const uint32_t i = (blockIdx.x * blockDim.x + threadIdx.x) * loop_size;
+  __shared__ uint16_t cache_num[cMAX_NR_OF_THREADS_PER_BLOCK];
+  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
   uint32_t cache_index = threadIdx.x;
   cache[cache_index] = BitVector<length>();
+  cache_num[cache_index] = 0;
   BitVector<length> temp;
 
-  // ToDo: replace if with while and increment:     i += blockDim.x * gridDim.x;
-  if (i < voxelmap_size)
+  while (i < voxelmap_size)
   {
-    for (uint32_t k = 0; (k < loop_size && (i + k < voxelmap_size)); k++)
+    const bool collision = collider.collide(voxelmap[i], other_map[i], &temp, sv_offset);
+    if (collision) // store collision info
     {
-      if (collider.collide(voxelmap[i + k]))
-      {
-        temp |= other_map[i + k].bitVector;
-      }
+      #ifndef DISABLE_STORING_OF_COLLISIONS
+      //      other_map[i].occupancy = 255;
+      //      other_map[i].insert(eBVM_COLLISION); // sets m_occupancy = MAX_PROBABILITY for prob voxels
+            voxelmap[i].insert(eBVM_COLLISION); // sets m_occupancy = MAX_PROBABILITY for prob voxels
+      #endif
+      cache[cache_index] = temp;
+      cache_num[cache_index] += 1;
     }
-
-    cache[cache_index] = temp;
+    i += blockDim.x * gridDim.x;
   }
   __syncthreads();
 
@@ -215,6 +218,7 @@ void kernelCollideVoxelMapsBitvector(ProbabilisticVoxel* voxelmap, const uint32_
     if (cache_index < j)
     {
       cache[cache_index] = cache[cache_index] | cache[cache_index + j];
+      cache_num[cache_index] = cache_num[cache_index] + cache_num[cache_index + j];
     }
     __syncthreads();
     j /= 2;
@@ -226,16 +230,15 @@ void kernelCollideVoxelMapsBitvector(ProbabilisticVoxel* voxelmap, const uint32_
     // FOR MEASUREMENT TEMPORARILY EDITED:
     //results[blockIdx.x] = true;
     results[blockIdx.x] = cache[0];
+    num_collisions[blockIdx.x] = cache_num[0];
   }
 }
 
 template<class Voxel>
 __global__
-void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui *map_dim, const float voxel_side_length,
-                                  Vector3f* points, const std::size_t sizePoints, const uint32_t voxel_type)
+void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui dimensions, const float voxel_side_length,
+                                  Vector3f* points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning)
 {
-
-  const Vector3ui dimensions = (*map_dim);
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizePoints; i += blockDim.x * gridDim.x)
   {
     const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length, points[i]);
@@ -243,9 +246,9 @@ void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui *map_dim, con
     if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
         && (integer_coordinates.z < dimensions.z))
     {
-      Voxel* voxel = &voxelmap[getVoxelIndex(map_dim, integer_coordinates.x, integer_coordinates.y,
+      Voxel* voxel = &voxelmap[getVoxelIndex(dimensions, integer_coordinates.x, integer_coordinates.y,
                                              integer_coordinates.z)];
-      voxel->insert(voxel_type);
+      voxel->insert(voxel_meaning);
     }
     else
     {
@@ -258,9 +261,8 @@ void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui *map_dim, con
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
-                                VoxelType voxelType, const Vector3ui *map_dim, const float voxel_side_length)
+                                BitVoxelMeaning voxel_meaning, const Vector3ui dimensions, const float voxel_side_length)
 {
-  const Vector3ui dimensions = (*map_dim);
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < meta_point_cloud->accumulated_cloud_size;
       i += blockDim.x * gridDim.x)
   {
@@ -276,9 +278,9 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
     if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
         && (integer_coordinates.z < dimensions.z))
     {
-      Voxel* voxel = &voxelmap[getVoxelIndex(map_dim, integer_coordinates.x, integer_coordinates.y,
+      Voxel* voxel = &voxelmap[getVoxelIndex(dimensions, integer_coordinates.x, integer_coordinates.y,
                                              integer_coordinates.z)];
-      voxel->insert(voxelType);
+      voxel->insert(voxel_meaning);
 
 //        printf("Inserted Point @(%u,%u,%u) into the voxel map \n",
 //               integer_coordinates.x,
@@ -298,14 +300,23 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
-                                VoxelType* voxel_types, const Vector3ui *map_dim,
+                                BitVoxelMeaning* voxel_meanings, const Vector3ui dimensions,
                                 const float voxel_side_length)
 {
-  const Vector3ui dimensions = (*map_dim);
+  u_int16_t sub_cloud = 0;
+  u_int32_t sub_cloud_upper_bound = meta_point_cloud->cloud_sizes[sub_cloud];
+
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < meta_point_cloud->accumulated_cloud_size;
       i += blockDim.x * gridDim.x)
   {
-    uint32_t voxel_type_index = i / meta_point_cloud->cloud_sizes[0];
+    // find out, to which sub_cloud our point belongs
+    while(i >= sub_cloud_upper_bound)
+    {
+      sub_cloud++;
+      sub_cloud_upper_bound += meta_point_cloud->cloud_sizes[sub_cloud];
+    }
+
+
     const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length,
                                                       meta_point_cloud->clouds_base_addresses[0][i]);
 
@@ -318,15 +329,15 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
     if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
         && (integer_coordinates.z < dimensions.z))
     {
-      Voxel* voxel = &voxelmap[getVoxelIndex(map_dim, integer_coordinates.x, integer_coordinates.y,
+      Voxel* voxel = &voxelmap[getVoxelIndex(dimensions, integer_coordinates.x, integer_coordinates.y,
                                              integer_coordinates.z)];
-      voxel->insert(voxel_types[voxel_type_index]);
+      voxel->insert(voxel_meanings[sub_cloud]);
 
-//        printf("Inserted Point @(%u,%u,%u) with type %u into the voxel map \n",
+//        printf("Inserted Point @(%u,%u,%u) with meaning %u into the voxel map \n",
 //               integer_coordinates.x,
 //               integer_coordinates.y,
 //               integer_coordinates.z,
-//               voxel_types[voxel_type_index]);
+//               voxel_meanings[voxel_meaning_index]);
 
     }
     else
@@ -341,13 +352,11 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
 //template<std::size_t length>
 //__global__
 //void kernelInsertSensorDataWithRayCasting(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-//                                          const Vector3ui* dimensions, const float voxel_side_length,
+//                                          const Vector3ui dimensions, const float voxel_side_length,
 //                                          Sensor* sensor, const Vector3f* sensor_data,
 //                                          const bool cut_real_robot, BitVoxel<length>* robotmap,
 //                                          const uint32_t bit_index)
 //{
-//  const Vector3ui map_dim = (*dimensions);
-//
 //  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; (i < voxelmap_size) && (i < sensor->data_size);
 //      i += gridDim.x * blockDim.x)
 //  {
@@ -358,9 +367,9 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
 //
 //      /* both data and sensor coordinates must
 //       be within boundaries for raycasting to work */
-//      if ((integer_coordinates.x < map_dim.x) && (integer_coordinates.y < map_dim.y)
-//          && (integer_coordinates.z < map_dim.z) && (sensor_coordinates.x < map_dim.x)
-//          && (sensor_coordinates.y < map_dim.y) && (sensor_coordinates.z < map_dim.z))
+//      if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
+//          && (integer_coordinates.z < dimensions.z) && (sensor_coordinates.x < dimensions.x)
+//          && (sensor_coordinates.y < dimensions.y) && (sensor_coordinates.z < dimensions.z))
 //      {
 //        bool update = false;
 //        if (robotmap && cut_real_robot)
@@ -368,7 +377,7 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
 //          BitVoxel<length>* robot_voxel = getVoxelPtr(robotmap, dimensions, integer_coordinates.x,
 //                                                      integer_coordinates.y, integer_coordinates.z);
 //
-////          if (!((robot_voxel->occupancy > 0) && (robot_voxel->voxeltype == eVT_OCCUPIED))) // not occupied by robot
+////          if (!((robot_voxel->occupancy > 0) && (robot_voxel->voxelmeaning == eBVM_OCCUPIED))) // not occupied by robot
 ////           {
 //          update = !robot_voxel->bitVector().getBit(bit_index); // not occupied by robot
 ////          else // else: sensor sees robot, no need to insert data.
@@ -389,7 +398,7 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
 //          ProbabilisticVoxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x,
 //                                                  integer_coordinates.y, integer_coordinates.z);
 //          voxel->updateOccupancy(cSENSOR_MODEL_OCCUPIED);
-////            voxel->voxeltype = eVT_OCCUPIED;
+////            voxel->voxelmeaning = eBVM_OCCUPIED;
 ////            increaseOccupancy(voxel, cSENSOR_MODEL_OCCUPIED); // todo: replace with "occupied" of sensor model
 //        }
 //      }
@@ -409,12 +418,10 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
 template<std::size_t length, class RayCasting>
 __global__
 void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-                            const Vector3ui* dimensions, const float voxel_side_length, Sensor* sensor,
+                            const Vector3ui dimensions, const float voxel_side_length, Sensor* sensor,
                             const Vector3f* sensor_data, const bool cut_real_robot,
                             BitVoxel<length>* robotmap, const uint32_t bit_index, RayCasting rayCaster)
 {
-  const Vector3ui map_dim = (*dimensions);
-
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; (i < voxelmap_size) && (i < sensor->data_size);
       i += gridDim.x * blockDim.x)
   {
@@ -425,9 +432,9 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
 
       /* both data and sensor coordinates must
        be within boundaries for raycasting to work */
-      if ((integer_coordinates.x < map_dim.x) && (integer_coordinates.y < map_dim.y)
-          && (integer_coordinates.z < map_dim.z) && (sensor_coordinates.x < map_dim.x)
-          && (sensor_coordinates.y < map_dim.y) && (sensor_coordinates.z < map_dim.z))
+      if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
+          && (integer_coordinates.z < dimensions.z) && (sensor_coordinates.x < dimensions.x)
+          && (sensor_coordinates.y < dimensions.y) && (sensor_coordinates.z < dimensions.z))
       {
         bool update = false;
         if (cut_real_robot)
@@ -435,7 +442,7 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
           BitVoxel<length>* robot_voxel = getVoxelPtr(robotmap, dimensions, integer_coordinates.x,
                                                       integer_coordinates.y, integer_coordinates.z);
 
-          //          if (!((robot_voxel->occupancy > 0) && (robot_voxel->voxeltype == eVT_OCCUPIED))) // not occupied by robot
+          //          if (!((robot_voxel->occupancy > 0) && (robot_voxel->voxelmeaning == eBVM_OCCUPIED))) // not occupied by robot
           //           {
           update = !robot_voxel->bitVector().getBit(bit_index); // not occupied by robot
           //          else // else: sensor sees robot, no need to insert data.
@@ -456,7 +463,7 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
           ProbabilisticVoxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x,
                                                   integer_coordinates.y, integer_coordinates.z);
           voxel->updateOccupancy(cSENSOR_MODEL_OCCUPIED);
-          //            voxel->voxeltype = eVT_OCCUPIED;
+          //            voxel->voxelmeaning = eBVM_OCCUPIED;
           //            increaseOccupancy(voxel, cSENSOR_MODEL_OCCUPIED); // todo: replace with "occupied" of sensor model
         }
       }
@@ -466,29 +473,37 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
 
 template<class Voxel>
 __global__
-void kernelAddressingTest(const Voxel* voxelmap, const Vector3ui* dimensions, const float *voxel_side_length,
-                          const Vector3f *testpoint, bool* success)
+void kernelAddressingTest(const Voxel* voxelmap_base_address, const Vector3ui dimensions, const float voxel_side_length,
+                          const Vector3f *testpoints, const size_t testpoints_size, bool* success)
 {
-//  const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-
-  Vector3ui test_ccords = mapToVoxels(*voxel_side_length, *testpoint);
-  Voxel* testvoxel = getVoxelPtr(voxelmap, dimensions, test_ccords.x, test_ccords.y, test_ccords.z);
-  Vector3ui int_coords = mapToVoxels(voxelmap, dimensions, testvoxel);
-  Vector3f center = getVoxelCenter(voxelmap, dimensions, *voxel_side_length, &int_coords);
-
-//  printf("TestCoord    (%f,%f,%f)\n",testpoint->x, testpoint->y, testpoint->z);
-//  printf("TestIntCoord (%d,%d,%d)\n",int_coords.x, int_coords.y, int_coords.z);
-//  printf("ReturnCoord  (%f,%f,%f)\n",center.x, center.y, center.z);
-
-  if ((abs(center.x - testpoint->x) > *voxel_side_length / 2.0)
-      || (abs(center.y - testpoint->y) > *voxel_side_length / 2.0)
-      || (abs(center.z - testpoint->z) > *voxel_side_length / 2.0))
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < testpoints_size; i += gridDim.x * blockDim.x)
   {
-    *success = false;
+    Vector3ui test_ccords = mapToVoxels(voxel_side_length, testpoints[i]);
+    Voxel* testvoxel = getVoxelPtr(voxelmap_base_address, dimensions, test_ccords.x, test_ccords.y, test_ccords.z);
+    Vector3ui int_coords = mapToVoxels(voxelmap_base_address, dimensions, testvoxel);
+    Vector3f center = getVoxelCenter(voxel_side_length, int_coords);
+
+  //  printf("TestCoord    (%f,%f,%f)\n",testpoints[i].x, testpoints[i].y, testpoints[i].z);
+  //  printf("TestIntCoord (%d,%d,%d)\n",int_coords.x, int_coords.y, int_coords.z);
+  //  printf("ReturnCoord  (%f,%f,%f)\n",center.x, center.y, center.z);
+
+    if ((abs(center.x - testpoints[i].x) > voxel_side_length / 2.0) ||
+        (abs(center.y - testpoints[i].y) > voxel_side_length / 2.0) ||
+        (abs(center.z - testpoints[i].z) > voxel_side_length / 2.0))
+    {
+      *success = false;
+    }
   }
-  else
+}
+
+template<std::size_t length>
+__global__
+void kernelShiftBitVector(BitVoxel<length>* voxelmap,
+                          const uint32_t voxelmap_size, uint8_t shift_size)
+{
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
   {
-    *success = true;
+    performLeftShift(voxelmap[i].bitVector(), shift_size);
   }
 }
 

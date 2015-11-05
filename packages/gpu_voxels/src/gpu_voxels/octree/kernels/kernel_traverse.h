@@ -27,7 +27,6 @@
 #include <gpu_voxels/helpers/cuda_handling.h>
 #include <gpu_voxels/octree/Morton.h>
 #include <gpu_voxels/octree/NTree.h>
-#include <gpu_voxels/octree/VoxelTypeFlags.h>
 #include <gpu_voxels/octree/kernels/kernel_common.h>
 
 // gpu_voxels

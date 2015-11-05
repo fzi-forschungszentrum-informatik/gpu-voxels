@@ -24,8 +24,8 @@
 #define GPU_VOXELS_VOXELMAP_PROB_VOXELMAP_H_INCLUDED
 
 #include <gpu_voxels/voxelmap/TemplateVoxelMap.h>
-#include <gpu_voxels/voxelmap/ProbabilisticVoxel.h>
-#include <gpu_voxels/voxelmap/BitVoxel.h>
+#include <gpu_voxels/voxel/ProbabilisticVoxel.h>
+#include <gpu_voxels/voxel/BitVoxel.h>
 #include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 
@@ -44,15 +44,18 @@ public:
 
   template<std::size_t length>
   void insertSensorData(const Vector3f* points, const bool enable_raycasting, const bool cut_real_robot,
-                        const uint32_t voxel_type, BitVoxel<length>* robot_map = NULL);
+                        const BitVoxelMeaning voxel_meaning, BitVoxel<length>* robot_map = NULL);
 
   virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
 
-  virtual void clearVoxelType(VoxelType voxel_type);
+  virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
 
-  virtual void insertPointCloud(const std::vector<Vector3f> &points, const uint32_t voxel_type);
+  virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
 
-  virtual VoxelMapTemplateId getTemplateType() { return VMT_PROBABILISTIC_VOXELMAP; }
+  virtual MapType getTemplateType() { return MT_PROBAB_VOXELMAP; }
+
+  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision,
+                                  float coll_threshold, const Vector3ui &offset);
 };
 
 } // end of namespace

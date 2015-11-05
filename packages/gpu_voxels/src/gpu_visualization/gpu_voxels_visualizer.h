@@ -104,11 +104,13 @@ void mouseClickFunctionWrapper(int32_t button, int32_t state, int32_t x, int32_t
 
 void runVisualisation(int32_t* argc, char* argv[]);
 void registerVoxelmapFromSharedMemory(uint32_t index);
+void registerVoxellistFromSharedMemory(uint32_t index);
 void registerOctreeFromSharedMemory(uint32_t index);
 void registerPrimitiveArrayFromSharedMemory(uint32_t index);
 
 uint32_t getNumberOfOctreesFromSharedMem();
 uint32_t getNumberOfVoxelmapsFromSharedMem();
+uint32_t getNumberOfVoxellistsFromSharedMem();
 uint32_t getNumberOfPrimitiveArraysFromSharedMem();
 
 #endif /* GPU_VOXELS_VISUALIZER_H_ */

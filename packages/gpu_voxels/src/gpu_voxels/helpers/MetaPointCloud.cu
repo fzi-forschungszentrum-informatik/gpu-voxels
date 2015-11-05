@@ -95,7 +95,7 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
       cudaMemcpy(m_dev_ptr_to_point_clouds_struct, m_dev_point_clouds_local, sizeof(MetaPointCloudStruct),
                  cudaMemcpyHostToDevice));
 
-  LOGGING_INFO_C(
+  LOGGING_DEBUG_C(
       Gpu_voxels_helpers,
       MetaPointCloud,
       "This MetaPointCloud requires: " << (m_accumulated_pointcloud_size * sizeof(Vector3f)) / 1024.0 / 1024.0 << "MB on the GPU and on the Host" << endl);
@@ -338,7 +338,7 @@ void MetaPointCloud::updatePointCloud(uint16_t cloud, const std::vector<Vector3f
   updatePointCloud(cloud, pointcloud.data(), pointcloud.size(), sync);
 }
 
-void MetaPointCloud::updatePointCloud(const std::string cloud_name, const std::vector<Vector3f> &pointcloud, bool sync)
+void MetaPointCloud::updatePointCloud(const std::string &cloud_name, const std::vector<Vector3f> &pointcloud, bool sync)
 {
   updatePointCloud(getCloudNumber(cloud_name), pointcloud.data(), pointcloud.size(), sync);
 }

@@ -42,19 +42,19 @@ namespace NTree {
 /**
  * Converts an array of voxel identified by Cartesian coordinates x y z to voxel identified by their morton code.
  */__global__
-void kernel_toMortonCode(uint3* inputVoxel, voxel_count numVoxel, VoxelID* outputVoxel);
+void kernel_toMortonCode(uint3* inputVoxel, voxel_count numVoxel, OctreeVoxelID* outputVoxel);
 
 __global__
-void kernel_transformKinectPoints(gpu_voxels::Vector3f* point_cloud, VoxelID num_points, Voxel* voxel,
+void kernel_transformKinectPoints(gpu_voxels::Vector3f* point_cloud, OctreeVoxelID num_points, Voxel* voxel,
                                   Sensor* sensor, gpu_voxels::Vector3f voxel_dimension);
 
 __global__ void kernel_transformKinectPoints_simple(gpu_voxels::Vector3f* point_cloud, const voxel_count num_points,
-                                                    VoxelID* voxel, Sensor* sensor,
+                                                    OctreeVoxelID* voxel, Sensor* sensor,
                                                     const uint32_t resolution);
 
 template<bool COUNT_MODE>
 __global__
-void kernel_voxelize(VoxelID* voxelInput, const voxel_count numVoxel, voxel_count* countVoxel,
+void kernel_voxelize(OctreeVoxelID* voxelInput, const voxel_count numVoxel, voxel_count* countVoxel,
                      Voxel* voxel_output)
 {
   const uint32_t NUM_THREADS = WARP_SIZE;
@@ -63,7 +63,7 @@ void kernel_voxelize(VoxelID* voxelInput, const voxel_count numVoxel, voxel_coun
   const voxel_count chunk_size = ceil(double(numVoxel) / (gridDim.x));
   const voxel_count block_id = blockIdx.x;
   const voxel_count from = chunk_size * block_id;
-  const voxel_count to = (VoxelID) min((unsigned long long int) (from + chunk_size),
+  const voxel_count to = (OctreeVoxelID) min((unsigned long long int) (from + chunk_size),
                                        (unsigned long long int) numVoxel);
   const uint32_t thread_id = threadIdx.x;
 
@@ -85,7 +85,7 @@ void kernel_voxelize(VoxelID* voxelInput, const voxel_count numVoxel, voxel_coun
   {
     voxel_count my_id = i + thread_id;
     bool is_active = my_id < to;
-    VoxelID my_voxel_id = is_active ? voxelInput[my_id] : INVALID_VOXEL;
+    OctreeVoxelID my_voxel_id = is_active ? voxelInput[my_id] : INVALID_VOXEL;
     bool is_new_voxel = is_active & ((my_id == 0) || voxelInput[my_id - 1] != voxelInput[my_id]);
     if (COUNT_MODE)
     {
@@ -157,18 +157,18 @@ void kernel_voxelize(VoxelID* voxelInput, const voxel_count numVoxel, voxel_coun
 }
 
 __global__
-void kernel_voxelize_finalStep(VoxelID* voxelInput, voxel_count numVoxel, const voxel_count num_output_voxel,
+void kernel_voxelize_finalStep(OctreeVoxelID* voxelInput, voxel_count numVoxel, const voxel_count num_output_voxel,
                                Voxel* voxel_output, Sensor* sensor);
 
 __global__
-void kernel_countVoxel(Voxel* voxelInput, VoxelID numVoxel, VoxelID* countVoxel);
+void kernel_countVoxel(Voxel* voxelInput, OctreeVoxelID numVoxel, OctreeVoxelID* countVoxel);
 
 __global__
-void kernel_combineEqualVoxel(Voxel* voxelInput, VoxelID numVoxel, VoxelID* countVoxel, Voxel* outputVoxel,
+void kernel_combineEqualVoxel(Voxel* voxelInput, OctreeVoxelID numVoxel, OctreeVoxelID* countVoxel, Voxel* outputVoxel,
                               Sensor* sensor);
 
 __global__
-void kernel_toMortonCode(Vector3ui* inputVoxel, voxel_count numVoxel, VoxelID* outputVoxel);
+void kernel_toMortonCode(Vector3ui* inputVoxel, voxel_count numVoxel, OctreeVoxelID* outputVoxel);
 
 __global__
 void kernel_transformDepthImage(DepthData* depth_image, gpu_voxels::Vector3f* d_point_cloud, Sensor* sensor,

@@ -25,8 +25,8 @@
 
 #include <cuda_runtime.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
-#include <gpu_voxels/voxelmap/BitVoxel.h>
-#include <gpu_voxels/voxelmap/ProbabilisticVoxel.h>
+#include <gpu_voxels/voxel/BitVoxel.h>
+#include <gpu_voxels/voxel/ProbabilisticVoxel.h>
 
 namespace gpu_voxels {
 namespace voxelmap {
@@ -40,49 +40,46 @@ const uint32_t cMAX_NR_OF_THREADS_PER_BLOCK = 1024;
 /* ------------------ DEVICE FUNCTIONS ------------------ */
 
 // VoxelMap addressing
-//! Maps discrete voxel coordinates to a voxel adress
+//! Maps discrete voxel coordinates to a voxel address
 __device__      __forceinline__
-uint32_t getVoxelIndex(const Vector3ui* dimensions, const uint32_t x,
+uint32_t getVoxelIndex(const Vector3ui &dimensions, const uint32_t x,
                                                   const uint32_t y, const uint32_t z)
 {
-  return (z * dimensions->x * dimensions->y + y * dimensions->x + x);
+  return (z * dimensions.x * dimensions.y + y * dimensions.x + x);
+}
+
+//! Maps discrete voxel coordinates to a voxel adress
+__host__ __device__      __forceinline__
+uint32_t getVoxelIndex(const Vector3ui &dimensions, const Vector3ui &coords)
+{
+  return (coords.z * dimensions.x * dimensions.y + coords.y * dimensions.x + coords.x);
 }
 
 template<class Voxel>
 __device__      __forceinline__
-Voxel* getVoxelPtr(const Voxel* voxelmap, const Vector3ui* dimensions,
-                                              const uint32_t x, const uint32_t y, const uint32_t z)
+Voxel* getVoxelPtr(const Voxel* voxelmap, const Vector3ui &dimensions,
+                   const uint32_t x, const uint32_t y, const uint32_t z)
 {
   return (Voxel*) (voxelmap + getVoxelIndex(dimensions, x, y, z));
 }
 
-//! Maps a voxel adress to discrete voxel coordinates
+//! Maps a voxel address to discrete voxel coordinates
 template<class Voxel>
 __device__ __forceinline__
-Vector3ui mapToVoxels(const Voxel* voxelmap, const Vector3ui* dimensions,
-                                                 const Voxel* voxel)
+Vector3ui mapToVoxels(const Voxel* voxelmap, const Vector3ui &dimensions,
+                      const Voxel* voxel)
 {
   Vector3ui integer_coordinates;
-  int voxels = voxel - voxelmap;
-  integer_coordinates.z = voxels / (dimensions->x * dimensions->y);
-  integer_coordinates.y = (voxels -= integer_coordinates.z * (dimensions->x * dimensions->y)) / dimensions->x;
-  integer_coordinates.x = (voxels -= integer_coordinates.y * dimensions->x);
+  int voxel_index = voxel - voxelmap;
+  integer_coordinates.z = voxel_index / (dimensions.x * dimensions.y);
+  integer_coordinates.y = (voxel_index -= integer_coordinates.z * (dimensions.x * dimensions.y)) / dimensions.x;
+  integer_coordinates.x = (voxel_index -= integer_coordinates.y * dimensions.x);
   return integer_coordinates;
 }
 
-//! Returns the center of a voxel as float coordinates.
-//__device__      __forceinline__ Vector3f getVoxelCenter(const Voxel* voxelmap, const Vector3ui* dimensions,
-//                                                   float voxel_side_length, const Vector3ui* voxel_coords)
-//{
-//
-//  return Vector3f(voxel_coords->x * voxel_side_length + voxel_side_length / 2.0,
-//                  voxel_coords->y * voxel_side_length + voxel_side_length / 2.0,
-//                  voxel_coords->z * voxel_side_length + voxel_side_length / 2.0);
-//}
-
 //! Partitioning of continuous data into voxels. Maps float coordinates to dicrete voxel coordinates.
-__device__      __forceinline__
-Vector3ui mapToVoxels(const float voxel_side_length, const Vector3f coordinates)
+__device__ __host__     __forceinline__
+Vector3ui mapToVoxels(const float voxel_side_length, const Vector3f &coordinates)
 {
   Vector3ui integer_coordinates;
   integer_coordinates.x = static_cast<uint32_t>(floor(coordinates.x / voxel_side_length));
@@ -93,33 +90,22 @@ Vector3ui mapToVoxels(const float voxel_side_length, const Vector3f coordinates)
   return integer_coordinates;
 }
 
-////! increase occupancy of a voxel according to storage limits
-//__device__ __forceinline__
-//void increaseOccupancy(Voxel* voxel, uint8_t increase)
-//{
-//  if ((*voxel).occupancy + increase <= 255)
-//  {
-//    (*voxel).occupancy += increase;
-//  }
-//  else
-//  {
-//    (*voxel).occupancy = 255;
-//  }
-//}
-//
-////! decrease occupancy of a voxel according to storage limits
-//__device__ __forceinline__
-//void decreaseOccupancy(Voxel* voxel, uint8_t decrease)
-//{
-//  if ((*voxel).occupancy - decrease >= 0)
-//  {
-//    (*voxel).occupancy -= decrease;
-//  }
-//  else
-//  {
-//    (*voxel).occupancy = 0;
-//  }
-//}
+template<class Voxel>
+__device__      __forceinline__
+Voxel* getHighestVoxelPtr(const Voxel* base_addr, const Vector3ui &dimensions)
+{
+  return getVoxelPtr(base_addr, dimensions, dimensions.x -1, dimensions.y -1, dimensions.z -1);
+}
+
+//! Returns the center of a voxel as float coordinates. Mainly for boost test purposes!
+__device__      __forceinline__
+Vector3f getVoxelCenter(float voxel_side_length, const Vector3ui &voxel_coords)
+{
+
+  return Vector3f(voxel_coords.x * voxel_side_length + voxel_side_length / 2.0,
+                  voxel_coords.y * voxel_side_length + voxel_side_length / 2.0,
+                  voxel_coords.z * voxel_side_length + voxel_side_length / 2.0);
+}
 
 struct RayCaster
 {
@@ -127,7 +113,7 @@ public:
 
 //! raycasting from one point to another marks decreases voxel occupancy along the ray
   __device__ __forceinline__
-  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui* dimensions, const Sensor* sensor,
+  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions, const Sensor* sensor,
                const Vector3ui& from, const Vector3ui& to)
   {
     int32_t difference_x = 0;
@@ -212,16 +198,12 @@ public:
     {
       //printf("visiting cell (%d, %d, %d)\n", x, y, z);
       voxel = getVoxelPtr(voxelmap, dimensions, x, y, z);
-      //voxel->voxeltype = eVT_OCCUPIED;
+      //voxel->voxelmeaning = eBVM_OCCUPIED;
 
       voxel->updateOccupancy(cSENSOR_MODEL_FREE);
 
       //decreaseOccupancy(voxel, cSENSOR_MODEL_FREE); // todo: replace with "free" of sensor model
 
-      // debugging:
-//      voxel->voxeltype_execution = eVT_OCCUPIED;
-//      voxel->occupancy_execution = 255;
-      // ----
 
       if ((error_xy > 0) && (error_xz > 0))
       {
@@ -255,27 +237,13 @@ struct DummyRayCaster: public RayCaster
 {
 public:
   __device__ __forceinline__
-  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui* dimensions, const Sensor* sensor,
+  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions, const Sensor* sensor,
                const Vector3ui& from, const Vector3ui& to)
   {
     // override and do nothing
   }
 };
 
-//__device__    __forceinline__
-//uint8_t limitSweptVolumeIndex(uint8_t index)
-//{
-//  if ((uint16_t) (eVT_SWEPT_VOLUME_START + index) >= eVT_SWEPT_VOLUME_END)
-//  {
-//    return eVT_SWEPT_VOLUME_END;
-//  }
-//  if (index <= eVT_SWEPT_VOLUME_START)
-//  {
-//    return eVT_SWEPT_VOLUME_START;
-//  }
-//  return index;
-//}
-//
 ///* ------------------ KERNELS ------------------ */
 
 //! Clear voxel occupancy
@@ -283,7 +251,7 @@ template<class Voxel>
 __global__
 void kernelClearVoxelMap(Voxel* voxelmap, const uint32_t voxelmap_size);
 
-//! Clear voxel occupancy for specific voxeltype
+//! Clear voxel occupancy for specific voxel_meaning
 template<std::size_t bit_length>
 __global__
 void kernelClearVoxelMap(BitVoxel<bit_length>* voxelmap, const uint32_t voxelmap_size, const uint32_t bit_index);
@@ -296,7 +264,7 @@ void kernelClearVoxelMap(BitVoxel<bit_length>* voxelmap, uint32_t voxelmap_size,
 ///*! Print voxel info from within kernel.
 // */
 //__global__
-//void kernelDumpVoxelMap(const Voxel* voxelmap, const Vector3ui* dimensions, const uint32_t voxelmap_size);
+//void kernelDumpVoxelMap(const Voxel* voxelmap, const Vector3ui dimensions, const uint32_t voxelmap_size);
 
 /*! Transform sensor data from sensor coordinate system
  * to world system. Needs extrinsic calibration of sensor.
@@ -316,115 +284,9 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 template<std::size_t length, class RayCasting>
 __global__
 void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-                            const Vector3ui* dimensions, const float voxel_side_length, Sensor* sensor,
+                            const Vector3ui dimensions, const float voxel_side_length, Sensor* sensor,
                             const Vector3f* sensor_data, const bool cut_real_robot,
                             BitVoxel<length>* robotmap, const uint32_t bit_index, RayCasting rayCaster);
-
-///*! Insert sensor data into voxel map with ray casting.
-// * The ray casting determines free space between sensor
-// * and measured points.
-// * Assumes sensor data is already transformed
-// * into world coordinate system.
-// * If cut_real_robot is enabled one has to
-// * specify pointer to the robot voxel map.
-// * The robot voxels will be assumed 100% certain
-// * and cut from sensor data.
-// */
-//template<std::size_t length>
-//__global__
-//void kernelInsertSensorDataWithRayCasting(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-//                                          const Vector3ui* dimensions, const float voxel_side_length,
-//                                          Sensor* sensor, const Vector3f* sensor_data,
-//                                          const bool cut_real_robot, BitVoxel<length>* robotmap,
-//                                          const uint32_t bit_index);
-
-///*! Insert static data into voxel map.
-// * Data must be in world coordinate system.
-// * Static data is considered 100% certain.
-// */
-//__global__
-//void kernelInsertStaticData(Voxel* voxelmap, const uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                            const float voxel_side_length, uint32_t static_data_size,
-//                            const Vector3f* static_data);
-
-///*! Inserts a link of a kinematic chain into a map.
-// * See also function with self collision check.
-// * Kinematic data is considered 100% certain.
-// */
-//__global__
-//void kernelInsertRobotKinematicLink(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                    const Vector3ui* dimensions, const float voxel_side_length,
-//                                    const MetaPointCloudStruct *robot_links, uint32_t link_nr);
-
-///*!
-// * Inserts the kinematic Link into the Bitvector representation
-// */
-//__global__
-//void kernelInsertKinematicLinkBitvector(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                        const Vector3ui* dimensions, const float voxel_side_length,
-//                                        uint32_t link_nr, uint32_t* point_cloud_sizes,
-//                                        Vector3f** point_clouds, uint64_t bit_number);
-
-///*!
-// * Sets one specific bit or the whole Bitvector to zero
-// */
-//__global__
-//void kernelClearBitvector(Voxel* voxelmap, uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                          uint8_t bit_number);
-
-//__global__
-//void kernelInsertRobotKinematicLinkOverwritingSensorData(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                                         const Vector3ui* dimensions,
-//                                                         const float voxel_side_length,
-//                                                         const MetaPointCloudStruct *robot_links,
-//                                                         uint32_t link_nr, const Voxel* environment_map);
-//
-///*! Insert a configuration for a kinematic link with self-collision check.
-// *  Always set self_ to false before calling this function because
-// *  it only indicates if there was a collision and not if there was none!
-// */
-//__global__
-//void kernelInsertRobotKinematicLinkWithSelfCollisionCheck(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                                          const Vector3ui* dimensions,
-//                                                          const float voxel_side_length,
-//                                                          const MetaPointCloudStruct *robot_links,
-//                                                          uint32_t link_nr, bool* self_collision);
-
-///*! Insert a link of a kinematic chain that will be
-// * treated as swept volume into the voxel map.
-// * Different configurations may be identified by the
-// * swept_volume_index, that is limited by values defined
-// * in Voxel.h.
-// * Swept volume data is considered 100% certain.
-// */
-//__global__
-//void kernelInsertSweptVolumeConfiguration(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                          const Vector3ui* dimensions, const float voxel_side_length,
-//                                          uint32_t link_nr, uint32_t* point_cloud_sizes,
-//                                          Vector3f** point_clouds, uint8_t swept_volume_index);
-
-///*! Remove swept volume from voxel map.
-// * Different configurations may be identified by the
-// * swept_volume_index, that is limited by values defined
-// * in Voxel.h.
-// */
-//__global__
-//void kernelRemoveSweptVolumeConfiguration(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                          const Vector3ui* dimensions, const float voxel_side_length,
-//                                          uint32_t link_nr, uint32_t* point_cloud_sizes,
-//                                          Vector3f** point_clouds, uint8_t swept_volume_index);
-
-///*! Insert data that will be treated as
-// * swept volume into the voxel map.
-// * Different data sets may be identified by the
-// * swept_volume_index, that is limited by values defined
-// * in Voxel.h.
-// * Swept volume data is considered 100% certain.
-// */
-//__global__
-//void kernelInsertSweptVolume(Voxel* voxelmap, const uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                             uint32_t swept_volume_data_size, const Vector3f* swept_volume_data,
-//                             uint8_t swept_volume_index);
 
 /*!
  * Collide two voxel maps.
@@ -434,16 +296,7 @@ __global__
 void kernelCollideVoxelMaps(Voxel* voxelmap, const uint32_t voxelmap_size, OtherVoxel* other_map,
                             Collider collider, bool* results);
 
-///*! Collide two voxel maps without plain parallelization.
-// * According to hardware this may increase performance.
-// * The performance increase is dependent on loop_size.
-// * Voxels are considered occupied for values
-// * greater or equal given thresholds.
-// */
-//__global__
-//void kernelCollideVoxelMapsAlternative(Voxel* voxelmap, const uint32_t voxelmap_size, const uint8_t threshold,
-//                                       Voxel* other_map, const uint8_t other_threshold, uint32_t loop_size,
-//                                       bool* results);
+
 
 /*!
  * Collide two Voxelmaps but test against the Bitvector of the other voxelmap
@@ -451,42 +304,16 @@ void kernelCollideVoxelMaps(Voxel* voxelmap, const uint32_t voxelmap_size, Other
  */
 template<std::size_t length, class Collider>
 __global__
-void kernelCollideVoxelMapsBitvector(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-                                     BitVoxel<length>* other_map, uint32_t loop_size, Collider collider,
-                                     BitVector<length>* results);
+void kernelCollideVoxelMapsBitvector(BitVoxel<length>* voxelmap, const uint32_t voxelmap_size,
+                                     BitVoxel<length>* other_map, Collider collider,
+                                     BitVector<length>* results, uint16_t* num_collisions, const uint16_t sv_offset);
 
-//__global__
-//void kernelCollideVoxelMapsIndicesBitmap(Voxel* voxelmap, uint8_t threshold, uint64_t* results,
-//                                         uint32_t* index_list, uint32_t index_number, uint64_t* bitmap_list,
-//                                         Vector3ui* dimensions);
-
-//__global__
-//void kernelCollideVoxelMapsBoundingBox(Voxel* voxelmap, const uint32_t voxelmap_size, const uint8_t threshold,
-//                                       Voxel* other_map, const uint8_t other_threshold, bool* results,
-//                                       uint32_t offset_x, uint32_t offset_y, uint32_t offset_z,
-//                                       uint32_t size_x, Vector3ui* dimensions);
-
-//__global__
-//void kernelCollideVoxelMapsIndices(Voxel* voxelmap, uint8_t threshold, bool* results, uint32_t* index_list,
-//                                   uint32_t index_number);
-
-//! Function that tests 3d -> 1d mapping of voxel map storage
+////! Function that tests 3d -> 1d mapping of voxel map storage
 template<class Voxel>
 __global__
-void kernelAddressingTest(const Voxel* voxelmap, const Vector3ui* dimensions, const float *voxel_side_length,
-                          const Vector3f *testpoint, bool* success);
+void kernelAddressingTest(const Voxel* voxelmap_base_address, const Vector3ui dimensions, const float voxel_side_length,
+                          const Vector3f *testpoints, const size_t testpoints_size, bool* success);
 
-//__global__
-//void kernelInsertBox(Voxel* voxelmap, const uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                     const uint32_t from_voxel_x, const uint32_t from_voxel_y, const uint32_t from_voxel_z,
-//                     const uint32_t to_voxel_x, const uint32_t to_voxel_y, const uint32_t to_voxel_z,
-//                     uint8_t voxeltype);
-
-//__global__
-//void kernelInsertBox(Voxel* voxelmap, const uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                     const uint32_t from_voxel_x, const uint32_t from_voxel_y, const uint32_t from_voxel_z,
-//                     const uint32_t to_voxel_x, const uint32_t to_voxel_y, const uint32_t to_voxel_z,
-//                     uint8_t voxeltype, uint8_t occupancy);
 
 /*! Collide two voxel maps with storing collision info (for debugging only)
  * Voxels are considered occupied for values
@@ -506,51 +333,28 @@ void kernelCollideVoxelMapsDebug(Voxel* voxelmap, const uint32_t voxelmap_size, 
  */
 template<class Voxel>
 __global__
-void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui *map_dim, const float voxel_side_length,
-                                  Vector3f* points, const std::size_t sizePoints, const uint32_t voxel_type);
+void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui map_dim, const float voxel_side_length,
+                                  Vector3f* points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning);
 
-///*!
-// * Copying a Voxelmap into map with different voxelsize. Implementation only supports data reduction.
-// * So only copy from a Voxelmap with smaller Voxelsize to a Voxelmap with lower resolution.
-// */
-//__global__
-//void kernelShrinkCopyVoxelMapBitvector(Voxel* destination_map, const uint32_t destination_map_size,
-//                                       Vector3ui* dest_map_dim, Voxel* source_map,
-//                                       const uint32_t source_map_size, Vector3ui* source_map_dim,
-//                                       uint8_t factor);
-///*!
-// * Copying a Voxelmap into map with different voxelsize. Implementation only supports data reduction.
-// * So only copy from a Voxelmap with smaller Voxelsize to a Voxelmap with lower resolution.
-// */
-//__global__
-//void kernelShrinkCopyVoxelMap(Voxel* destination_map, const uint32_t destination_map_size,
-//                              Vector3ui* dest_map_dim, Voxel* source_map, const uint32_t source_map_size,
-//                              Vector3ui* source_map_dim, uint8_t factor);
-
-//__global__
-//void kernelInsertVoxelVector(Voxel* destination_map, uint32_t* voxel_list, uint32_t list_size);
-
-//__global__
-//void kernelInsertVoxelVectorBitmap(Voxel* destination_map, uint32_t* voxel_list, uint32_t list_size,
-//                                   uint64_t mask);
-//__global__
-//void kernelInsertBitmapByIndices(Voxel* destination_map, uint32_t* voxel_list, uint32_t list_size,
-//                                 uint64_t* bitvector);
-
-//__global__
-//void kernelInsertBitmapIndices(Voxel* destination_map, uint32_t* voxel_list, uint32_t list_size,
-//                               uint64_t* bitvector);
 
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *meta_point_cloud,
-                                VoxelType voxelType, const Vector3ui *map_dim, const float voxel_side_length);
+                                BitVoxelMeaning voxel_meaning, const Vector3ui map_dim, const float voxel_side_length);
 
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *meta_point_cloud,
-                                VoxelType* voxel_types, const Vector3ui *map_dim,
+                                BitVoxelMeaning* voxel_meanings, const Vector3ui map_dim,
                                 const float voxel_side_length);
+
+/**
+ * Shifts all swept-volume-IDs by shift_size towards lower IDs.
+ * Currently this is limited to a shift size <64
+ */
+template<std::size_t length>
+__global__
+void kernelShiftBitVector(BitVoxel<length>* voxelmap, const uint32_t voxelmap_size, uint8_t shift_size);
 
 } // end of namespace voxelmap
 } // end of namespace gpu_voxels

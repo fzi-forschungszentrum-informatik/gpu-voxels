@@ -176,7 +176,22 @@ bool XMLInterpreter::getVoxelmapContext(VoxelmapContext* context, uint32_t index
   return true;
 }
 
-bool XMLInterpreter::getOctreeContext(OctreeContext* context, uint32_t index)
+bool XMLInterpreter::getVoxellistContext(CubelistContext* context, uint32_t index)
+{
+  if (!m_is_initialized)
+  {
+    return false;
+  }
+  std::string p = "/" + context->m_map_name;
+  if (!getDataContext(context, p))
+  { // if no context has been found for the name try the old naming
+    p = "/voxellist_" + boost::lexical_cast<std::string>(index);
+    return getDataContext(context, p);
+  }
+  return true;
+}
+
+bool XMLInterpreter::getOctreeContext(CubelistContext* context, uint32_t index)
 {
   if (!m_is_initialized)
   {
@@ -241,10 +256,10 @@ bool XMLInterpreter::getVisualizerContext(VisualizerContext* con)
       (c_path / "draw_edges_of_triangles").string(), false);
   con->m_draw_filled_triangles = icl_core::config::getDefault<bool>((c_path / "draw_filled_triangles").string(),
                                                                   true);
-  con->m_draw_whole_map = icl_core::config::getDefault<bool>((c_path / "draw_whole_map").string(), false);
+  con->m_draw_whole_map = icl_core::config::getDefault<bool>((c_path / "draw_whole_map").string(), true);
 
   con->m_grid_distance = icl_core::config::getDefault<float>((c_path / "grid_distance").string(), 10.f);
-  con->m_grid_height = icl_core::config::getDefault<float>((c_path / "grid_height").string(), 10.f);
+  con->m_grid_height = icl_core::config::getDefault<float>((c_path / "grid_height").string(), 0.f);
   con->m_grid_max_x = icl_core::config::getDefault<uint32_t>((c_path / "grid_max_x").string(), 1000);
   con->m_grid_max_y = icl_core::config::getDefault<uint32_t>((c_path / "grid_max_y").string(), 1000);
 

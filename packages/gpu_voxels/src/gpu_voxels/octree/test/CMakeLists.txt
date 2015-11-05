@@ -60,41 +60,41 @@
 
 
 
-# ----- programm octree_test -----
-ICMAKER_SET("octree_test")
+## ----- programm octree_test -----
+#ICMAKER_SET("octree_test")
 
-ICMAKER_ADD_HEADERS(
-  ArgumentHandling.h
-  Helper.h
-  )
+#ICMAKER_ADD_HEADERS(
+#  ArgumentHandling.h
+#  Helper.h
+#  )
 
-ICMAKER_ADD_SOURCES(
-  ArgumentHandling.cpp
-  Main_Test.cpp
-  Helper.cpp
-  )
+#ICMAKER_ADD_SOURCES(
+#  ArgumentHandling.cpp
+#  Main_Test.cpp
+#  Helper.cpp
+#  )
 
-ICMAKER_ADD_CUDA_FILES(
-  Tests.cu
-  Tests.h
-  )
+#ICMAKER_ADD_CUDA_FILES(
+#  Tests.cu
+#  Tests.h
+#  )
 
-ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
-ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS__)
-ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
-ICMAKER_INCLUDE_DIRECTORIES(../cub)
+#ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
+#ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS__)
+#ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
+#ICMAKER_INCLUDE_DIRECTORIES(../cub)
 
 
-ICMAKER_INTERNAL_DEPENDENCIES(
-  gpu_voxels_octree
-  )
+#ICMAKER_INTERNAL_DEPENDENCIES(
+#  gpu_voxels_octree
+#  )
 
-ICMAKER_EXTERNAL_DEPENDENCIES(
-  CUDA
-  PCL
-  )
+#ICMAKER_EXTERNAL_DEPENDENCIES(
+#  CUDA
+#  PCL
+#  )
 
-ICMAKER_BUILD_PROGRAM()
+#ICMAKER_BUILD_PROGRAM()
 
 
 # ----- program octree_provider -----
@@ -135,6 +135,7 @@ ICMAKER_INCLUDE_DIRECTORIES(../octomap/octomap/include/)
 
 ICMAKER_INTERNAL_DEPENDENCIES(
   gpu_voxels_octree
+  gpu_voxels_voxel
   gpu_voxels_voxelmap
   icl_core
   icl_core_performance_monitor
@@ -199,6 +200,7 @@ ICMAKER_INCLUDE_DIRECTORIES(../octomap/octomap/include/)
 
 
 ICMAKER_INTERNAL_DEPENDENCIES(
+  gpu_voxels_voxel
   gpu_voxels_octree
   gpu_voxels_voxelmap
   icl_core

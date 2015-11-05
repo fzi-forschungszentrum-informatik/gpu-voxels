@@ -33,9 +33,21 @@
 namespace gpu_voxels {
 namespace robot {
 
+typedef std::pair<std::string, float> JointValuePair;
+typedef std::map<std::string, float> JointValueMap;
+typedef JointValueMap::iterator JointValueMapIterator;
+typedef JointValueMap::const_iterator JointValueMapConstIterator;
+
+
 class RobotInterface
 {
 public:
+
+  /**
+   * @brief getJointNames Reads all joint names
+   * @param jointnames Vector of jointnames that will get extended
+   */
+  virtual void getJointNames(std::vector<std::string> &jointnames) = 0;
 
   /**
    * @brief Updates the joints of the robot
@@ -66,6 +78,20 @@ public:
    * \param cloud New geometry
    */
   virtual void updatePointcloud(const std::string &link_name, const std::vector<Vector3f> &cloud) = 0;
+
+  /**
+   * @brief getLowerJointLimits Gets the minimum joint values
+   * @param lower_limits Map of jointnames and values.
+   * This map will get extended if joints were missing.
+   */
+  virtual void getLowerJointLimits(JointValueMap &lower_limits) = 0;
+
+  /**
+   * @brief getUpperJointLimits Gets the maximum joint values
+   * @param upper_limits Map of jointnames and values.
+   * This map will get extended if joints were missing.
+   */
+  virtual void getUpperJointLimits(JointValueMap &upper_limits) = 0;
 };
 
 } // namespace robot

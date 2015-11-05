@@ -80,3 +80,55 @@ V 0.7 (2015-06-10):
 V 0.71 (2015-06-10):
 ====================
 - Updated this changelog.
+
+V 0.8 (2015-11-09):
+===================
+- Compiles with CUDA 7.5
+- Added Voxellists as new Datatype
+    - Huge speedup compared to Voxelmaps with sparse data.
+    - Added Bit-Shifting-Collisionchecks (Thanks to Felix Mauch)
+    - Added Bit-Margin for Bitvoxel Collisionchecks (Thanks to Felix Mauch)
+- General:
+    - Removed superficial memory allocation from Voxelmap.
+    - Added script to automatize binvox mesh voxelization
+    - Improved PrimitiveArrays update speed when number of primitives stays constant.
+    - Removed heaps of compiler warnings (Thanks to Christian Juelg)
+    - Various Bugfixes, mainly in collision Kernels
+- Renamings / moved code:
+    - HighLevel-API: Added "merge" function.
+    - CudaMath now longer requires an instance. Now it is a namespace.
+    - VoxelType ==> BitVoxelMeaning
+    - Fixed standard CTORs of basic datatypes for CUDA shared memory allocation.
+    - Moved voxels to gpu_voxels namespace
+    - Removed seom missleading typedefs
+    - Moved Voxel definitions to own subfolder.
+    - Removed dead code fragments.
+- Octree:
+    - Adapted to new API.
+    - Removed its own voxellist. Now uses more general Voxellist.
+    - Removed VoxelTypeFlags and replaced them by more general bitvectors.
+    - Simplified Octree selftests and triggered them by Boost-Test.
+    - Dropped CUB lib. Now using CUDAs version from Thrust.
+- Robot representation:
+    - Enhanced robot interface (jointnames and min max angles).
+    - Restructured inheritance of robot implementations.
+    - Fixed install of robot headers.
+- Visualizer:
+    - Updated Visualizer to new API.
+    - Added new function to move cam in plane.
+    - Switched from Octree to more general Cubelist interface,
+      as this can also be used to visualize Voxellists.
+    - Visualizer now cleans Shared-Mem files.
+    - Added Script to generate color gradient config files for visualizer.
+    - Fixed a bug in drawing the grid
+- Example programs and Testcases:
+    - Updated examples to new API.
+    - Added more Boost-Tests.
+    - Reordered model files.
+- icl_core and basic libs:
+    - Added performance monitor docu
+    - Some new cmake magic
+    - Improved ringbuffer
+    - New Doxygen version.
+    - Tinyxml cmake updated.
+    - Added missing Findscripts for OpenNi.

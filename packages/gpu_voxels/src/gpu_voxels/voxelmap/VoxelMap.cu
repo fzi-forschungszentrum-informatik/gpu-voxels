@@ -15,14 +15,14 @@
 
 namespace gpu_voxels {
 
-template class BitVector<voxelmap::BIT_VECTOR_LENGTH>;
+template class BitVector<BIT_VECTOR_LENGTH>;
+template class BitVoxel<BIT_VECTOR_LENGTH>;
 
 namespace voxelmap {
 
 // ############################### BitVoxelMap ######################################
 // Explicit instantiation of template class to link against from other files where this template is used
 template class BitVoxelMap<BIT_VECTOR_LENGTH>;
-template class BitVoxel<BIT_VECTOR_LENGTH>;
 // ##################################################################################
 
 // ############################### TemplateVoxelMap ######################################
@@ -33,7 +33,7 @@ template uint32_t TemplateVoxelMap<ProbabilisticVoxel>::collisionCheckWithCounte
 // ############################### ProbVoxelMap (inherits from TemplateVoxelMap) ######################################
 // Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects
 template void ProbVoxelMap::insertSensorData<BIT_VECTOR_LENGTH>(const Vector3f*, const bool, const bool,
-                                                                const uint32_t, BitVoxel<BIT_VECTOR_LENGTH>*);
+                                                                const BitVoxelMeaning, BitVoxel<BIT_VECTOR_LENGTH>*);
 
 
 // ##################################################################################

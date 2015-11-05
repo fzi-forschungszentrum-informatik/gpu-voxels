@@ -46,7 +46,7 @@ class Voxel
 public:
   // TODO choose better memory layout; may use one byte of voxel_id for occ. probab.
 
-  VoxelID voxelId;
+  OctreeVoxelID voxelId;
   gpu_voxels::Vector3ui coordinates;
 
   __host__ __device__
@@ -58,7 +58,7 @@ public:
   __host__ __device__
   friend bool operator==(Voxel a, Voxel b)
   {
-    return (a.voxelId == b.voxelId && equal(a.coordinates, b.coordinates) && a.occupancy == b.occupancy);
+    return (a.voxelId == b.voxelId && a.coordinates == b.coordinates && a.occupancy == b.occupancy);
   }
 
 private:
@@ -72,7 +72,7 @@ public:
   }
 
   __host__ __device__
-  Voxel(VoxelID voxelID, gpu_voxels::Vector3ui coordinates, Probability occupancy)
+  Voxel(OctreeVoxelID voxelID, gpu_voxels::Vector3ui coordinates, Probability occupancy)
   {
     this->voxelId = voxelID;
     this->coordinates = coordinates;
@@ -97,10 +97,10 @@ public:
 
 struct count_per_size: public thrust::unary_function<Cube, voxel_count>
 {
-  VoxelID m_cube_side_length;
+  OctreeVoxelID m_cube_side_length;
 
   __host__ __device__
-  count_per_size(VoxelID cube_side_length)
+  count_per_size(OctreeVoxelID cube_side_length)
   {
     m_cube_side_length = cube_side_length;
   }

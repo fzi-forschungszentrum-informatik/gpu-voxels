@@ -34,6 +34,10 @@ SharedMemoryManagerPrimitiveArrays::SharedMemoryManagerPrimitiveArrays()
   shmm = new SharedMemoryManager(shm_segment_name_primitive_array, true);
 }
 
+SharedMemoryManagerPrimitiveArrays::~SharedMemoryManagerPrimitiveArrays()
+{
+  delete shmm;
+}
 
 uint32_t SharedMemoryManagerPrimitiveArrays::getNumberOfPrimitiveArraysToDraw()
 {

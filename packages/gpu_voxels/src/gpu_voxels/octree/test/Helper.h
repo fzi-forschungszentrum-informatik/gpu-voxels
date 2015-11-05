@@ -26,7 +26,6 @@
 
 #include <gpu_voxels/octree/test/ArgumentHandling.h>
 #include <gpu_voxels/octree/NTree.h>
-#include <gpu_voxels/octree/VoxelTypeFlags.h>
 #include <gpu_voxels/octree/PointCloud.h>
 #include <gpu_voxels/octree/Voxel.h>
 
@@ -40,6 +39,7 @@
 #include <thrust/transform.h>
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
+#include <gpu_voxels/helpers/BitVector.h>
 
 namespace gpu_voxels {
 namespace NTree {
@@ -47,9 +47,9 @@ namespace Test {
 
 static const std::size_t RAND_SEED = 2746135025UL;
 
-void initDevice();
+bool testAndInitDevice();
 
-thrust::host_vector<gpu_voxels::Vector3ui> linearPoints(voxel_count num_points, VoxelID maxValue);
+thrust::host_vector<gpu_voxels::Vector3ui> linearPoints(voxel_count num_points, OctreeVoxelID maxValue);
 
 //struct Trafo_Point_to_Voxel
 //{
@@ -105,10 +105,10 @@ bool buildOctree(NTree<branching_factor, level_count, InnerNode, LeafNode>* tree
   printf("MapDim x=%u y=%u z=%u\n", build_result.map_dimensions.x, build_result.map_dimensions.y,
          build_result.map_dimensions.z);
 
-  VoxelID max_morton_code = morton_code60(build_result.map_dimensions.x - 1,
+  OctreeVoxelID max_morton_code = morton_code60(build_result.map_dimensions.x - 1,
                                           build_result.map_dimensions.y - 1,
                                           build_result.map_dimensions.z - 1);
-  VoxelID tree_limit = (uint64_t) pow(branching_factor, level_count - 1) - 1;
+  OctreeVoxelID tree_limit = (uint64_t) pow(branching_factor, level_count - 1) - 1;
   printf("Max morton code: %lu Map morton limit: %lu\n", max_morton_code, tree_limit);
   if (max_morton_code > tree_limit)
   {
@@ -162,17 +162,16 @@ bool buildOctree(NTree<branching_factor, level_count, InnerNode, LeafNode>* tree
 }
 
 template<int VTF_SIZE>
-thrust::host_vector<VoxelTypeFlags<VTF_SIZE> > randomVoxelTypes(voxel_count num_points)
+thrust::host_vector<BitVector<VTF_SIZE> > randomVoxelTypes(voxel_count num_points)
 {
-  thrust::host_vector<VoxelTypeFlags<VTF_SIZE> > rand_types(num_points);
+  thrust::host_vector<BitVector<VTF_SIZE> > rand_types(num_points);
 
   for (voxel_count i = 0; i < num_points; ++i)
   {
-    for (uint32_t k = 0; k < VTF_SIZE / 4; ++k)
-    {
-      VoxelTypeFlags<VTF_SIZE>* tmp = &rand_types[i];
-      tmp->m_flags[k] = rand();
-    }
+    // set 3 random bits per Vector
+    rand_types[i].setBit(rand() % VTF_SIZE);
+    rand_types[i].setBit(rand() % VTF_SIZE);
+    rand_types[i].setBit(rand() % VTF_SIZE);
   }
   return rand_types;
 }

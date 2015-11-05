@@ -13,12 +13,25 @@
 #------------- testing_gpu_voxels -----------------------
 ICMAKER_SET("test_gpu_voxels_core") # IDE_FOLDER ${ICL_CORE_IDE_FOLDER}
 
+ICMAKER_ADD_HEADERS(
+  helpers.h
+)
+
 ICMAKER_ADD_SOURCES(
   testing_main.cpp
+  helpers.cpp
+  ../octree/test/ArgumentHandling.cpp
+  ../octree/test/Main_Test.cpp
+  ../octree/test/Helper.cpp
   )
 ICMAKER_ADD_CUDA_FILES(
   testing_voxelmap.cu
+  testing_voxellist.cu
+  testing_octree.cu
+  testing_octree_collisions.cu
   testing_cudaMath.cu
+  ../octree/test/Tests.cu
+  ../octree/test/Tests.h
   )
 
 ICMAKER_INTERNAL_DEPENDENCIES(

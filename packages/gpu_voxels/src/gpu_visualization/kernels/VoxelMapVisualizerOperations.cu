@@ -37,7 +37,8 @@ namespace visualization {
  * @param write_index: the atomic counters for each voxel type (should be initialized with 0).
  * @param draw_voxel_type: if 0 the corresponding type at this index will not be drawn.
  * @param prefixes: stores the index of the VBO segment for each voxel type.
- */__global__ void fill_vbo_without_precounting(voxelmap::ProbabilisticVoxel* voxelMap, Vector3ui dim_voxel_map,
+ */
+__global__ void fill_vbo_without_precounting(ProbabilisticVoxel* voxelMap, Vector3ui dim_voxel_map,
                                               Vector3ui dim_super_voxel, Vector3ui start_voxel,
                                               Vector3ui end_voxel, uint8_t occupancy_threshold, float4* vbo,
                                               uint32_t* vbo_offsets, uint32_t* vbo_limits,
@@ -66,10 +67,10 @@ namespace visualization {
             {
               uint32_t index = 0xffff;
               uint8_t prefix;
-              voxelmap::ProbabilisticVoxel voxel = voxelMap[k * dim_voxel_map.x * dim_voxel_map.y
+              ProbabilisticVoxel voxel = voxelMap[k * dim_voxel_map.x * dim_voxel_map.y
                   + j * dim_voxel_map.x + i];
 
-              if (voxel.getOccupancy() >= voxelmap::probability(occupancy_threshold - 128)) // Use signed values. Quick fix
+              if (voxel.getOccupancy() >= probability(occupancy_threshold - 128)) // Use signed values. Quick fix
               {
                 //printf("occ thresh %u \n", occupancy_threshold);
                 //map the occupancy on the first 10 types, so type element [0,9]
@@ -116,7 +117,7 @@ namespace visualization {
  * @param write_index: the atomic counters for each voxel type (should be initialized with 0).
  * @param draw_voxel_type: if 0 the corresponding type at this index will not be drawn.
  * @param prefixes: stores the index of the VBO segment for each voxel type.
- */__global__ void fill_vbo_without_precounting(voxelmap::BitVectorVoxel* voxelMap, Vector3ui dim_voxel_map,
+ */__global__ void fill_vbo_without_precounting(BitVectorVoxel* voxelMap, Vector3ui dim_voxel_map,
                                               Vector3ui dim_super_voxel, Vector3ui start_voxel,
                                               Vector3ui end_voxel, uint8_t occupancy_threshold, float4* vbo,
                                               uint32_t* vbo_offsets, uint32_t* vbo_limits,
@@ -143,11 +144,11 @@ namespace visualization {
           {
             for (uint32_t k = z; k < dim_super_voxel.z + z && k < dim_voxel_map.z && !found; k++)
             {
-              voxelmap::BitVectorVoxel voxel = voxelMap[k * dim_voxel_map.x * dim_voxel_map.y + j * dim_voxel_map.x + i];
+              BitVectorVoxel voxel = voxelMap[k * dim_voxel_map.x * dim_voxel_map.y + j * dim_voxel_map.x + i];
 
               if (!voxel.bitVector().isZero())
               {
-                for (uint32_t t = 0 ; t < min((unsigned long long) voxelmap::BIT_VECTOR_LENGTH, (unsigned long long) MAX_DRAW_TYPES); ++t)
+                for (uint32_t t = 0 ; t < min((unsigned long long) BIT_VECTOR_LENGTH, (unsigned long long) MAX_DRAW_TYPES); ++t)
                 {
                   uint32_t index = 0xffff;
                   uint8_t prefix;
@@ -209,26 +210,40 @@ namespace visualization {
  * @param write_index: the atomic counters for each type (should be initialized with 0).
  * @param draw_voxel_type: if 0 the corresponding type at this index will not be drawn.
  * @param prefixes: stores the index of the VBO segment for each voxel type.
- */__global__ void fill_vbo_with_octree(Cube* cubes, uint32_t size, float4* vbo, uint32_t* vbo_offsets,
+ */
+__global__ void fill_vbo_with_cubelist(Cube* cubes, uint32_t size, float4* vbo, uint32_t* vbo_offsets,
                                       uint32_t* write_index, uint8_t* draw_voxel_type, uint8_t* prefixes)
 {
   //use Grid-Stride Loops
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += blockDim.x * gridDim.x)
   {
     Cube* cube = cubes + i;
+
     uint32_t index = 0xffff;
-    if (draw_voxel_type[cube->m_type])
+
+    bool found = false;
+    for (size_t t = 0 ; t < MAX_DRAW_TYPES; ++t)
     {
-      uint8_t prefix = prefixes[cube->m_type];
-      index = atomicAdd(write_index + prefix, 1);
-      index = index + vbo_offsets[prefix];
-      float x = cube->m_position.x;
-      float y = cube->m_position.y;
-      float z = cube->m_position.z;
-      float w = cube->m_side_length;
-      vbo[index] = make_float4(x, y, z, w);
-      // write the position and the scale factor into the vbo
-      // use the z as height so switch z and y
+      // TODO: Create a bitmask outside the kernel and just do a bit comparison in here! Instead of for-loop
+      if (draw_voxel_type[t] && cube->m_type_vector.getBit(t))
+      {
+        uint8_t prefix = prefixes[t];
+        index = atomicAdd(write_index + prefix, 1);
+        index = index + vbo_offsets[prefix];
+        // write the position and the scale factor into the vbo
+        float x = cube->m_position.x;
+        float y = cube->m_position.y;
+        float z = cube->m_position.z;
+        float w = cube->m_side_length;
+        //            printf("Found voxel at (%f,%f,%f) with voxel type %lu, and sidelenth %f\n", x, y, z, t, w);
+        vbo[index] = make_float4(x, y, z, w);
+        found = true;
+      }
+
+      if (found)
+      { // if a set bit in the bit vector was found leave this loop
+        break;
+      }
     }
   }
 }
@@ -241,16 +256,30 @@ namespace visualization {
  * @param cubes_per_type: Will contain the number of cubes per type afterwards (should be initialized with 0).
  * @param draw_voxel_type: if 0 the corresponding type at this index will not be drawn.
  * @param prefixes: stores the index of the VBO segment for each voxel type.
- */__global__ void calculate_cubes_per_type(Cube* cubes, uint32_t size, uint32_t* cubes_per_type,
-                                          uint8_t* draw_voxel_type, uint8_t* prefixes)
+ */
+__global__ void calculate_cubes_per_type_list(Cube* cubes, uint32_t size, uint32_t* cubes_per_type, uint8_t* draw_voxel_type, uint8_t* prefixes)
 {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += blockDim.x * gridDim.x)
   {
     Cube* cube = cubes + i;
-    if (draw_voxel_type[cube->m_type])
+
+    bool found = false;
+    // TODO: Create a bitmask outside the kernel and just do a bit comparison in here! Instead of for-loop
+    for (size_t t = 0; t < MAX_DRAW_TYPES; ++t)
     {
-      uint8_t prefix = prefixes[cube->m_type];
-      atomicAdd(cubes_per_type + prefix, 1);
+      uint8_t prefix;
+      if (draw_voxel_type[t] && cube->m_type_vector.getBit(t))
+      {
+        prefix = prefixes[t];
+        atomicAdd(cubes_per_type + prefix, 1);
+        //printf("Found voxel with type %lu. Now drawing %u voxels of type %lu\n", t, *(cubes_per_type+prefix), t);
+        found = true;
+      }
+
+      if (found)
+      { // if a set bit in the bit vector was found leave this loop
+        break;
+      }
     }
   }
 }

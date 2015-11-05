@@ -27,7 +27,7 @@
 #include <gpu_voxels/octree/kernels/kernel_common.h>
 #include <gpu_voxels/octree/NTreeData.h>
 #include <gpu_voxels/octree/load_balancer/kernel_config/LoadBalance.cuh>
-#include <gpu_voxels/octree/VoxelTypeFlags.h>
+#include <gpu_voxels/helpers/BitVector.h>
 
 namespace gpu_voxels {
 namespace NTree {
@@ -64,10 +64,10 @@ void check_border(const gpu_voxels::Vector3ui& ntree_min, const gpu_voxels::Vect
 
 /**
  * @brief This struct defines the shared memory, variables, kernel functions etc. needed to do a collision check between an \code NTree \endcode and a \code VoxelMap \endcode with help of the load balancing concept.
- * @tparam vft_size Size parameter to use for \code VoxelTypeFlags \endcode template. Defines the size in Byte of the voxel-type bit-vector.
+ * @tparam vft_size Size parameter to use for \code BitVector \endcode template. Defines the size in Byte of the voxel-meaning bit-vector.
  * @tparam set_collision_flag \code true \endcode to set the collision flag if necessary
- * @tparam compute_voxelTypeFlags \code true \endcode to compute the voxel type flags. Each bit of this vector indicates whether a voxel of the corresponsing type caused a collision.
- * @tparam VoxelType The type of a voxel of the corresponsing \code VoxelMap \endcode
+ * @tparam compute_voxelTypeFlags \code true \endcode to compute the voxel meaning flags. Each bit of this vector indicates whether a voxel of the corresponsing meaning caused a collision.
+ * @tparam VoxelType The meaning of a voxel of the corresponsing \code VoxelMap \endcode
  */
 template<std::size_t num_threads,
   std::size_t branching_factor,
@@ -94,7 +94,7 @@ public:
   {
   public:
     std::size_t my_num_collisions;
-    VoxelTypeFlags<vtf_size> my_flags;
+    BitVector<vtf_size> my_flags;
 
     __host__ __device__
     VariablesConfig() :
@@ -133,7 +133,7 @@ public:
     const VoxelType* voxel_map;
     const gpu_voxels::Vector3ui voxel_map_dim;
     const uint32_t min_level;
-    VoxelTypeFlags<vtf_size>* result_voxelTypeFlags;
+    BitVector<vtf_size>* result_voxelTypeFlags;
 
     __host__ __device__
     KernelParameters(const typename Base::AbstractKernelParameters& abstract_params,
@@ -142,7 +142,7 @@ public:
                      const VoxelType* p_voxel_map,
                      const gpu_voxels::Vector3ui p_voxel_map_dim,
                      const uint32_t p_min_level,
-                     VoxelTypeFlags<vtf_size>* p_result_voxelTypeFlags) :
+                     BitVector<vtf_size>* p_result_voxelTypeFlags) :
         Base::AbstractKernelParameters(abstract_params),
         num_collisions(p_num_collisions),
         offset(p_offset),
@@ -162,7 +162,7 @@ public:
   typedef KernelParameters KernelParams;
 
   __device__
-  static void doLoadBalancedWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static void doLoadBalancedWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                                  Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
       uint32_t insert_count_tid0 = 0; // number of new work items only maintained for thread 0
@@ -173,11 +173,11 @@ public:
       gpu_voxels::Vector3ui coordinates;
       if (variables.is_active)
       {
-        node_active = shared_mem.work_item_cache[constants.work_index].active;
-        node = shared_mem.work_item_cache[constants.work_index].node;
+        node_active = shared_mem->work_item_cache[constants.work_index].active;
+        node = shared_mem->work_item_cache[constants.work_index].node;
         node += constants.work_lane * node_active;
-        chk_border = shared_mem.work_item_cache[constants.work_index].check_border;
-        level = shared_mem.work_item_cache[constants.work_index].level;
+        chk_border = shared_mem->work_item_cache[constants.work_index].check_border;
+        level = shared_mem->work_item_cache[constants.work_index].level;
 
         is_last_level = (level == 1);
         insert_work_item = node->isOccupied() & !is_last_level & (node->hasStatus(ns_PART) | !node_active);
@@ -185,7 +185,7 @@ public:
         {
           // compute coordinates of this inner node
           gpu_voxels::Vector3ui min, max;
-          getNextCoordinates(shared_mem.work_item_cache[constants.work_index].coordinates, constants.work_lane, level, min, max);
+          getNextCoordinates(shared_mem->work_item_cache[constants.work_index].coordinates, constants.work_lane, level, min, max);
           coordinates = min;
 
           if (chk_border)
@@ -208,17 +208,17 @@ public:
         {
           const uint32_t my_work_item = i / leafs_per_work_item;
           const uint32_t my_inner_node = (i % leafs_per_work_item) / branching_factor;
-          temp_node = shared_mem.work_item_cache[my_work_item].node;
-          const bool temp_active = shared_mem.work_item_cache[my_work_item].active;
+          temp_node = shared_mem->work_item_cache[my_work_item].node;
+          const bool temp_active = shared_mem->work_item_cache[my_work_item].active;
           temp_node += my_inner_node * temp_active;
-          bool chk_border = shared_mem.work_item_cache[my_work_item].check_border;
-          const uint8_t level = shared_mem.work_item_cache[my_work_item].level;
+          bool chk_border = shared_mem->work_item_cache[my_work_item].check_border;
+          const uint8_t level = shared_mem->work_item_cache[my_work_item].level;
 
           if ((level == 1) && temp_node->isOccupied()
-              && (temp_node->hasStatus(ns_PART) || !shared_mem.work_item_cache[my_work_item].active))
+              && (temp_node->hasStatus(ns_PART) || !shared_mem->work_item_cache[my_work_item].active))
           {
             gpu_voxels::Vector3ui min, max;
-            getNextCoordinates(shared_mem.work_item_cache[my_work_item].coordinates, my_inner_node, level, min, max);
+            getNextCoordinates(shared_mem->work_item_cache[my_work_item].coordinates, my_inner_node, level, min, max);
             gpu_voxels::Vector3ui coordinates = min;
             bool is_inside = true, is_at_border = true;
             if (chk_border)
@@ -263,7 +263,7 @@ public:
                   }
                   if (compute_voxelTypeFlags)
                   {
-                    variables.my_flags |= my_voxel->voxel_type;
+                    variables.my_flags |= my_voxel->voxel_meaning;
                   }
                   ++variables.my_num_collisions;
                 }
@@ -273,15 +273,15 @@ public:
         }
       }
 
-      uint32_t allVotes = thread_prefix<num_threads / WARP_SIZE>(shared_volatile_mem.block_votes, constants.thread_id, insert_count_tid0,
+      uint32_t allVotes = thread_prefix<num_threads / WARP_SIZE>(shared_volatile_mem->block_votes, constants.thread_id, insert_count_tid0,
                                                               insert_work_item);
 
       // add new work items to stack
       if (variables.is_active & insert_work_item)
       {
         const uint32_t warpLocalIndex = __popc(allVotes << (WARP_SIZE - constants.warp_lane));
-        const uint32_t interWarpIndex = shared_volatile_mem.block_votes[constants.warp_id];
-        WorkItem* stackPointer = &shared_mem.my_work_stack[shared_mem.num_stack_work_items + interWarpIndex + warpLocalIndex];
+        const uint32_t interWarpIndex = shared_volatile_mem->block_votes[constants.warp_id];
+        WorkItem* stackPointer = &shared_mem->my_work_stack[shared_mem->num_stack_work_items + interWarpIndex + warpLocalIndex];
 
         node_active = node->hasStatus(ns_PART) && kernel_params.min_level <= (level - 1);
         InnerNode* children = node_active ? ((InnerNode*) node->getChildPtr()) : node;
@@ -290,12 +290,12 @@ public:
       __syncthreads();
 
       if (constants.thread_id == 0)
-        shared_mem.num_stack_work_items += insert_count_tid0;
+        shared_mem->num_stack_work_items += insert_count_tid0;
       __syncthreads();
   }
 
   __device__
-  static void doReductionWork(SharedMem& shared_mem, SharedVolatileMem& shared_volatile_mem,
+  static void doReductionWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                               Variables& variables, Constants& constants, KernelParams& kernel_params)
   {      
     if (variables.my_num_collisions != 0)
@@ -304,7 +304,7 @@ public:
     if (compute_voxelTypeFlags)
     {
         if (!variables.my_flags.isZero())
-          VoxelTypeFlags<vtf_size>::reduceAtomic(variables.my_flags, *kernel_params.result_voxelTypeFlags);
+          BitVector<vtf_size>::reduceAtomic(variables.my_flags, *kernel_params.result_voxelTypeFlags);
     }
 
     // todo is a shared memory reduction more efficient in this case?
@@ -314,7 +314,7 @@ public:
   }
 
   __device__
-  static bool abortLoop(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static bool abortLoop(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     return Base::abortLoop(shared_mem, shared_volatile_mem, variables, constants, kernel_params);

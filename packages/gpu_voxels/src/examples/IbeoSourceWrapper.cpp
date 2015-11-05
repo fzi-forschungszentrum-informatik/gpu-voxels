@@ -40,6 +40,34 @@ namespace nncom = icl_hardware::ncom;
 
 namespace gpu_voxels {
 
+
+// -------------------UNFINISHED MATH------------------------
+struct TransformPointWithMatrix4f
+{
+  Matrix4f m_matrix;
+
+  __host__ __device__
+  TransformPointWithMatrix4f(Matrix4f matrix) : m_matrix(matrix)
+  {
+    printf("ERROR: Function TransformPointWithMatrix4f is not yet implemented!");
+  }
+
+  __host__ __device__
+  Vector3f operator()(Vector3f x)
+  {
+    return m_matrix * x;
+  }
+};
+
+void transform(std::vector<Vector3f>& host_point_cloud, Matrix4f matrix)
+{
+  thrust::device_vector<Vector3f> device_point_cloud(host_point_cloud);
+  thrust::transform(device_point_cloud.begin(), device_point_cloud.end(), device_point_cloud.begin(), TransformPointWithMatrix4f(matrix));
+    HANDLE_CUDA_ERROR(cudaMemcpy(&host_point_cloud[0], thrust::raw_pointer_cast(device_point_cloud.data()), host_point_cloud.size() * sizeof(Vector3f), cudaMemcpyDeviceToHost));
+}
+// -------------------END MATH------------------------
+
+
 IbeoSourceWrapper::IbeoSourceWrapper(CallbackFunction callback, std::string ibeo_uri, std::string ncom_uri, Vector3f additional_translation) :
     m_callback(callback),
     m_ibeo_uri(ibeo_uri),
@@ -127,7 +155,7 @@ void IbeoSourceWrapper::run()
 
       LOGGING_INFO(Gpu_voxels, "Transform point cloud..." << endl);
 
-      CudaMath::transform(point_cloud, matrix); // todo: keep point cloud in gpu mem
+      transform(point_cloud, matrix); // todo: keep point cloud in gpu mem
 
       m_callback(point_cloud);
     }

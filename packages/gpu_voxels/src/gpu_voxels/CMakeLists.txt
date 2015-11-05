@@ -35,7 +35,6 @@ ICMAKER_ADD_SOURCES(
   )
 
 ICMAKER_ADD_CUDA_FILES(
-  octree/VoxelTypeFlags.h
   octree/DataTypes.h
   )
   
@@ -64,7 +63,9 @@ ICMAKER_INSTALL_HEADERS(gpu_voxels)
 
 #------------- anounce high level libs and tests ------------------
 ADD_SUBDIRECTORY(robot)
+ADD_SUBDIRECTORY(voxel)
 ADD_SUBDIRECTORY(voxelmap)
+ADD_SUBDIRECTORY(voxellist)
 ADD_SUBDIRECTORY(vis_interface)
 ADD_SUBDIRECTORY(octree)
 
@@ -98,6 +99,7 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
   gpu_voxels_dh_robot
   gpu_voxels_urdf_robot
   gpu_voxels_voxelmap
+  gpu_voxels_voxellist
   gpu_voxels_octree
   gpu_voxels_primitive_array
   gpu_voxels_vis_interface

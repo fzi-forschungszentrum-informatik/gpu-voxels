@@ -67,7 +67,7 @@ bool BinvoxFileReader::readPointCloud(const std::string filename, std::vector<Ve
     return false;
   }
   *input >> version;
-  LOGGING_INFO(Gpu_voxels_helpers, "Binvox: Reading version " << version << endl);
+  LOGGING_DEBUG(Gpu_voxels_helpers, "Binvox: Reading version " << version << endl);
 
   depth = -1;
   int done = 0;
@@ -85,7 +85,7 @@ bool BinvoxFileReader::readPointCloud(const std::string filename, std::vector<Ve
       scale = scale / width;
     }
     else {
-      LOGGING_INFO(Gpu_voxels_helpers, "Binvox: unrecognized keyword [" << line << "], skipping" << endl);
+      LOGGING_WARNING(Gpu_voxels_helpers, "Binvox: unrecognized keyword [" << line << "], skipping" << endl);
       char c;
       do {  // skip until end of line
         c = input->get();
@@ -136,7 +136,7 @@ bool BinvoxFileReader::readPointCloud(const std::string filename, std::vector<Ve
   input->close();
 
   // convert occupied voxels index to points in a pointcloud
-  LOGGING_INFO(Gpu_voxels_helpers, "Binvox: Generating pointcloud from " << nr_voxels << " occupied Voxels" << endl);
+  LOGGING_DEBUG(Gpu_voxels_helpers, "Binvox: Generating pointcloud from " << nr_voxels << " occupied Voxels" << endl);
 
   // The x-axis is the most significant axis, then the z-axis, then the y-axis.
   index = 0;
@@ -158,7 +158,7 @@ bool BinvoxFileReader::readPointCloud(const std::string filename, std::vector<Ve
   }
   delete voxels;
 
-  LOGGING_INFO(
+  LOGGING_DEBUG(
       Gpu_voxels_helpers,
       "Binvox Handler: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f))/1024.0/1024.0 << " MB on CPU) from "<< filename.c_str() << "." << endl);
 

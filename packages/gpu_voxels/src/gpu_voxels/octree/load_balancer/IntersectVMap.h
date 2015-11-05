@@ -43,7 +43,7 @@ typedef RunConfig<128> IntersectVMapRunConfig; // Number of threads due to exper
  * @tparam level_count Number of levels of the corresponding \code NTree \endcode
  * @tparam InnerNode Inner node type of the corresponding \code NTree \endcode
  * @tparam LeafNode Leaf node type of the corresponding \code NTree \endcode
- * @tparam vft_size Size parameter to use for \code VoxelTypeFlags \endcode template. Defines the size in Byte of the voxel-type bit-vector.
+ * @tparam vft_size Size parameter to use for \code BitVector \endcode template. Defines the size in Byte of the voxel-type bit-vector.
  * @tparam set_collision_flag \code true \endcode to set the collision flag if necessary
  * @tparam compute_voxelTypeFlags \code true \endcode to compute the voxel type flags. Each bit of this vector indicates whether a voxel of the corresponsing type caused a collision.
  * @tparam VoxelType The type of a voxel of the corresponsing \code VoxelMap \endcode
@@ -97,7 +97,7 @@ protected:
   /**
    * @brief Holds the vector of voxel types in collision.
    */
-  VoxelTypeFlags<vft_size>* m_dev_result_voxelTypeFlags;
+  BitVector<vft_size>* m_dev_result_voxelTypeFlags;
 
   const gpu_voxels::Vector3ui m_offset;
   const VoxelType* m_voxel_map;
@@ -114,7 +114,7 @@ public:
   /**
    * @brief Holds the vector of voxel types in collision.
    */
-  VoxelTypeFlags<vft_size> m_result_voxelTypeFlags;
+  BitVector<vft_size> m_result_voxelTypeFlags;
 };
 
 }

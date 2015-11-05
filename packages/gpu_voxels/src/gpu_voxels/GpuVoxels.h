@@ -38,29 +38,31 @@
 #include <cstdio>
 #include <iostream>
 #include <map>
+#include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/allocators/allocator.hpp>
+#include <boost/interprocess/containers/vector.hpp>
 #include <stdint.h> // for fixed size datatypes
 
 #include <gpu_voxels/GpuVoxelsMap.h>
 #include <gpu_voxels/ManagedMap.h>
 #include <gpu_voxels/ManagedPrimitiveArray.h>
 #include <gpu_voxels/vis_interface/VisVoxelMap.h>
+#include <gpu_voxels/vis_interface/VisTemplateVoxelList.h>
 #include <gpu_voxels/vis_interface/VisPrimitiveArray.h>
 #include <gpu_voxels/octree/VisNTree.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
-#include <gpu_voxels/voxelmap/VoxelMap.h>
 #include <gpu_voxels/octree/Octree.h>
 #include <gpu_voxels/primitive_array/PrimitiveArray.h>
+#include <gpu_voxels/voxellist/VoxelList.h>
+#include <gpu_voxels/voxelmap/VoxelMap.h>
+
 
 #include <gpu_voxels/robot/robot_interface.h>
 #include <gpu_voxels/robot/urdf_robot/urdf_robot.h>
 #include <gpu_voxels/robot/dh_robot/KinematicLink.h>
 #include <gpu_voxels/robot/dh_robot/KinematicChain.h>
-
-#include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/containers/vector.hpp>
-#include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 
@@ -76,8 +78,6 @@ typedef ManagedMaps::iterator ManagedMapsIterator;
 
 typedef std::map<std::string, ManagedPrimitiveArray > ManagedPrimitiveArrays;
 typedef ManagedPrimitiveArrays::iterator ManagedPrimitiveArraysIterator;
-
-typedef boost::shared_ptr<robot::KinematicLink> KinematicLinkSharedPtr;
 
 typedef boost::shared_ptr<robot::RobotInterface> RobotInterfaceSharedPtr;
 typedef std::map<std::string, RobotInterfaceSharedPtr > ManagedRobots;
@@ -127,9 +127,9 @@ public:
   /*!
    * \brief clearMap Deletes a special voxel type from the map
    * \param map_name Which map to clear
-   * \param voxel_type Which type of voxels to clear
+   * \param voxel_meaning Which type of voxels to clear
    */
-  bool clearMap(const std::string &map_name, VoxelType voxel_type);
+  bool clearMap(const std::string &map_name, BitVoxelMeaning voxel_meaning);
 
   /*!
    * \brief getMap Gets a const pointer to the map.
@@ -199,12 +199,19 @@ public:
   bool addRobot(const std::string &robot_name, const std::string &path_to_urdf_file, const bool use_model_path);
 
   /*!
+   * \brief getRobot Returns the shared pointer to the robot
+   * \param rob_name Name of the robot to get.
+   * \return Empty pointer, if not found.
+   */
+  RobotInterfaceSharedPtr getRobot(const std::string &rob_name);
+
+  /*!
    * \brief setRobotConfiguration Changes the robot joint configuration and triggers the transformation
    * of all joint's pointclouds. Call \code insertRobotIntoMap() afterwards!
    * \param jointmap Map of jointnames and values. Not required to contain all joints of the robot.
    * \return true, if update was successful
    */
-  bool setRobotConfiguration(std::string robot_name, const std::map<std::string, float> &jointmap);
+  bool setRobotConfiguration(std::string robot_name, const robot::JointValueMap &jointmap);
 
   /*!
    * \brief updateRobotPart Changes the geometry of a single robot link. This is useful when changing a tool,
@@ -224,7 +231,21 @@ public:
    * @param jointmap Map with joint values. Missing joints will be added to map.
    * @return True if robot with given identifier exists, false otherwise.
    */
-  bool getRobotConfiguration(const std::string& robot_name, std::map<std::string, float> &jointmap);
+  bool getRobotConfiguration(const std::string& robot_name, robot::JointValueMap &jointmap);
+
+  /*!
+   * \brief insertPointcloudFromFile inserts a pointcloud from a file into the map
+   * The coordinates are interpreted as global coordinates
+   * \param map_name Name of the map to insert the pointcloud
+   * \param path filename (Must end in .xyz for XYZ files, .pcd for PCD files or .binvox for Binvox files)
+   * \param use_model_path Prepends environment variable GPU_VOXELS_MODEL_PATH to path if true
+   * \param shift_to_zero if true, the map will be shifted, so that its minimum lies at zero.
+   * \param offset_XYZ if given, the map will be transformed by this XYZ offset. If shifting is active, this happens after the shifting.
+   * \return true if succeeded, false otherwise
+   */
+  bool insertPointcloudFromFile(const std::string map_name, const std::string path, const bool use_model_path,
+                                const BitVoxelMeaning voxel_meaning, const bool shift_to_zero = false,
+                                const Vector3f &offset_XYZ = Vector3f(), const float scaling = 1.0);
 
   /*!
    * \brief insertRobotIntoMap Writes a robot with its current pose into a map
@@ -232,17 +253,17 @@ public:
    * \param map_name Name of the map to insert the robot
    * \return true, if robot was added, false otherwise
    */
-  bool insertRobotIntoMap(std::string robot_name, std::string map_name, const VoxelType voxel_type);
+  bool insertRobotIntoMap(std::string robot_name, std::string map_name, const BitVoxelMeaning voxel_meaning);
 
   /*!
   * \brief insertBoxIntoMap Helper function to generate obstacles. This inserts a box object.
   * \param corner_min Coordinates of the lower, left corner in the front.
   * \param corner_max Coordinates of the upper, right corner in the back.
   * \param map_name Name of the map to insert the box
-  * \param voxel_type The kind of voxel to insert
+  * \param voxel_meaning The kind of voxel to insert
   * \param points_per_voxel Point density. This is only relevant to test probabilistic maps.
   */
-  bool insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &corner_max, std::string map_name, const VoxelType voxel_type, uint16_t points_per_voxel = 1);
+  bool insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &corner_max, std::string map_name, const BitVoxelMeaning voxel_meaning, uint16_t points_per_voxel = 1);
 
   /*!
    * \brief addPrimitives
@@ -262,7 +283,7 @@ public:
   /*!
    * \brief modifyPrimitives Sets to points and sizes of the primitives in the array.
    * \param array_name Name of array to modify
-   * \param prim_positions Vector of new positions / sizes
+   * \param prim_positions Vector of new positions / sizes. Given in Voxels, not metric!
    * \return true if successful, false otherwise
    */
   bool modifyPrimitives(const std::string &array_name, std::vector<Vector4f>& prim_positions);

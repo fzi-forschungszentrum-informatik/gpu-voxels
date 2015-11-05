@@ -1,0 +1,65 @@
+Trajectory_Num: 4
+Joint_Num: 14
+Name: H4_Traj1
+hollie_plain_base_theta_joint   -3.14  -3.14
+hollie_plain_base_x_joint       4.0     4.0
+hollie_plain_base_y_joint       2.5     2.5
+hollie_plain_lower_torso        0       0
+hollie_plain_upper_torso        0       0
+hollie_plain_neck_yaw           0       0
+hollie_plain_left_arm_1_joint   0       -1.7
+hollie_plain_left_arm_2_joint   0       -0.5
+hollie_plain_left_arm_3_joint   0       0
+hollie_plain_left_arm_4_joint   0       0
+hollie_plain_right_arm_1_joint  0       1.7
+hollie_plain_right_arm_2_joint  0       0.5
+hollie_plain_right_arm_3_joint  0       0
+hollie_plain_right_arm_4_joint  0       0
+Joint_Num: 14
+Name: H4_Traj2
+hollie_plain_base_theta_joint   -3.14  -3.14
+hollie_plain_base_x_joint       4.0     4.0
+hollie_plain_base_y_joint       2.5     2.5
+hollie_plain_lower_torso        0       0.3
+hollie_plain_upper_torso        0       0
+hollie_plain_neck_yaw           0       0.3
+hollie_plain_left_arm_1_joint   0       0
+hollie_plain_left_arm_2_joint   0       -1.5
+hollie_plain_left_arm_3_joint   0       0
+hollie_plain_left_arm_4_joint   0       0
+hollie_plain_right_arm_1_joint  0       0
+hollie_plain_right_arm_2_joint  0       0
+hollie_plain_right_arm_3_joint  0       0
+hollie_plain_right_arm_4_joint  0       0
+Joint_Num: 14
+Name: H4_Traj3
+hollie_plain_base_theta_joint   -3.14  -3.14
+hollie_plain_base_x_joint       4.0     4.0
+hollie_plain_base_y_joint       2.5     2.5
+hollie_plain_lower_torso        0       0.3
+hollie_plain_upper_torso        0       0
+hollie_plain_neck_yaw           0       0.3
+hollie_plain_left_arm_1_joint   0       0
+hollie_plain_left_arm_2_joint   0       0
+hollie_plain_left_arm_3_joint   0       0
+hollie_plain_left_arm_4_joint   0       0
+hollie_plain_right_arm_1_joint  0       0
+hollie_plain_right_arm_2_joint  0       1.5
+hollie_plain_right_arm_3_joint  0       0
+hollie_plain_right_arm_4_joint  0       0
+Joint_Num: 14
+Name: H4_Traj4
+hollie_plain_base_theta_joint   -3.14  -3.14
+hollie_plain_base_x_joint       4.0     4.0
+hollie_plain_base_y_joint       2.5     2.5
+hollie_plain_lower_torso        0       0.3
+hollie_plain_upper_torso        0       0
+hollie_plain_neck_yaw           0       0
+hollie_plain_left_arm_1_joint   0       0
+hollie_plain_left_arm_2_joint   0       0
+hollie_plain_left_arm_3_joint   0       0
+hollie_plain_left_arm_4_joint   0       0
+hollie_plain_right_arm_1_joint  0       0
+hollie_plain_right_arm_2_joint  0       0
+hollie_plain_right_arm_3_joint  0       0
+hollie_plain_right_arm_4_joint  0       0

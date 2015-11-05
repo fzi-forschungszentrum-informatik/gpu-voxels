@@ -31,8 +31,14 @@ namespace visualization {
 
 SharedMemoryManagerVisualizer::SharedMemoryManagerVisualizer()
 {
-  shmm = new SharedMemoryManager(shm_segment_name_visualizer, false);
+  shmm = new SharedMemoryManager(shm_segment_name_visualizer, true);
 }
+
+SharedMemoryManagerVisualizer::~SharedMemoryManagerVisualizer()
+{
+  delete shmm;
+}
+
 bool SharedMemoryManagerVisualizer::getCameraTargetPoint(glm::vec3& target)
 {
   std::pair<Vector3f*, std::size_t> res_s = shmm->getMemSegment().find<Vector3f>(shm_variable_name_target_point.c_str());

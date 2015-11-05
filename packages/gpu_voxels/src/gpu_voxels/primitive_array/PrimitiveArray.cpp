@@ -46,23 +46,29 @@ PrimitiveArray::~PrimitiveArray()
 
 void PrimitiveArray::setPoints(const std::vector<Vector4f> &points)
 {
-  if(m_dev_ptr_to_primitive_positions)
+  // if only the poses have changed, but the number of primitives stays constant,
+  // we only have to copy over the new data. Else we need to malloc new mem!
+  if(points.size() != m_num_entities)
   {
-    //delete old array
-    cudaFree(m_dev_ptr_to_primitive_positions);
-    m_dev_ptr_to_primitive_positions = NULL;
+    if(m_dev_ptr_to_primitive_positions)
+    {
+      //delete old array
+      cudaFree(m_dev_ptr_to_primitive_positions);
+      m_dev_ptr_to_primitive_positions = NULL;
+    }
+    // allocate the accumulated memory for the positions of the primitives
+    m_num_entities = points.size();
+    HANDLE_CUDA_ERROR(
+        cudaMalloc((void** )&m_dev_ptr_to_primitive_positions, m_num_entities * sizeof(Vector4f)));
   }
-  m_num_entities = points.size();
-  // allocate the accumulated memory for the positions of the primitives
-  HANDLE_CUDA_ERROR(
-      cudaMalloc((void** )&m_dev_ptr_to_primitive_positions, m_num_entities * sizeof(Vector4f)));
+
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_dev_ptr_to_primitive_positions, points.data(), m_num_entities * sizeof(Vector4f),
                  cudaMemcpyHostToDevice));
 }
 
 
-uint32_t PrimitiveArray::getMemorySizeInByte()
+std::size_t PrimitiveArray::getMemoryUsage()
 {
   return m_num_entities * sizeof(Vector4f);
 }

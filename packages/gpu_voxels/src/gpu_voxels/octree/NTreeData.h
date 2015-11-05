@@ -24,11 +24,23 @@
 #define GPU_VOXELS_OCTREE_NTREEDATA_H_INCLUDED
 
 #include <iostream>
+
 #include <gpu_voxels/octree/Nodes.h>
 //#include <gpu_voxels/octree/Voxel.h>
 #include <gpu_voxels/octree/EnvironmentNodes.h>
 #include <gpu_voxels/octree/RobotNodes.h>
-#include <gpu_voxels/octree/cub/util_type.cuh>
+
+//including cub.h will place all of cub in "thrust::system::cuda::detail::cub_"
+//we con't want to include all of cub here, because gcc will get confused by device code
+#define CUB_NS_PREFIX namespace thrust { namespace system { namespace cuda { namespace detail {
+#define CUB_NS_POSTFIX                  }                  }                }                  }
+#define cub cub_
+#include <thrust/system/cuda/detail/cub/util_type.cuh>
+#undef cub
+#undef CUB_NS_PREFIX
+#undef CUB_NS_POSTFIX
+namespace cub = thrust::system::cuda::detail::cub_;
+
 
 namespace gpu_voxels {
 namespace NTree {
@@ -121,14 +133,14 @@ template<typename InnerNode>
 struct WorkItemExtract
 {
   InnerNode* node;
-  VoxelID nodeId;
+  OctreeVoxelID nodeId;
   uint8_t level;
 
   __host__ __device__ WorkItemExtract()
   {
   }
 
-  __host__ __device__ WorkItemExtract(InnerNode* node, VoxelID nodeId, uint8_t level)
+  __host__ __device__ WorkItemExtract(InnerNode* node, OctreeVoxelID nodeId, uint8_t level)
   {
     this->node = node;
     this->nodeId = nodeId;
@@ -206,14 +218,14 @@ struct Work_Cache
 };
 
 //__host__ __device__ __forceinline__
-//VoxelID computeVoxelID(const uint32_t index, const uint32_t size_x, const uint32_t size_y)
+//OctreeVoxelID computeVoxelID(const uint32_t index, const uint32_t size_x, const uint32_t size_y)
 //{
 //  gpu_voxels::Vector3ui coordinates = computeCoordinates(index, size_x, size_y);
 //  return morton_code60(coordinates);
 //}
 //
 //__host__ __device__ __forceinline__
-//VoxelID computeVoxelID_morton(const uint32_t index, const uint32_t size_x, const uint32_t size_y,
+//OctreeVoxelID computeVoxelID_morton(const uint32_t index, const uint32_t size_x, const uint32_t size_y,
 //                              const uint32_t log_branching_factor, const uint32_t branching_factor,
 //                              const gpu_voxels::Vector3ui coordinates_offset)
 //{
@@ -456,7 +468,7 @@ struct MapProperties
 //    return (rel_coordinates << (log_branching_factor3 * level));
 //  }
 
-  __host__  __device__  __forceinline__ VoxelID computeVoxelID_morton(const uint32_t index)
+  __host__  __device__  __forceinline__ OctreeVoxelID computeVoxelID_morton(const uint32_t index)
   {
     const uint32_t m = index & (branching_factor - 1);
     const gpu_voxels::Vector3ui offset(min_x, min_y, min_z);

@@ -74,7 +74,7 @@ public:
   void insertPoints(const std::vector<Vector3f> &points);
 
   //! get the number of bytes that is required for the array
-  uint32_t getMemorySizeInByte();
+  virtual std::size_t getMemoryUsage();
 
 private:
   PrimitiveType m_primitive_type;

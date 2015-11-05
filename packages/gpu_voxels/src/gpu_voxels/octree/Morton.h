@@ -180,16 +180,16 @@ __host__  __device__
 
 template<std::size_t branching_factor>
 __host__  __device__
- __forceinline__ VoxelID getVoxelSideLength(uint32_t level)
+ __forceinline__ OctreeVoxelID getVoxelSideLength(uint32_t level)
 {
   return powf(powf(branching_factor, 1.0f / 3.0f), level);
 }
 
 template<typename T>
-struct transform_to_morton: public thrust::unary_function<T, VoxelID>
+struct transform_to_morton: public thrust::unary_function<T, OctreeVoxelID>
 {
   __host__  __device__
-   __forceinline__ VoxelID operator()(T value)
+   __forceinline__ OctreeVoxelID operator()(T value)
   {
     MORTON_TRAFO(value.)
   }
@@ -197,14 +197,14 @@ struct transform_to_morton: public thrust::unary_function<T, VoxelID>
 
 template<std::size_t branching_factor>
 __host__  __device__
- __forceinline__ VoxelID getZOrderPrefix(VoxelID value, uint32_t level)
+ __forceinline__ OctreeVoxelID getZOrderPrefix(OctreeVoxelID value, uint32_t level)
 {
   return value >> ((level + 1) * (uint32_t) log2(float(branching_factor)));
 }
 
 template<std::size_t branching_factor>
 __host__  __device__
- __forceinline__ VoxelID getZOrderNodeId(const VoxelID value, const uint32_t level)
+ __forceinline__ OctreeVoxelID getZOrderNodeId(const OctreeVoxelID value, const uint32_t level)
 {
   return (value >> (level * (uint32_t) log2(float(branching_factor)))) & (branching_factor - 1);
 }
@@ -214,9 +214,9 @@ __host__  __device__
  */
 template<std::size_t branching_factor>
 __device__
- __forceinline__ uint8_t getCommonLevel(VoxelID idA, VoxelID idB)
+ __forceinline__ uint8_t getCommonLevel(OctreeVoxelID idA, OctreeVoxelID idB)
 {
-  assert(sizeof(VoxelID) == 8); // otherwise use __clz() instead of __clzll()
+  assert(sizeof(OctreeVoxelID) == 8); // otherwise use __clz() instead of __clzll()
 
 #ifdef __CUDACC__
 #define op __clzll
@@ -226,33 +226,33 @@ __device__
   const int numLeadingZeros = op(idA xor idB);
 #undef op
 
-  return (uint8_t) ceil((sizeof(VoxelID) * 8 - numLeadingZeros) / log2(float(branching_factor)));
+  return (uint8_t) ceil((sizeof(OctreeVoxelID) * 8 - numLeadingZeros) / log2(float(branching_factor)));
 }
 
 template<std::size_t branching_factor>
 __host__  __device__
- __forceinline__ VoxelID getNextSubTree(VoxelID value, uint32_t level)
+ __forceinline__ OctreeVoxelID getNextSubTree(OctreeVoxelID value, uint32_t level)
 {
-  return value >> ((level + 1) * (VoxelID) log2(float(branching_factor)));
+  return value >> ((level + 1) * (OctreeVoxelID) log2(float(branching_factor)));
 }
 
 template<std::size_t branching_factor>
 __host__  __device__
- __forceinline__ uint64_t getTree(VoxelID id, uint32_t splitLevel)
+ __forceinline__ uint64_t getTree(OctreeVoxelID id, uint32_t splitLevel)
 {
-  return id << (splitLevel * (VoxelID) log2(float(branching_factor)));
+  return id << (splitLevel * (OctreeVoxelID) log2(float(branching_factor)));
 }
 
 template<std::size_t branching_factor>
 __host__  __device__
- __forceinline__ VoxelID getZOrderNextLevel(VoxelID prefix, uint32_t child)
+ __forceinline__ OctreeVoxelID getZOrderNextLevel(OctreeVoxelID prefix, uint32_t child)
 {
   return (prefix << (uint32_t) log2(float(branching_factor))) + child;
 }
 
 template<std::size_t branching_factor>
 __host__  __device__
- __forceinline__ VoxelID getZOrderLastLevel(VoxelID prefix, uint32_t level)
+ __forceinline__ OctreeVoxelID getZOrderLastLevel(OctreeVoxelID prefix, uint32_t level)
 {
   return prefix << (level * uint32_t(log2(float(branching_factor))));
 }
@@ -262,7 +262,7 @@ __host__  __device__
  */
 struct MortonCube{
 public:
-  VoxelID m_voxel_id; // morton code of the voxel, only the prefix according to the level matters
+  OctreeVoxelID m_voxel_id; // morton code of the voxel, only the prefix according to the level matters
   uint8_t m_level; // level of the voxel in the tree and therefore the length of the morton prefix
 
   __host__  __device__
@@ -271,7 +271,7 @@ public:
   }
 
   __host__  __device__
-  MortonCube(const VoxelID voxel_id, const uint8_t level) : m_voxel_id(voxel_id), m_level(level)
+  MortonCube(const OctreeVoxelID voxel_id, const uint8_t level) : m_voxel_id(voxel_id), m_level(level)
   {
   }
 };

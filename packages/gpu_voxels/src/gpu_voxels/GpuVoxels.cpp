@@ -25,8 +25,6 @@
 
 namespace gpu_voxels {
 
-using namespace boost::interprocess;
-
 GpuVoxels::GpuVoxels(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z,
                      const float voxel_side_length) :
     m_dim_x(dim_x), m_dim_y(dim_y), m_dim_z(dim_z), m_voxel_side_length(voxel_side_length)
@@ -35,8 +33,10 @@ GpuVoxels::GpuVoxels(const uint32_t dim_x, const uint32_t dim_y, const uint32_t 
 
 GpuVoxels::~GpuVoxels()
 {
-  // as the map objects are shared pointers, they get deleted by this.
+  // as the objects are shared pointers, they get deleted by this.
   m_managed_maps.clear();
+  m_managed_robots.clear();
+  m_managed_primitive_arrays.clear();
 }
 
 bool GpuVoxels::addPrimitives(const primitive_array::PrimitiveType prim_type, const std::string &array_name)
@@ -104,7 +104,7 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
   {
     case MT_PROBAB_VOXELMAP:
     {
-      voxelmap::VoxelMap* orig_map = new voxelmap::VoxelMap(m_dim_x, m_dim_y, m_dim_z, m_voxel_side_length, MT_PROBAB_VOXELMAP);
+      voxelmap::ProbVoxelMap* orig_map = new voxelmap::ProbVoxelMap(m_dim_x, m_dim_y, m_dim_z, m_voxel_side_length, MT_PROBAB_VOXELMAP);
       VisVoxelMap* vis_map = new VisVoxelMap(orig_map, map_name);
       map_shared_ptr = GpuVoxelsMapSharedPtr(orig_map);
       vis_map_shared_ptr = VisProviderSharedPtr(vis_map);
@@ -113,8 +113,13 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
 
     case MT_BITVECTOR_VOXELLIST:
     {
+      voxellist::BitVectorVoxelList* orig_list = new voxellist::BitVectorVoxelList(Vector3ui(m_dim_x, m_dim_y, m_dim_z), m_voxel_side_length, MT_BITVECTOR_VOXELLIST);
+      VisTemplateVoxelList<BitVectorVoxel, uint32_t>* vis_list = new VisTemplateVoxelList<BitVectorVoxel, uint32_t>(orig_list, map_name);
+      map_shared_ptr = GpuVoxelsMapSharedPtr(orig_list);
+      vis_map_shared_ptr = VisProviderSharedPtr(vis_list);
       break;
     }
+
     case MT_BITVECTOR_OCTREE:
     {
       NTree::GvlNTreeDet* ntree = new NTree::GvlNTreeDet(m_voxel_side_length, MT_BITVECTOR_OCTREE);
@@ -124,8 +129,12 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
       vis_map_shared_ptr = VisProviderSharedPtr(vis_map);
       break;
     }
+
     case MT_BITVECTOR_MORTON_VOXELLIST:
-      break;
+    {
+      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
+      return false;
+    }
 
     case MT_BITVECTOR_VOXELMAP:
     {
@@ -138,8 +147,13 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
       vis_map_shared_ptr = VisProviderSharedPtr(vis_map);
       break;
     }
+
     case MT_PROBAB_VOXELLIST:
-      break;
+    {
+      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
+      return false;
+    }
+
     case MT_PROBAB_OCTREE:
     {
       NTree::GvlNTreeProb* ntree = new NTree::GvlNTreeProb(m_voxel_side_length, MT_PROBAB_OCTREE);
@@ -149,10 +163,18 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
       vis_map_shared_ptr = VisProviderSharedPtr(vis_map);
       break;
     }
+
     case MT_PROBAB_MORTON_VOXELLIST:
-      break;
-    default:
+    {
+      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
       return false;
+    }
+
+    default:
+    {
+      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "THIS TYPE OF MAP IS UNKNOWN!" << endl);
+      return false;
+    }
   }
 
   if (map_shared_ptr)
@@ -211,6 +233,17 @@ bool GpuVoxels::addRobot(const std::string &robot_name,
   return true;
 }
 
+RobotInterfaceSharedPtr GpuVoxels::getRobot(const std::string &rob_name)
+{
+  ManagedRobotsIterator it = m_managed_robots.find(rob_name);
+  if (it == m_managed_robots.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Robot with name '" << rob_name << "' not found." << endl);
+    return RobotInterfaceSharedPtr();
+  }
+  return m_managed_robots.find(rob_name)->second;
+}
+
 bool GpuVoxels::addRobot(const std::string &robot_name, const std::vector<std::string> &link_names,
               const std::vector<robot::DHParameters> &dh_params,
               const MetaPointCloud &pointclouds)
@@ -263,7 +296,7 @@ bool GpuVoxels::updateRobotPart(std::string robot_name, const std::string &link_
 }
 
 bool GpuVoxels::setRobotConfiguration(std::string robot_name,
-                                const std::map<std::string, float> &jointmap)
+                                const robot::JointValueMap &jointmap)
 {
   ManagedRobotsIterator it = m_managed_robots.find(robot_name);
   if (it == m_managed_robots.end())
@@ -275,7 +308,7 @@ bool GpuVoxels::setRobotConfiguration(std::string robot_name,
   return true;
 }
 
-bool GpuVoxels::getRobotConfiguration(const std::string& robot_name, std::map<std::string, float> &jointmap)
+bool GpuVoxels::getRobotConfiguration(const std::string& robot_name, robot::JointValueMap &jointmap)
 {
   ManagedRobotsIterator rob_it = m_managed_robots.find(robot_name);
   if (rob_it == m_managed_robots.end())
@@ -287,7 +320,23 @@ bool GpuVoxels::getRobotConfiguration(const std::string& robot_name, std::map<st
   return true;
 }
 
-bool GpuVoxels::insertRobotIntoMap(std::string robot_name, std::string map_name, const VoxelType voxel_type)
+bool GpuVoxels::insertPointcloudFromFile(const std::string map_name, const std::string path,
+                                         const bool use_model_path, const BitVoxelMeaning voxel_meaning,
+                                         const bool shift_to_zero, const Vector3f &offset_XYZ, const float scaling)
+{
+  ManagedMapsIterator map_it = m_managed_maps.find(map_name);
+  if (map_it == m_managed_maps.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find map '" << map_name << "'" << endl);
+    return false;
+  }
+
+  return map_it->second.map_shared_ptr->insertPointcloudFromFile(path, use_model_path, voxel_meaning,
+                                                                 shift_to_zero, offset_XYZ, scaling);
+
+}
+
+bool GpuVoxels::insertRobotIntoMap(std::string robot_name, std::string map_name, const BitVoxelMeaning voxel_meaning)
 {
   ManagedRobotsIterator rob_it = m_managed_robots.find(robot_name);
   if (rob_it == m_managed_robots.end())
@@ -302,12 +351,12 @@ bool GpuVoxels::insertRobotIntoMap(std::string robot_name, std::string map_name,
     return false;
   }
 
-  map_it->second.map_shared_ptr->insertMetaPointCloud(*rob_it->second->getTransformedClouds(), voxel_type);
+  map_it->second.map_shared_ptr->insertMetaPointCloud(*rob_it->second->getTransformedClouds(), voxel_meaning);
 
   return true;
 }
 
-bool GpuVoxels::insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &corner_max, std::string map_name, const VoxelType voxel_type, uint16_t points_per_voxel)
+bool GpuVoxels::insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &corner_max, std::string map_name, const BitVoxelMeaning voxel_meaning, uint16_t points_per_voxel)
 {
   ManagedMapsIterator map_it = m_managed_maps.find(map_name);
   if (map_it == m_managed_maps.end())
@@ -335,7 +384,7 @@ bool GpuVoxels::insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &cor
   MetaPointCloud boxes(box_clouds);
   boxes.syncToDevice();
 
-  map_it->second.map_shared_ptr->insertMetaPointCloud(boxes, voxel_type);
+  map_it->second.map_shared_ptr->insertMetaPointCloud(boxes, voxel_meaning);
 
   return true;
 }
@@ -352,7 +401,7 @@ bool GpuVoxels::clearMap(const std::string &map_name)
   return true;
 }
 
-bool GpuVoxels::clearMap(const std::string &map_name, VoxelType voxel_type)
+bool GpuVoxels::clearMap(const std::string &map_name, BitVoxelMeaning voxel_meaning)
 {
   ManagedMapsIterator it = m_managed_maps.find(map_name);
   if (it == m_managed_maps.end())
@@ -360,7 +409,7 @@ bool GpuVoxels::clearMap(const std::string &map_name, VoxelType voxel_type)
     LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Map with name '" << map_name << "' not found." << endl);
     return false;
   }
-  it->second.map_shared_ptr->clearVoxelType(voxel_type);
+  it->second.map_shared_ptr->clearBitVoxelMeaning(voxel_meaning);
   return true;
 }
 

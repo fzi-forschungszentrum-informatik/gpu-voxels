@@ -87,36 +87,36 @@ __host__   __device__   inline NodeStatus getNewStatus(const NodeStatus child_st
   return new_status;
 }
 
-__host__   __device__   __forceinline__ enum gpu_voxels::VoxelType statusToVoxelType(NodeStatus status)
+__host__   __device__   __forceinline__ enum gpu_voxels::BitVoxelMeaning statusToBitVoxelMeaning(NodeStatus status)
 {
   status = (status & (ns_FREE | ns_UNKNOWN | ns_OCCUPIED));
-  enum gpu_voxels::VoxelType res;
+  enum gpu_voxels::BitVoxelMeaning res;
 
   switch (status)
   {
     case ns_FREE:
     case ns_FREE | ns_UNKNOWN:
-      // TODO: specify VoxelType for free space
-      res = gpu_voxels::eVT_FREE;
+      // TODO: specify BitVoxelMeaning for free space
+      res = gpu_voxels::eBVM_FREE;
       break;
     case ns_UNKNOWN:
-      res = gpu_voxels::eVT_UNKNOWN;
+      res = gpu_voxels::eBVM_UNKNOWN;
       break;
     case ns_OCCUPIED:
     case ns_OCCUPIED | ns_FREE:
     case ns_OCCUPIED | ns_FREE | ns_UNKNOWN:
     case ns_OCCUPIED | ns_UNKNOWN:
       // TODO: decide between static and dynamic voxel
-      res = gpu_voxels::eVT_OCCUPIED;
+      res = gpu_voxels::eBVM_OCCUPIED;
       break;
   }
   return res;
 }
 
-__host__   __device__   __forceinline__ enum gpu_voxels::VoxelType statusToVoxelType(uint8_t* mapping_lookup,
+__host__   __device__   __forceinline__ enum gpu_voxels::BitVoxelMeaning statusToBitVoxelMeaning(uint8_t* mapping_lookup,
                                                                                  NodeStatus status)
 {
-  return gpu_voxels::VoxelType(mapping_lookup[status & (ns_FREE | ns_UNKNOWN | ns_OCCUPIED | ns_COLLISION)]);
+  return gpu_voxels::BitVoxelMeaning(mapping_lookup[status & (ns_FREE | ns_UNKNOWN | ns_OCCUPIED | ns_COLLISION)]);
 }
 
 /*

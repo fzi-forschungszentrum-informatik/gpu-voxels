@@ -38,7 +38,7 @@ namespace visualization {
 
 void ExitOnGLError(std::string);
 
-std::string typeToString(VoxelType type);
+std::string typeToString(BitVoxelMeaning type);
 std::string typeToString(MapType type);
 
 // data format converter functions

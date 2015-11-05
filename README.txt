@@ -6,12 +6,16 @@ If you have questions or experience any problems with the software, please subsc
 mailinglist at https://listserv.fzi.de/mailman/listinfo/gpu-voxels
 and post to gpu-voxels@listserv.fzi.de
 
-The team behind this code consists of
+The library is developed and maintained by:
 Andreas Hermann
+
+Contributors are:
 Sebastian Klemm
 Florian Drews
 Matthias Wagner
 Felix Mauch
+Christian Jülg
+
 
 We would be grateful if scientific publications resulting from projects that make use of GPU-Voxels would cite our overview paper:
 A. Hermann, F. Drews, J. Bauer, S. Klemm, A. Roennau and R. Dillmann:

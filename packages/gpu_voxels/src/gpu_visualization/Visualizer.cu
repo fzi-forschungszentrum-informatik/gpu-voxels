@@ -15,12 +15,14 @@
 //----------------------------------------------------------------------
 #include "Visualizer.h"
 
+#include <boost/interprocess/managed_shared_memory.hpp>
 #include <gpu_visualization/shaders/ColormapFragmentShader.h>
 #include <gpu_visualization/shaders/ColormapVertexShader.h>
 #include <gpu_visualization/shaders/LightingFragmentShader.h>
 #include <gpu_visualization/shaders/LightingVertexShader.h>
 #include <gpu_visualization/shaders/SimpleFragmentShader.h>
 #include <gpu_visualization/shaders/SimpleVertexShader.h>
+
 
 namespace gpu_voxels {
 namespace visualization {
@@ -35,12 +37,14 @@ Visualizer::Visualizer()
   m_default_prim = NULL;
   m_shm_manager_octrees = NULL;
   m_shm_manager_voxelmaps = NULL;
+  m_shm_manager_voxellists = NULL;
   m_shm_manager_primitive_arrays = NULL;
   m_shm_manager_visualizer = NULL;
   m_window_title = "visualizer";
-  m_use_external_draw_type_triggers = true;
-  m_draw_swept_volumes = false;
+  m_use_external_draw_type_triggers = false;
+  m_draw_swept_volumes = true;
   m_move_focus_enabled = false;
+  m_move_focus_vertical_enabled = false;
 }
 
 Visualizer::~Visualizer()
@@ -211,7 +215,15 @@ bool Visualizer::initializeContextFromXML(int& argc, char *argv[])
 
 bool Visualizer::initalizeVisualizer(int& argc, char *argv[])
 {
-  m_shm_manager_visualizer = new SharedMemoryManagerVisualizer();
+  try
+  {
+    m_shm_manager_visualizer = new SharedMemoryManagerVisualizer();
+  } catch (boost::interprocess::interprocess_exception& e)
+  {
+    m_shm_manager_visualizer = NULL;
+    LOGGING_WARNING_C(Visualization, Visualizer, "Couldn't open the shared memory segment of Visualizer!" << endl);
+  }
+
   return initializeContextFromXML(argc, argv) & initGL(&argc, argv);
 }
 
@@ -282,7 +294,7 @@ bool calcSize(size_t& new_size_byte, size_t current_size)
  * @return:     Returns true if the buffer can now hold all the data
  *              Returns false if the new size would exceed the memory limit.
  */
-bool Visualizer::resizeGLBufferForOctree(OctreeContext* con)
+bool Visualizer::resizeGLBufferForCubelist(CubelistContext* con)
 {
   size_t new_size_byte = con->getSizeForBuffer();
   if (calcSize(new_size_byte, con->m_cur_vbo_size))
@@ -324,6 +336,7 @@ void Visualizer::resizeGLBufferForWithoutPrecounting(VoxelmapContext* context)
 
   resizeGLBuffer(context, new_size_byte);
 }
+
 void Visualizer::resizeGLBuffer(DataContext* con, size_t new_size_byte)
 {
   struct cudaGraphicsResource* cuda_res = con->m_cuda_ressources;
@@ -419,7 +432,7 @@ void Visualizer::registerOctree(uint32_t index, std::string map_name)
     try
     {
       m_shm_manager_octrees = new SharedMemoryManagerOctrees();
-    } catch (std::exception& e)
+    } catch (boost::interprocess::interprocess_exception& e)
     {
       LOGGING_ERROR_C(
           Visualization,
@@ -429,7 +442,7 @@ void Visualizer::registerOctree(uint32_t index, std::string map_name)
     }
   }
 
-  OctreeContext* con = new OctreeContext(map_name);
+  CubelistContext* con = new CubelistContext(map_name);
   if (!m_interpreter->getOctreeContext(con, index))
   {
     LOGGING_WARNING_C(Visualization, Visualizer,
@@ -458,7 +471,7 @@ void Visualizer::registerVoxelMap(voxelmap::AbstractVoxelMap* map, uint32_t inde
     try
     {
       m_shm_manager_voxelmaps = new SharedMemoryManagerVoxelMaps();
-    } catch (std::exception& e)
+    } catch (boost::interprocess::interprocess_exception& e)
     {
       LOGGING_ERROR_C(
           Visualization,
@@ -490,6 +503,36 @@ void Visualizer::registerVoxelMap(voxelmap::AbstractVoxelMap* map, uint32_t inde
   distributeMaxMemory();
 }
 
+void Visualizer::registerVoxelList(uint32_t index, std::string map_name)
+{
+  if (m_shm_manager_voxellists == NULL)
+  {
+    try
+    {
+      m_shm_manager_voxellists = new SharedMemoryManagerVoxelLists();
+    } catch (boost::interprocess::interprocess_exception& e)
+    {
+      LOGGING_ERROR_C(
+          Visualization,
+          Visualizer,
+          "Registering the Voxel List with index " << index << " failed! Couldn't open the shared memory segment!" << endl);
+      exit(EXIT_FAILURE);
+    }
+  }
+  CubelistContext* con = new CubelistContext(map_name);
+  if (!m_interpreter->getVoxellistContext(con, index))
+  {
+    LOGGING_WARNING_C(
+        Visualization, Visualizer,
+        "No context found for voxel list " << map_name << ". Using the default context." << endl);
+  }
+//  con->updateCudaLaunchVariables(m_cur_context->m_dim_svoxel);
+  generateGLBufferForDataContext(con);
+
+  m_cur_context->m_voxel_lists.push_back(con);
+  distributeMaxMemory();
+}
+
 void Visualizer::registerPrimitiveArray(uint32_t index, std::string prim_array_name)
 {
   if (m_shm_manager_primitive_arrays == NULL)
@@ -497,7 +540,7 @@ void Visualizer::registerPrimitiveArray(uint32_t index, std::string prim_array_n
     try
     {
       m_shm_manager_primitive_arrays = new SharedMemoryManagerPrimitiveArrays();
-    } catch (std::exception& e)
+    } catch (boost::interprocess::interprocess_exception& e)
     {
       LOGGING_ERROR_C(
           Visualization,
@@ -536,13 +579,13 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
   // fill_vbo_without_precounting<<< dim3(1,1,1), dim3(1,1,1)>>>(/**/
   if (context->m_voxelMap->getMapType() == MT_BITVECTOR_VOXELMAP)
   {
-    if(voxelmap::BIT_VECTOR_LENGTH > MAX_DRAW_TYPES)
+    if(BIT_VECTOR_LENGTH > MAX_DRAW_TYPES)
       LOGGING_ERROR_C(Visualization, Visualizer,
-          "Only " << MAX_DRAW_TYPES << " different draw types supported. But bit vector has " << voxelmap::BIT_VECTOR_LENGTH << " different types." << endl);
+          "Only " << MAX_DRAW_TYPES << " different draw types supported. But bit vector has " << BIT_VECTOR_LENGTH << " different types." << endl);
 
     fill_vbo_without_precounting<<<context->m_num_blocks, context->m_threads_per_block>>>(
         /**/
-        (voxelmap::BitVectorVoxel*) context->m_voxelMap->getVoidDeviceDataPtr(),/**/
+        (BitVectorVoxel*) context->m_voxelMap->getVoidDeviceDataPtr(),/**/
         context->m_voxelMap->getDimensions(),/**/
         m_cur_context->m_dim_svoxel,/**/
         m_cur_context->m_view_start_voxel_pos,/**/
@@ -560,7 +603,7 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
   {
     fill_vbo_without_precounting<<<context->m_num_blocks, context->m_threads_per_block>>>(
         /**/
-        (voxelmap::ProbabilisticVoxel*) context->m_voxelMap->getVoidDeviceDataPtr(),/**/
+        (ProbabilisticVoxel*) context->m_voxelMap->getVoidDeviceDataPtr(),/**/
         context->m_voxelMap->getDimensions(),/**/
         m_cur_context->m_dim_svoxel,/**/
         m_cur_context->m_view_start_voxel_pos,/**/
@@ -663,17 +706,15 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
   }
 }
 
-void Visualizer::fillGLBufferWithOctree(OctreeContext* context, uint32_t index)
-{
-  if (!updateOctreeContext(context, index))
-  {/*Don't fill the vbo if it couldn't be updated.*/
-    return;
-  }
-
+/**
+ * Fills the VBO from a Cubelist extracted from Voxellist or Octree with the translation_scale vectors.
+ */
+void Visualizer::fillGLBufferWithCubelist(CubelistContext* context, uint32_t index)
+{ 
   thrust::device_vector<uint32_t> indices(context->m_num_voxels_per_type.size(), 0);
   calculateNumberOfCubeTypes(context);
 
-  context->m_vbo_draw_able = resizeGLBufferForOctree(context);
+  context->m_vbo_draw_able = resizeGLBufferForCubelist(context);
   if (context->m_vbo_draw_able)
   {
     float4 *vbo_ptr;
@@ -683,7 +724,7 @@ void Visualizer::fillGLBufferWithOctree(OctreeContext* context, uint32_t index)
         cudaGraphicsResourceGetMappedPointer((void ** )&vbo_ptr, &num_bytes, context->m_cuda_ressources));
 
     // Launch kernel to copy data into the OpenGL buffer.
-    fill_vbo_with_octree<<<context->m_num_blocks, context->m_threads_per_block>>>(
+    fill_vbo_with_cubelist<<<context->m_num_blocks, context->m_threads_per_block>>>(
         /**/
         context->getCubesDevicePointer(),/**/
         context->getNumberOfCubes(),/**/
@@ -724,11 +765,11 @@ void Visualizer::printVBO(DataContext* context)
   HANDLE_CUDA_ERROR(cudaGraphicsUnmapResources(1, &(context->m_cuda_ressources), 0));
 }
 
-void Visualizer::calculateNumberOfCubeTypes(OctreeContext* context)
+void Visualizer::calculateNumberOfCubeTypes(CubelistContext* context)
 {
   thrust::fill(context->m_d_num_voxels_per_type.begin(), context->m_d_num_voxels_per_type.end(), 0);
 // Launch kernel to copy data into the OpenGL buffer. <<<context->getNumberOfCubes(),1>>><<<num_threads_per_block,num_blocks>>>
-  calculate_cubes_per_type<<<context->m_num_blocks, context->m_threads_per_block>>>(
+  calculate_cubes_per_type_list<<<context->m_num_blocks, context->m_threads_per_block>>>(
       context->getCubesDevicePointer(),/**/
       context->getNumberOfCubes(),/**/
       thrust::raw_pointer_cast(context->m_d_num_voxels_per_type.data()),
@@ -793,12 +834,27 @@ void Visualizer::updateStartEndViewVoxelIndices()
 
 }
 
-bool Visualizer::updateOctreeContext(OctreeContext* context, uint32_t index)
+bool Visualizer::updateOctreeContext(CubelistContext* context, uint32_t index)
 {
   Cube* cubes;
   uint32_t size;
 
   bool suc = m_shm_manager_octrees->getOctreeVisualizationData(cubes, size, index);
+  if (suc)
+  {
+    context->setCubesDevicePointer(cubes);
+    context->setNumberOfCubes(size);
+    context->updateCudaLaunchVariables();
+  }
+  return suc;
+}
+
+bool Visualizer::updateVoxelListContext(CubelistContext* context, uint32_t index)
+{
+  Cube* cubes;
+  uint32_t size;
+
+  bool suc = m_shm_manager_voxellists->getVisualizationData(cubes, size, index);
   if (suc)
   {
     context->setCubesDevicePointer(cubes);
@@ -911,7 +967,7 @@ void Visualizer::drawDataContext(DataContext* context)
     {
       // if collision type will be drawn set the deep function so that they will be drawn
       //over other triangles with the same z value.
-      if (context->m_types_segment_mapping[i] == eVT_COLLISION)
+      if (context->m_types_segment_mapping[i] == eBVM_COLLISION)
       {
         if (m_cur_context->m_draw_collison_depth_test_always)
           glDepthFunc(GL_ALWAYS);
@@ -974,7 +1030,7 @@ void Visualizer::drawGrid()
   if (m_cur_context->m_grid_vbo != 0)
   {/*Only draw the grid if the VBO was generated*/
     mat4 MVP = m_cur_context->m_camera->getProjectionMatrix() * m_cur_context->m_camera->getViewMatrix()
-        * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, m_cur_context->m_grid_height, 0.f));
+        * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.f, m_cur_context->m_grid_height));
 
     glUniformMatrix4fv(m_vpID, 1, GL_FALSE, glm::value_ptr(MVP));
     glUniform4fv(m_startColorID, 1, glm::value_ptr(m_cur_context->m_grid_color));
@@ -1153,7 +1209,7 @@ void Visualizer::drawPrimitivesFromSharedMem()
         if (m_cur_context->m_lighting)
         { // set up the correct variables for the shader with lighting
           glUseProgram(m_lighting_programID);
-          mat4 V_inv_trans = transpose(inverse(V));
+          mat4 V_inv_trans = glm::transpose(glm::inverse(V));
           vec3 lightpos_world = m_cur_context->m_camera->getCameraPosition()
               + vec3(1.f) * m_cur_context->m_camera->getCameraRight();
           vec3 light_intensity = vec3(m_cur_context->m_light_intensity);
@@ -1247,7 +1303,7 @@ void Visualizer::renderFunction(void)
   {
     glUseProgram(m_lighting_programID);
     mat4 V = m_cur_context->m_camera->getViewMatrix();
-    mat4 V_inv_trans = transpose(inverse(V));
+    mat4 V_inv_trans = glm::transpose(glm::inverse(V));
     glUniformMatrix4fv(m_light_vpID, 1, GL_FALSE, value_ptr(VP));
     glUniformMatrix4fv(m_light_vID, 1, GL_FALSE, value_ptr(V));
     glUniformMatrix4fv(m_light_v_inv_transID, 1, GL_FALSE, value_ptr(V_inv_trans));
@@ -1277,7 +1333,7 @@ void Visualizer::renderFunction(void)
   {
     DrawTypes d = m_shm_manager_visualizer->getDrawTypes();
     bool changed = false;
-    for(uint32_t i = eVT_SWEPT_VOLUME_START + 1; i < MAX_DRAW_TYPES; ++i)
+    for(uint32_t i = eBVM_SWEPT_VOLUME_START + 1; i < MAX_DRAW_TYPES; ++i)
     {
       if (d.draw_types[i] != m_cur_context->m_draw_types[i])
       {
@@ -1293,6 +1349,9 @@ void Visualizer::renderFunction(void)
 
       for (uint32_t i = 0; i < m_cur_context->m_octrees.size(); i++)
         m_cur_context->m_octrees[i]->m_has_draw_type_flipped = true;
+
+      for (uint32_t i = 0; i < m_cur_context->m_voxel_lists.size(); i++)
+        m_cur_context->m_voxel_lists[i]->m_has_draw_type_flipped = true;
 
       m_cur_context->m_camera->setViewChanged(true);
       copyDrawTypeToDevice();
@@ -1320,6 +1379,26 @@ void Visualizer::renderFunction(void)
   }
   m_cur_context->m_camera->setViewChanged(!set_view_to_false);
 
+
+////////////////////////////////draw all voxellists ///////////////////////////////////////
+
+  for (uint32_t i = 0; i < m_cur_context->m_voxel_lists.size(); i++)
+  {
+    if (m_cur_context->m_voxel_lists[i]->m_draw_context)
+    {
+      if (m_shm_manager_voxellists->hasBufferSwapped(i))
+      {
+        /*Don't fill the vbo if it couldn't be updated.*/
+        if (updateVoxelListContext(m_cur_context->m_voxel_lists[i], i))
+        {
+          fillGLBufferWithCubelist(m_cur_context->m_voxel_lists[i], i);
+        }
+        m_shm_manager_voxellists->setBufferSwappedToFalse(i);
+      }
+      drawDataContext(m_cur_context->m_voxel_lists[i]);
+    }
+  }
+
 ////////////////////////////////draw all octrees ///////////////////////////////////////
 
   for (uint32_t i = 0; i < m_cur_context->m_octrees.size(); i++)
@@ -1328,7 +1407,11 @@ void Visualizer::renderFunction(void)
     {
       if (m_shm_manager_octrees->hasOctreeBufferSwapped(i))
       {
-        fillGLBufferWithOctree(m_cur_context->m_octrees[i], i);
+        /*Don't fill the vbo if it couldn't be updated.*/
+        if (updateOctreeContext(m_cur_context->m_octrees[i], i))
+        {
+          fillGLBufferWithCubelist(m_cur_context->m_octrees[i], i);
+        }
         m_shm_manager_octrees->setOctreeBufferSwappedToFalse(i);
       }
       drawDataContext(m_cur_context->m_octrees[i]);
@@ -1390,9 +1473,21 @@ void Visualizer::mouseClickFunction(int32_t button, int32_t state, int32_t xpos,
       m_move_focus_enabled = true;
     }
   }
+  else if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
+  {
+    int32_t modi = glutGetModifiers();
+    if (modi & GLUT_ACTIVE_CTRL  && modi & GLUT_ACTIVE_ALT)
+    {
+      m_move_focus_vertical_enabled = true;
+    }
+  }
   else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
   {
     m_move_focus_enabled = false;
+  }
+  else if (button == GLUT_MIDDLE_BUTTON && state == GLUT_UP)
+  {
+    m_move_focus_vertical_enabled = false;
   }
 
 }
@@ -1405,6 +1500,11 @@ void Visualizer::mouseMotionFunction(int32_t xpos, int32_t ypos)
   if (m_move_focus_enabled)
   {
     m_cur_context->m_camera->moveFocusPointFromMouseInput(xpos, ypos);
+    createFocusPointVBO();
+  }
+  else if (m_move_focus_vertical_enabled)
+  {
+    m_cur_context->m_camera->moveFocusPointVerticalFromMouseInput(xpos, ypos);
     createFocusPointVBO();
   }
   else
@@ -1452,6 +1552,11 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
   {
     multiplier *= 10.f;
   }
+
+  int8_t modi = glutGetModifiers();
+  bool alt_pressed = modi & GLUT_ACTIVE_ALT;
+  printf("Keycode: %c, Modifier value: %d, shift_pressed=%u\n", key, modi, alt_pressed);
+
 
   // size_t temp = 0;
   switch (key)
@@ -1529,34 +1634,69 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
       m_cur_context->m_light_intensity = max(m_cur_context->m_light_intensity, 0.f);
       break;
     case '1':
-      flipDrawType(eVT_OCCUPIED);
+      flipDrawType(eBVM_OCCUPIED);
       break;
     case '2':
-      flipDrawType(eVT_COLLISION);
+      flipDrawType(eBVM_COLLISION);
       break;
     case '3':
-      flipDrawType(eVT_SWEPT_VOLUME_START);
+      flipDrawType(eBVM_SWEPT_VOLUME_START);
       break;
     case '4':
-      flipDrawType(VoxelType(eVT_SWEPT_VOLUME_START + 1));
+      if (!alt_pressed)
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 1));
+      }
+      else
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 6));
+      }
       break;
     case '5':
-      flipDrawType(VoxelType(eVT_SWEPT_VOLUME_START + 2));
+      if (!alt_pressed)
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 2));
+      }
+      else
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 7));
+      }
       break;
     case '6':
-      flipDrawType(VoxelType(eVT_SWEPT_VOLUME_START + 3));
+      if (!alt_pressed)
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 3));
+      }
+      else
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 8));
+      }
       break;
     case '7':
-      flipDrawType(VoxelType(eVT_SWEPT_VOLUME_START + 4));
+      if (!alt_pressed)
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 4));
+      }
+      else
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 9));
+      }
       break;
     case '8':
-      flipDrawType(VoxelType(eVT_SWEPT_VOLUME_START + 5));
+      if (!alt_pressed)
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 5));
+      }
+      else
+      {
+        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 10));
+      }
       break;
     case '9':
-      flipDrawType(eVT_FREE);
+      flipDrawType(eBVM_FREE);
       break;
     case '0':
-      flipDrawType(eVT_UNKNOWN);
+      flipDrawType(eBVM_UNKNOWN);
       break;
 
   }
@@ -1619,6 +1759,18 @@ void Visualizer::keyboardSpecialFunction(int32_t key, int32_t x, int32_t y)
     case GLUT_KEY_F8:
       flipDrawOctree(3);
       break;
+    case GLUT_KEY_F9:
+      flipDrawVoxellist(0);
+      break;
+    case GLUT_KEY_F10:
+      flipDrawVoxellist(1);
+      break;
+    case GLUT_KEY_F11:
+      flipDrawVoxellist(2);
+      break;
+    case GLUT_KEY_F12:
+      flipDrawVoxellist(3);
+      break;
     default:
       break;
   }
@@ -1672,7 +1824,7 @@ void Visualizer::decreaseSuperVoxelSize()
   Vector3ui d = m_cur_context->m_dim_svoxel;
   if (d.x > 1 && d.y > 1 && d.z > 1)
   {
-    d = d / 2;
+    d = d / Vector3ui(2);
 //    LOGGING_DEBUG_C(Visualization, VoxelMapVisualizer_gpu,
 //                   "dimension of super voxel: (" << d.x << ", " << d.y << ", " << d.z << ")" << endl);
     m_cur_context->m_dim_svoxel = d;
@@ -1693,7 +1845,7 @@ void Visualizer::flipDrawVoxelmap(uint32_t index)
 {
   if (index >= m_cur_context->m_voxel_maps.size())
   {
-    LOGGING_INFO_C(Visualization, Visualizer, "No voxel map registered at index " << index << endl);
+    LOGGING_INFO_C(Visualization, Visualizer, "No Voxelmap registered at index " << index << endl);
     return;
   }
   VoxelmapContext* con = m_cur_context->m_voxel_maps[index];
@@ -1703,32 +1855,53 @@ void Visualizer::flipDrawVoxelmap(uint32_t index)
   {
     m_cur_context->m_camera->setViewChanged(true); // force an update of vbos
     LOGGING_INFO_C(Visualization, Visualizer,
-                   "Activated the drawing of the voxel map: " << con->m_map_name << endl);
+                   "Activated the drawing of the Voxelmap: " << con->m_map_name << endl);
   }
   else
   {
     LOGGING_INFO_C(Visualization, Visualizer,
-                   "Deactivated the drawing of the voxel map: " << con->m_map_name << endl);
+                   "Deactivated the drawing of the Voxelmap: " << con->m_map_name << endl);
   }
 }
 void Visualizer::flipDrawOctree(uint32_t index)
 {
   if (index >= m_cur_context->m_octrees.size())
   {
-    LOGGING_INFO_C(Visualization, Visualizer, "No octree registered at index " << index << endl);
+    LOGGING_INFO_C(Visualization, Visualizer, "No Octree registered at index " << index << endl);
     return;
   }
-  OctreeContext* con = m_cur_context->m_octrees[index];
+  CubelistContext* con = m_cur_context->m_octrees[index];
   con->m_draw_context = !con->m_draw_context;
   if (con->m_draw_context)
   {
     LOGGING_INFO_C(Visualization, Visualizer,
-                   "Activated the drawing of the octree: " << con->m_map_name << endl);
+                   "Activated the drawing of the Octree: " << con->m_map_name << endl);
   }
   else
   {
     LOGGING_INFO_C(Visualization, Visualizer,
-                   "Deactivated the drawing of the octree: " << con->m_map_name << endl);
+                   "Deactivated the drawing of the Octree: " << con->m_map_name << endl);
+  }
+}
+
+void Visualizer::flipDrawVoxellist(uint32_t index)
+{
+  if (index >= m_cur_context->m_voxel_lists.size())
+  {
+    LOGGING_INFO_C(Visualization, Visualizer, "No Voxellist registered at index " << index << endl);
+    return;
+  }
+  CubelistContext* con = m_cur_context->m_voxel_lists[index];
+  con->m_draw_context = !con->m_draw_context;
+  if (con->m_draw_context)
+  {
+    LOGGING_INFO_C(Visualization, Visualizer,
+                   "Activated the drawing of the Voxellist: " << con->m_map_name << endl);
+  }
+  else
+  {
+    LOGGING_INFO_C(Visualization, Visualizer,
+                   "Deactivated the drawing of the Voxellist: " << con->m_map_name << endl);
   }
 }
 
@@ -1748,7 +1921,7 @@ void Visualizer::flipExternalVisibilityTrigger()
   }
 }
 
-void Visualizer::flipDrawType(VoxelType type)
+void Visualizer::flipDrawType(BitVoxelMeaning type)
 {
   if (m_cur_context->m_draw_types[type])
   {
@@ -1769,14 +1942,18 @@ void Visualizer::flipDrawType(VoxelType type)
   {
     m_cur_context->m_octrees[i]->m_has_draw_type_flipped = true;
   }
+  for (uint32_t i = 0; i < m_cur_context->m_voxel_lists.size(); i++)
+  {
+    m_cur_context->m_voxel_lists[i]->m_has_draw_type_flipped = true;
+  }
   m_cur_context->m_camera->setViewChanged(true);
   copyDrawTypeToDevice();
 }
 
 void Visualizer::flipDrawSweptVolume()
 {
-  const uint8 start = static_cast<uint>(eVT_SWEPT_VOLUME_START);
-  const uint8 end = static_cast<uint>(eVT_SWEPT_VOLUME_END);
+  const uint8 start = static_cast<uint>(eBVM_SWEPT_VOLUME_START);
+  const uint8 end = static_cast<uint>(eBVM_SWEPT_VOLUME_END);
   if (m_draw_swept_volumes)
   {
     m_draw_swept_volumes = false;
@@ -1799,6 +1976,11 @@ void Visualizer::flipDrawSweptVolume()
   {
     m_cur_context->m_octrees[i]->m_has_draw_type_flipped = true;
   }
+  for (uint32_t i = 0; i < m_cur_context->m_voxel_lists.size(); i++)
+  {
+    m_cur_context->m_voxel_lists[i]->m_has_draw_type_flipped = true;
+  }
+
   m_cur_context->m_camera->setViewChanged(true);
   copyDrawTypeToDevice();
 }
@@ -1881,7 +2063,7 @@ void Visualizer::printPositionOfVoxelUnderMouseCurser(int32_t xpos, int32_t ypos
   }
   for (uint32_t i = 0; i < m_cur_context->m_octrees.size(); i++)
   {
-    OctreeContext * con = m_cur_context->m_octrees[i];
+    CubelistContext * con = m_cur_context->m_octrees[i];
     if (!con->m_draw_context)
     {/*If this octree isn't drawn => don't look there for voxels*/
       continue;
@@ -1967,7 +2149,7 @@ __inline__ uint8_t Visualizer::typeToColorIndex(uint8_t type)
   /*Dynamic(254) -> 0 */
   /*Static(253)  -> 1 */
   /* .... */
-  /*eVT_SWEPT_VOLUME_START(0) -> 254 */
+  /*eBVM_SWEPT_VOLUME_START(0) -> 254 */
   //return type == (uint8_t) 255 ? (uint8_t) 255 : (uint8_t) 254 - type;
   return type;
 }
@@ -2085,11 +2267,13 @@ void Visualizer::printHelp()
   std::cout << "0-9: toggle the drawing of the some types." << std::endl;
   std::cout << "F1-F4: toggle the drawing of the first 4 registered voxel maps." << std::endl;
   std::cout << "F5-F8: toggle the drawing of the first 4 registered octrees." << std::endl;
+  std::cout << "F9-F12: toggle the drawing of the first 4 registered voxellists." << std::endl;
   std::cout << "" << std::endl;
   std::cout << "---->Mouse" << std::endl;
   std::cout << "RIGHT_BUTTON: print x,y,z coordinates of the clicked voxel." << std::endl;
   std::cout << "LEFT_BUTTON: enables mouse movement." << std::endl;
   std::cout << "ALT + CTRL + LEFT_BUTTON: enables focus point movement in X-Y-Plane." << std::endl;
+  std::cout << "ALT + CTRL + MIDDLE_BUTTON: enables focus point movement in Z-direction." << std::endl;
   std::cout << "ALT + CTRL + MOUSE_WHEEL: Move Camera closer of further away from focus point." << std::endl;
   std::cout << "MOUSE_WHEEL: increase/ decrease super voxel size." << std::endl;
   std::cout << "" << std::endl;

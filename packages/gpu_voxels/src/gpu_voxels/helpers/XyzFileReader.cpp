@@ -51,7 +51,7 @@ bool XyzFileReader::readPointCloud(const std::string filename, std::vector<Vecto
       points.push_back(vec);
     }
   }
-  LOGGING_INFO(
+  LOGGING_DEBUG(
       Gpu_voxels_helpers,
       "XYZ-FileReader: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f))/1024.0/1024.0 << " MB on CPU) from "<< filename.c_str() << "." << endl);
   file.close();

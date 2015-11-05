@@ -257,7 +257,7 @@ int main(int argc, char **argv)
 
   Test::getRandomPlans(parameter);
 
-  Test::initDevice();
+  Test::testAndInitDevice();
 
   my_barrier = new boost::barrier(parameter.size() + 1);
   global_stop = false;

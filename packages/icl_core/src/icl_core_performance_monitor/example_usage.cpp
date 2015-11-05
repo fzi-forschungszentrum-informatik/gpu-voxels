@@ -10,6 +10,7 @@
 //
 // © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
 //
+
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
     // do some work
     uint32_t j = i / i;
     j++;
-    sleep(0.11);
+    icl_core::os::usleep(110000);
     PERF_MON_PRINT_AND_RESET_INFO("test_timer", "event");
   }
 

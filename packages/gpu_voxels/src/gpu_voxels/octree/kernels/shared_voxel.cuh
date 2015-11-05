@@ -12,13 +12,13 @@
 */
 //----------------------------------------------------------------------
 
-#ifndef SHERED_MEM_CUH
-#define SHERED_MEM_CUH
+#ifndef SHARED_MEM_CUH
+#define SHARED_MEM_CUH
 
 #include <gpu_voxels/helpers/common_defines.h>
-#include <gpu_voxels/voxelmap/AbstractVoxel.h>
-#include <gpu_voxels/voxelmap/BitVoxel.h>
-#include <gpu_voxels/voxelmap/ProbabilisticVoxel.h>
+#include <gpu_voxels/voxel/AbstractVoxel.h>
+#include <gpu_voxels/voxel/BitVoxel.h>
+#include <gpu_voxels/voxel/ProbabilisticVoxel.h>
 
 // non-specialized class template
 template <typename T>
@@ -37,12 +37,12 @@ public:
 
 // specialization for AbstractVoxel
 template <>
-struct SharedVoxel <gpu_voxels::voxelmap::AbstractVoxel>
+struct SharedVoxel <gpu_voxels::AbstractVoxel>
 {
 public:
-  __device__ gpu_voxels::voxelmap::AbstractVoxel* getPointer()
+  __device__ gpu_voxels::AbstractVoxel* getPointer()
   {
-    extern __shared__ gpu_voxels::voxelmap::AbstractVoxel abstract_mem[];
+    extern __shared__ gpu_voxels::AbstractVoxel abstract_mem[];
     return abstract_mem;
   }
 };
@@ -50,24 +50,24 @@ public:
 
 // specialization for BitVoxel
 template <>
-struct SharedVoxel <gpu_voxels::voxelmap::BitVoxel<gpu_voxels::voxelmap::BIT_VECTOR_LENGTH> >
+struct SharedVoxel <gpu_voxels::BitVoxel<gpu_voxels::BIT_VECTOR_LENGTH> >
 {
 public:
-  __device__ gpu_voxels::voxelmap::BitVoxel<gpu_voxels::voxelmap::BIT_VECTOR_LENGTH>* getPointer()
+  __device__ gpu_voxels::BitVoxel<gpu_voxels::BIT_VECTOR_LENGTH>* getPointer()
   {
-    extern __shared__ gpu_voxels::voxelmap::BitVoxel<gpu_voxels::voxelmap::BIT_VECTOR_LENGTH> bit_mem[];
+    extern __shared__ gpu_voxels::BitVoxel<gpu_voxels::BIT_VECTOR_LENGTH> bit_mem[];
     return bit_mem;
   }
 };
 
 // specialization for ProbabilisticVoxel
 template <>
-struct SharedVoxel <gpu_voxels::voxelmap::ProbabilisticVoxel>
+struct SharedVoxel <gpu_voxels::ProbabilisticVoxel>
 {
 public:
-  __device__ gpu_voxels::voxelmap::ProbabilisticVoxel* getPointer()
+  __device__ gpu_voxels::ProbabilisticVoxel* getPointer()
   {
-    extern __shared__ gpu_voxels::voxelmap::ProbabilisticVoxel probabilistic_mem[];
+    extern __shared__ gpu_voxels::ProbabilisticVoxel probabilistic_mem[];
     return probabilistic_mem;
   }
 };
@@ -76,4 +76,4 @@ public:
 
 
 
-#endif // SHERED_MEM_CUH
+#endif // SHARED_VOXEL_CUH

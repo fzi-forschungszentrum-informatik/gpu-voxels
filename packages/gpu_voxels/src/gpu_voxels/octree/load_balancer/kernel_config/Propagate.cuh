@@ -118,7 +118,7 @@ public:
   typedef typename Base::AbstractKernelParameters KernelParams;
 
   __device__
-  static void doLoadBalancedWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static void doLoadBalancedWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                                  Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     // check the level ordering of the stack work items
@@ -126,7 +126,7 @@ public:
     if (constants.thread_id == 0)
     {
       for (int32_t i = 0; i < (variables.num_work_items - 1); ++i)
-        assert(shared_mem.work_item_cache[i].level >= shared_mem.work_item_cache[i + 1].level);
+        assert(shared_mem->work_item_cache[i].level >= shared_mem->work_item_cache[i + 1].level);
     }
 #endif
     __syncthreads();
@@ -143,10 +143,10 @@ public:
     // fetch data, read flags and propagate top-down for InnerNodes
     if (variables.is_active)
     {
-      node = &shared_mem.work_item_cache[constants.work_index].node[constants.work_lane];
+      node = &shared_mem->work_item_cache[constants.work_index].node[constants.work_lane];
       assert(node != NULL);
-      is_top_down_mode = shared_mem.work_item_cache[constants.work_index].is_top_down;
-      update_subtree = shared_mem.work_item_cache[constants.work_index].update_subtree;
+      is_top_down_mode = shared_mem->work_item_cache[constants.work_index].is_top_down;
+      update_subtree = shared_mem->work_item_cache[constants.work_index].update_subtree;
 
       lastLevel = node->hasStatus(ns_LAST_LEVEL);
       insert_top_down_work_item = !lastLevel & is_top_down_mode & node->hasStatus(ns_PART)
@@ -156,21 +156,21 @@ public:
 #endif
 
       // marker which marks a new level of work items
-      assert(shared_mem.work_item_cache[constants.work_index].level < level_count);
+      assert(shared_mem->work_item_cache[constants.work_index].level < level_count);
       const bool new_level_start = (constants.work_lane == 0)
           && (constants.work_index == 0
-              || (shared_mem.work_item_cache[constants.work_index - 1].level
-                  != shared_mem.work_item_cache[constants.work_index].level));
+              || (shared_mem->work_item_cache[constants.work_index - 1].level
+                  != shared_mem->work_item_cache[constants.work_index].level));
       if (new_level_start)
-        shared_mem.level_start_index[shared_mem.work_item_cache[constants.work_index].level] =
+        shared_mem->level_start_index[shared_mem->work_item_cache[constants.work_index].level] =
             constants.thread_id;
 
       const bool level_end = (constants.work_lane == 0)
           && (((constants.work_index + 1) == variables.num_work_items)
-              || shared_mem.work_item_cache[constants.work_index].level
-                  != shared_mem.work_item_cache[constants.work_index + 1].level);
+              || shared_mem->work_item_cache[constants.work_index].level
+                  != shared_mem->work_item_cache[constants.work_index + 1].level);
       if (level_end)
-        shared_mem.level_end_index[shared_mem.work_item_cache[constants.work_index].level] = constants.thread_id
+        shared_mem->level_end_index[shared_mem->work_item_cache[constants.work_index].level] = constants.thread_id
             + branching_factor;
 
       // handle top-down update
@@ -178,11 +178,11 @@ public:
       {
         // top-down update for expanding compressed nodes
         if (((node->getStatus() & constants.status_mask) == 0))
-          topDownUpdate(node, shared_mem.work_item_cache[constants.work_index].parent_node,
+          topDownUpdate(node, shared_mem->work_item_cache[constants.work_index].parent_node,
                         constants.top_down_status_mask, constants.status_mask);
         else if (update_subtree)
           // top-down update for updating a subtree with a single value
-          topDownSubtreeUpdate(node, shared_mem.work_item_cache[constants.work_index].parent_node,
+          topDownSubtreeUpdate(node, shared_mem->work_item_cache[constants.work_index].parent_node,
                                constants.top_down_status_mask, constants.status_mask);
       }
 
@@ -203,10 +203,10 @@ public:
       for (uint32_t i = 0; i < branching_factor; ++i)
       {
         // ## top-down ##
-        InnerNode* my_node = &shared_mem.work_item_cache[constants.work_index].node[i];
+        InnerNode* my_node = &shared_mem->work_item_cache[constants.work_index].node[i];
         if (my_node->hasStatus(ns_PART))
         {
-          const bool leaf_update_subtree = shared_mem.work_item_cache[constants.work_index].update_subtree
+          const bool leaf_update_subtree = shared_mem->work_item_cache[constants.work_index].update_subtree
               || my_node->hasFlags(nf_UPDATE_SUBTREE);
           LeafNode* leafNode = &((LeafNode*) my_node->getChildPtr())[constants.work_lane];
           if ((leafNode->getStatus() & LeafNode::INVALID_STATUS) == LeafNode::INVALID_STATUS)
@@ -218,7 +218,7 @@ public:
 
           //__threadfence_block();
 #ifdef PROPAGATE_BOTTOM_UP
-          bottomUpUpdate<branching_factor>(leafNode, my_node, shared_volatile_mem.bottom_up_reduction,
+          bottomUpUpdate<branching_factor>(leafNode, my_node, shared_volatile_mem->bottom_up_reduction,
                                            constants.thread_id);
 
           if (constants.work_lane == 0)
@@ -241,10 +241,10 @@ public:
           >> (branching_factor * (constants.warp_lane / branching_factor))) & constants.work_lane_mask;
       if (my_is_ready_votes == constants.work_lane_mask)
       {
-        assert(shared_mem.work_item_cache[constants.work_index].level >= 1);
+        assert(shared_mem->work_item_cache[constants.work_index].level >= 1);
 
-        InnerNode* parent = shared_mem.work_item_cache[constants.work_index].parent_node;
-        bottomUpUpdate<branching_factor>(node, parent, shared_volatile_mem.bottom_up_reduction,
+        InnerNode* parent = shared_mem->work_item_cache[constants.work_index].parent_node;
+        bottomUpUpdate<branching_factor>(node, parent, shared_volatile_mem->bottom_up_reduction,
                                          constants.thread_id);
 
         if (constants.work_lane == 0)
@@ -273,9 +273,9 @@ public:
         {
           const uint32_t index = constants.warp_id + constants.warp_lane * (constants.num_warps + 1);
           // make warp local votes available for every warp
-          shared_mem.warp_votes[index] = all_insert_votes[constants.warp_lane];
+          shared_mem->warp_votes[index] = all_insert_votes[constants.warp_lane];
           // count warp votes and make them available for every warp
-          shared_mem.warp_prefix_sum[index] = __popc(all_insert_votes[constants.warp_lane]);
+          shared_mem->warp_prefix_sum[index] = __popc(all_insert_votes[constants.warp_lane]);
         }
       }
       __syncthreads();
@@ -284,15 +284,15 @@ public:
       if (constants.thread_id <= 1)
       {
         const uint32_t index = constants.num_warps + constants.thread_id * (constants.num_warps + 1);
-        shared_mem.warp_votes[index] = 0;
-        shared_mem.warp_prefix_sum[index] = 0;
+        shared_mem->warp_votes[index] = 0;
+        shared_mem->warp_prefix_sum[index] = 0;
         uint32_t my_insert_count = 0;
 #pragma unroll
         for (uint32_t w = 0; w < (constants.num_warps + 1); ++w)
         {
           const uint32_t offset = w + constants.thread_id * (constants.num_warps + 1);
-          const uint32_t tmp = shared_mem.warp_prefix_sum[offset];
-          shared_mem.warp_prefix_sum[offset] = my_insert_count;
+          const uint32_t tmp = shared_mem->warp_prefix_sum[offset];
+          shared_mem->warp_prefix_sum[offset] = my_insert_count;
           my_insert_count += tmp;
         }
       }
@@ -302,29 +302,29 @@ public:
       if (variables.is_active & insert_bottom_up_work_item)
       {
         const uint32_t my_level_start =
-            shared_mem.level_start_index[shared_mem.work_item_cache[constants.work_index].level];
+            shared_mem->level_start_index[shared_mem->work_item_cache[constants.work_index].level];
         const uint32_t start_warp = my_level_start / WARP_SIZE;
         const uint32_t local_index_start_warp = my_level_start % WARP_SIZE;
         assert(my_level_start < num_threads);
 
         // number of items of same kind previous to my position
-        uint32_t my_index = shared_mem.warp_prefix_sum[constants.warp_id]
-            + __popc(shared_mem.warp_votes[constants.warp_id] << (WARP_SIZE - constants.warp_lane));
+        uint32_t my_index = shared_mem->warp_prefix_sum[constants.warp_id]
+            + __popc(shared_mem->warp_votes[constants.warp_id] << (WARP_SIZE - constants.warp_lane));
 
         // add number of items of other kind till the level start position
-        my_index += shared_mem.warp_prefix_sum[start_warp + constants.num_warps + 1]
+        my_index += shared_mem->warp_prefix_sum[start_warp + constants.num_warps + 1]
             + __popc(
-                shared_mem.warp_votes[start_warp + constants.num_warps + 1]
+                shared_mem->warp_votes[start_warp + constants.num_warps + 1]
                     << (WARP_SIZE - local_index_start_warp));
 
         assert(
             my_index
-                < (shared_mem.warp_prefix_sum[constants.num_warps]
-                    + shared_mem.warp_prefix_sum[2 * constants.num_warps + 1]));
-        assert((shared_mem.num_stack_work_items + my_index) < kernel_params.stack_size_per_task);
+                < (shared_mem->warp_prefix_sum[constants.num_warps]
+                    + shared_mem->warp_prefix_sum[2 * constants.num_warps + 1]));
+        assert((shared_mem->num_stack_work_items + my_index) < kernel_params.stack_size_per_task);
 
-        WorkItem* work_item = &shared_mem.my_work_stack[shared_mem.num_stack_work_items + my_index];
-        *work_item = shared_mem.work_item_cache[constants.work_index];
+        WorkItem* work_item = &shared_mem->my_work_stack[shared_mem->num_stack_work_items + my_index];
+        *work_item = shared_mem->work_item_cache[constants.work_index];
         work_item->is_top_down = false; // mark as bottom-up work item
       }
 
@@ -335,30 +335,30 @@ public:
         assert(node->getChildPtr() != NULL);
 
         const uint32_t my_level_end =
-            shared_mem.level_end_index[shared_mem.work_item_cache[constants.work_index].level];
+            shared_mem->level_end_index[shared_mem->work_item_cache[constants.work_index].level];
         const uint32_t end_warp = my_level_end / WARP_SIZE;
         const uint32_t local_index_end_warp = my_level_end % WARP_SIZE;
         assert(my_level_end <= num_threads);
 
         // number of items of same kind previous to my position
-        uint32_t my_index = shared_mem.warp_prefix_sum[constants.warp_id + constants.num_warps + 1]
+        uint32_t my_index = shared_mem->warp_prefix_sum[constants.warp_id + constants.num_warps + 1]
             + __popc(
-                shared_mem.warp_votes[constants.warp_id + constants.num_warps + 1]
+                shared_mem->warp_votes[constants.warp_id + constants.num_warps + 1]
                     << (WARP_SIZE - constants.warp_lane));
 
         // add number of items of other kind till the NEXT level start position
-        my_index += shared_mem.warp_prefix_sum[end_warp]
-            + __popc(shared_mem.warp_votes[end_warp] << (WARP_SIZE - local_index_end_warp));
+        my_index += shared_mem->warp_prefix_sum[end_warp]
+            + __popc(shared_mem->warp_votes[end_warp] << (WARP_SIZE - local_index_end_warp));
 
         assert(
             my_index
-                < (shared_mem.warp_prefix_sum[constants.num_warps]
-                    + shared_mem.warp_prefix_sum[2 * constants.num_warps + 1]));
-        assert((shared_mem.num_stack_work_items + my_index) < kernel_params.stack_size_per_task);
+                < (shared_mem->warp_prefix_sum[constants.num_warps]
+                    + shared_mem->warp_prefix_sum[2 * constants.num_warps + 1]));
+        assert((shared_mem->num_stack_work_items + my_index) < kernel_params.stack_size_per_task);
 
-        shared_mem.my_work_stack[shared_mem.num_stack_work_items + my_index] = WorkItem(
+        shared_mem->my_work_stack[shared_mem->num_stack_work_items + my_index] = WorkItem(
             (InnerNode*) node->getChildPtr(), node, true,
-            shared_mem.work_item_cache[constants.work_index].level - 1,
+            shared_mem->work_item_cache[constants.work_index].level - 1,
             update_subtree || node->hasFlags(nf_UPDATE_SUBTREE));
       }
       __syncthreads();
@@ -372,22 +372,22 @@ public:
       // TODO Deal with compiler problem to enable the assertions
 //      uint32_t bottom_up_count = __syncthreads_count(insert_bottom_up_work_item);
 //      uint32_t top_down_count = __syncthreads_count(insert_top_down_work_item);
-//      assert(bottom_up_count == shared_mem.warp_prefix_sum[constants.num_warps]);
-//      assert(top_down_count == shared_mem.warp_prefix_sum[2 * constants.num_warps + 1]);
+//      assert(bottom_up_count == shared_mem->warp_prefix_sum[constants.num_warps]);
+//      assert(top_down_count == shared_mem->warp_prefix_sum[2 * constants.num_warps + 1]);
 #endif
 
       if (constants.thread_id == 0)
       {
         // check stack sorting by level
 #ifndef NDEBUG
-        int32_t num_inserts = shared_mem.warp_prefix_sum[constants.num_warps]
-            + shared_mem.warp_prefix_sum[2 * constants.num_warps + 1];
+        int32_t num_inserts = shared_mem->warp_prefix_sum[constants.num_warps]
+            + shared_mem->warp_prefix_sum[2 * constants.num_warps + 1];
         for (int32_t i = 0; i < (num_inserts - 1); ++i)
-          assert(shared_mem.my_work_stack[shared_mem.num_stack_work_items + i].level >= shared_mem.my_work_stack[shared_mem.num_stack_work_items + i + 1].level);
+          assert(shared_mem->my_work_stack[shared_mem->num_stack_work_items + i].level >= shared_mem->my_work_stack[shared_mem->num_stack_work_items + i + 1].level);
 #endif
 
-        shared_mem.num_stack_work_items += shared_mem.warp_prefix_sum[constants.num_warps]
-            + shared_mem.warp_prefix_sum[2 * constants.num_warps + 1];
+        shared_mem->num_stack_work_items += shared_mem->warp_prefix_sum[constants.num_warps]
+            + shared_mem->warp_prefix_sum[2 * constants.num_warps + 1];
       }
       __syncthreads();
     }
@@ -397,14 +397,14 @@ public:
   }
 
   __device__
-  static void doReductionWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static void doReductionWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     // Nothing to do
   }
 
   __device__
-  static bool abortLoop(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static bool abortLoop(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     return Base::abortLoop(shared_mem, shared_volatile_mem, variables, constants, kernel_params)

@@ -23,4 +23,4 @@
 
 // Dummy file for
 
-#include <gpu_voxels/voxelmap/BitVoxel.h>
+#include <gpu_voxels/voxel/BitVoxel.h>

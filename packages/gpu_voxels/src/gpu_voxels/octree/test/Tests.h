@@ -31,6 +31,7 @@
 #include <thrust/host_vector.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/octree/DataTypes.h>
+#include "Helper.h"
 
 namespace gpu_voxels {
 namespace NTree {
@@ -42,12 +43,24 @@ static const uint32_t BRANCHING_FACTOR = 8;
 static const uint32_t LEVEL_COUNT = 9;
 static const uint32_t NUM_VOXEL = pow(BRANCHING_FACTOR, LEVEL_COUNT - 1);
 
-thrust::host_vector<gpu_voxels::Vector3ui> randomPoints(voxel_count num_points, VoxelID maxValue);
+enum Intersection_Type
+{
+  SIMPLE, LOAD_BALANCE
+};
+
+thrust::host_vector<gpu_voxels::Vector3ui> randomPoints(voxel_count num_points, OctreeVoxelID maxValue);
+thrust::host_vector<Voxel> randomVoxel(OctreeVoxelID num_points, OctreeVoxelID maxValue, Probability occupancy);
 
 thrust::host_vector<gpu_voxels::Vector3ui> randomCube(
     gpu_voxels::Vector3ui map_dimensions, uint32_t cube_side_length);
 
-void run(std::vector<Vector3f>& points, uint32_t num_points);
+bool mortonTest(uint32_t num_runs);
+
+bool insertTest(OctreeVoxelID num_points, OctreeVoxelID num_inserts, bool set_free, bool propergate_up);
+
+bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time, bool rebuildTest);
+
+//bool intersectionTest(OctreeVoxelID num_points, Intersection_Type insect_type, double & time);
 
 void rotate(thrust::host_vector<gpu_voxels::Vector3ui>& points, float angle_degree,
             gpu_voxels::Vector3f translation);

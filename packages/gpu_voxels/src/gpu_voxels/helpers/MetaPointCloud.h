@@ -96,7 +96,7 @@ public:
    * \param pointcloud The new cloud. May differ in size.
    * \param sync If set to true, only this modified cloud is synced to the GPU.
    */
-  void updatePointCloud(const std::string cloud_name, const std::vector<Vector3f> &pointcloud, bool sync = false);
+  void updatePointCloud(const std::string &cloud_name, const std::vector<Vector3f> &pointcloud, bool sync = false);
 
   /*!
    * \brief updatePointCloud This updates a specific cloud on the host.

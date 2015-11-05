@@ -10,6 +10,7 @@
 //
 // © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
 //
+
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -46,16 +47,18 @@ namespace perf_mon{
  * measurement.
  *
  * You can use the static methods directly, but using the macros defined in
- * PerformanceMonitorMacros.h is recommended, as they provide enabling and disabling by
+ * \a PerformanceMonitorMacros.h is recommended, as they provide enabling and disabling by
  * defines such as _IC_DEBUG_ and IC_PERFORMANCE_MONITOR.
  *
  * The typical minimum workflow would look like follows:
- *   - enable PM macros with #define IC_PERFORMANCE_MONITOR
+ *  - In your main do:
+ *   - enable PM macros with #define IC_PERFORMANCE_MONITOR (before including this header!!!)
  *   - initialize the PM with number of names and events
+ *   - at the end of your program print the summary
+ *  - Somewhere in your program do:
  *   - start a timer
  *   - do some work
  *   - create measurement event (this will by default output the runtime
- *   - at the end of your program print the summary
  *
  * By default all outputs go to the prefix "". You can enable other prefixes as you wish
  * and then use the print and summary functions with these prefixes. This way you can

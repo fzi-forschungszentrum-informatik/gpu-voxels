@@ -110,7 +110,8 @@ void Intersect<branching_factor, level_count, InnerNode, LeafNode, InnerNode2, L
     m_collider);
 
   // Call the templated kernel function. It's behavior is defined by the given KernelConfig.
-  kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS>>>(kernel_params);
+  size_t dynamic_shared_mem_size = sizeof(typename KernelConfig::SharedMem) + sizeof(typename KernelConfig::SharedVolatileMem);
+  kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS, dynamic_shared_mem_size>>>(kernel_params);
 }
 
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,

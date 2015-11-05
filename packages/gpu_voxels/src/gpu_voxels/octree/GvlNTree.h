@@ -25,7 +25,7 @@
 
 #include <gpu_voxels/GpuVoxelsMap.h>
 #include <gpu_voxels/octree/NTree.h>
-#include <gpu_voxels/voxelmap/BitVoxel.h>
+#include <gpu_voxels/voxel/BitVoxel.h>
 
 namespace gpu_voxels {
 namespace NTree {
@@ -41,23 +41,28 @@ public:
 
   // ------ START Global API functions ------
 
-  virtual void insertGlobalData(const std::vector<Vector3f> &point_cloud, VoxelType voxel_type);
+  virtual void insertPointCloud(const std::vector<Vector3f> &point_cloud, BitVoxelMeaning voxel_meaning);
 
-  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, VoxelType voxel_type);
+  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, BitVoxelMeaning voxel_meaning);
 
-  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<VoxelType>& voxel_types);
+  virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings);
 
   virtual void clearMap();
 
-  virtual void clearVoxelType(VoxelType voxel_type);
+  virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
 
   virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
 
   virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0, const Vector3ui &offset = Vector3ui());
 
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, voxelmap::BitVectorVoxel&  types_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
+  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  types_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
+
+  virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3ui &offset = Vector3ui());
 
   virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
+
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui(), const BitVoxelMeaning* new_meaning = NULL);
 
   virtual std::size_t getMemoryUsage();
 

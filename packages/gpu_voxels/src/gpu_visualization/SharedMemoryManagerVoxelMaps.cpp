@@ -33,6 +33,11 @@ SharedMemoryManagerVoxelMaps::SharedMemoryManagerVoxelMaps()
   shmm = new SharedMemoryManager(shm_segment_name_voxelmaps, true);
 }
 
+SharedMemoryManagerVoxelMaps::~SharedMemoryManagerVoxelMaps()
+{
+  delete shmm;
+}
+
 uint32_t SharedMemoryManagerVoxelMaps::getNumberOfVoxelMapsToDraw()
 {
   std::pair<uint32_t*, std::size_t> res = shmm->getMemSegment().find<uint32_t>(

@@ -59,7 +59,7 @@ bool PointcloudFileHandler::loadPointCloud(const std::string _path, const bool u
     path = _path;
   }
 
-  LOGGING_INFO_C(
+  LOGGING_DEBUG_C(
       Gpu_voxels_helpers,
       GpuVoxelsMap,
       "Loading Pointcloud file " << path << " ..." << endl);

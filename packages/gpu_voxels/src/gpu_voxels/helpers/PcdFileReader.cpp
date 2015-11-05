@@ -39,15 +39,16 @@ bool PcdFileReader::readPointCloud(const std::string filename, std::vector<Vecto
   }
 
   Vector3f vec;
-  for (size_t i = 0; i < cloud->points.size (); ++i)
+  points.resize(cloud->points.size());
+  for (size_t i = 0; i < cloud->points.size(); ++i)
   {
     vec.x = cloud->points[i].x;
     vec.y = cloud->points[i].y;
     vec.z = cloud->points[i].z;
-    points.push_back(vec);
+    points[i] = vec;
   }
 
-  LOGGING_INFO(
+  LOGGING_DEBUG(
       Gpu_voxels_helpers,
       "PCD Handler: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f))/1024.0/1024.0 << " MB on CPU) from "<< filename.c_str() << "." << endl);
   return true;

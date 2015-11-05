@@ -20,13 +20,73 @@
  *
  */
 //----------------------------------------------------------------------
-#ifndef GPU_VOXELS_CUDAMATH_H_INCLUDED
-#define GPU_VOXELS_CUDAMATH_H_INCLUDED
+#ifndef GPU_VOXELS_HELPERS_CUDAMATH_H_INCLUDED
+#define GPU_VOXELS_HELPERS_CUDAMATH_H_INCLUDED
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
-#include <vector>
+#include <gpu_voxels/helpers/MathHelpers.h>
 
 namespace gpu_voxels {
+
+//! Reformatting function (not gpu accelerated)
+__host__ __device__
+inline void Vec3ToMat4(const Vector3f& vec_in, Matrix4f& mat_out)
+{
+  mat_out.a14 = vec_in.x;
+  mat_out.a24 = vec_in.x;
+  mat_out.a34 = vec_in.x;
+  mat_out.a44 = 1;
+}
+
+//! Reformatting function (not gpu accelerated)
+__host__ __device__
+inline void Mat3ToMat4(const Matrix3d& mat_in, Matrix4f& mat_out)
+{
+  mat_out.a11 = mat_in.a11;  mat_out.a12 = mat_in.a12;  mat_out.a13 = mat_in.a13;  mat_out.a14 = 0;
+  mat_out.a21 = mat_in.a21;  mat_out.a22 = mat_in.a22;  mat_out.a23 = mat_in.a13;  mat_out.a24 = 0;
+  mat_out.a31 = mat_in.a31;  mat_out.a32 = mat_in.a32;  mat_out.a33 = mat_in.a13;  mat_out.a34 = 0;
+  mat_out.a41 = 0;           mat_out.a42 = 0;           mat_out.a43 = 0;           mat_out.a44 = 1;
+}
+
+//! Reformatting function (not gpu accelerated)
+__host__ __device__
+inline void Mat3AndVec3ToMat4(const Matrix3d& mat_in, const Vector3f& vec_in, Matrix4f& mat_out)
+{
+  mat_out.a11 = mat_in.a11;  mat_out.a12 = mat_in.a12;  mat_out.a13 = mat_in.a13;  mat_out.a14 = vec_in.x;
+  mat_out.a21 = mat_in.a21;  mat_out.a22 = mat_in.a22;  mat_out.a23 = mat_in.a23;  mat_out.a24 = vec_in.y;
+  mat_out.a31 = mat_in.a31;  mat_out.a32 = mat_in.a32;  mat_out.a33 = mat_in.a33;  mat_out.a34 = vec_in.z;
+  mat_out.a41 = 0;           mat_out.a42 = 0;           mat_out.a43 = 0;           mat_out.a44 = 1;
+}
+
+//! Reformatting function (not gpu accelerated)
+__host__ __device__
+inline void Mat3AndVec3ToMat4(const Matrix3f& mat_in, const Vector3f& vec_in, Matrix4f& mat_out)
+{
+  mat_out.a11 = mat_in.a11;  mat_out.a12 = mat_in.a12;  mat_out.a13 = mat_in.a13;  mat_out.a14 = vec_in.x;
+  mat_out.a21 = mat_in.a21;  mat_out.a22 = mat_in.a22;  mat_out.a23 = mat_in.a23;  mat_out.a24 = vec_in.y;
+  mat_out.a31 = mat_in.a31;  mat_out.a32 = mat_in.a32;  mat_out.a33 = mat_in.a33;  mat_out.a34 = vec_in.z;
+  mat_out.a41 = 0;           mat_out.a42 = 0;           mat_out.a43 = 0;           mat_out.a44 = 1;
+}
+
+//! Reformatting function (not gpu accelerated)
+__host__ __device__
+inline void Mat3AndVec4ToMat4(const Matrix3d& mat_in, const Vector4d& vec_in, Matrix4f& mat_out)
+{
+  mat_out.a11 = mat_in.a11;  mat_out.a12 = mat_in.a12;  mat_out.a13 = mat_in.a13;  mat_out.a14 = vec_in.x;
+  mat_out.a21 = mat_in.a21;  mat_out.a22 = mat_in.a22;  mat_out.a23 = mat_in.a23;  mat_out.a24 = vec_in.y;
+  mat_out.a31 = mat_in.a31;  mat_out.a32 = mat_in.a32;  mat_out.a33 = mat_in.a33;  mat_out.a34 = vec_in.z;
+  mat_out.a41 = 0;           mat_out.a42 = 0;           mat_out.a43 = 0;           mat_out.a44 = vec_in.w;
+}
+
+//! Transpose a matrix
+__host__ __device__
+inline void transpose(const Matrix4f& mat_in, Matrix4f& mat_out)
+{
+  mat_out.a11 = mat_in.a11;  mat_out.a12 = mat_in.a21;  mat_out.a13 = mat_in.a31;  mat_out.a14 = mat_in.a41;
+  mat_out.a21 = mat_in.a12;  mat_out.a22 = mat_in.a22;  mat_out.a23 = mat_in.a32;  mat_out.a24 = mat_in.a42;
+  mat_out.a31 = mat_in.a13;  mat_out.a32 = mat_in.a23;  mat_out.a33 = mat_in.a33;  mat_out.a34 = mat_in.a43;
+  mat_out.a41 = mat_in.a14;  mat_out.a42 = mat_in.a24;  mat_out.a43 = mat_in.a34;  mat_out.a44 = mat_in.a44;
+}
 
 
 __host__ __device__
@@ -98,12 +158,26 @@ inline gpu_voxels::Matrix4f yaw(float angle)
   return m;
 }
 
+/*!
+ * \brief rotateYPR Constructs a rotation matrix
+ * \param _yaw
+ * \param _pitch
+ * \param _roll
+ * \return
+ */
 __host__ __device__
 inline gpu_voxels::Matrix4f rotateYPR(float _yaw, float _pitch, float _roll)
 {
   return yaw(_yaw) * (pitch(_pitch) * roll(_roll));
 }
 
+/*!
+ * \brief rotateRPY Constructs a rotation matrix
+ * \param _yaw
+ * \param _pitch
+ * \param _roll
+ * \return
+ */
 __host__ __device__
 inline gpu_voxels::Matrix4f rotateRPY(float _yaw, float _pitch, float _roll)
 {
@@ -123,38 +197,8 @@ public:
   //! Constructor
   CudaMath();
 
-  /*! Constructor with custom member intialization
-   *  \param max_nr_of_devices The maximum number of graphics cards compatible with CUDA
-   *  \param max_nr_of_blocks The maximum available number of CUDA blocks on the GPU.
-   *  \param max_nr_of_threads_per_block The maximum available number of CUDA threads per block on the GPU.
-   */
-  CudaMath(unsigned int max_nr_of_devices, unsigned int max_nr_of_blocks, unsigned int max_nr_of_threads_per_block);
-
   //! Destructor
   ~CudaMath();
-
-  //! For more comfortable matrix output
-  void printMatrix(const Matrix4f& matrix);
-
-  //! Device load balancing functions
-  void computeLinearLoad(const uint32_t nr_of_items, uint32_t* blocks,
-                         uint32_t* threads_per_block);
-
-
-  //! Reformatting functions (not gpu accelerated)
-  void Vec3ToMat4(const Vector3f& vec_in, Matrix4f& mat_out);
-  void Mat3ToMat4(const Matrix3d& in, Matrix4f& out);
-  void Mat3AndVec3ToMat4(const Matrix3d& mat_in, const Vector3f& vec_in, Matrix4f& out);
-  void Mat3AndVec4ToMat4(const Matrix3d& mat_in, const Vector4d& vec_in, Matrix4f& out);
-
-  void Mat3AndVec3ToMat4(const Matrix3f& mat_in, const Vector3f& vec_in, Matrix4f& mat_out);
-
-  //! Transpose a matrix
-  void transpose(const Matrix3d& in, Matrix3d& out);
-  void transpose(const Matrix4f& in, Matrix4f& out);
-
-  //! Invert a matrix (not gpu accelerated because of low benefit)
-  // void invert(const Matrix4f& in, Matrix4f& out);
 
   /*! Transform Matrix (corresponding to mcal_kinematic::tTransformCoordinates style)
          computes absoultes[] = base    * relatives[]
@@ -163,52 +207,6 @@ public:
    */
   void transform(unsigned int nr_of_transformations, Matrix4f& base, const Matrix4f* relatives,
                  Matrix4f* absolutes, bool invert_base);
-
-  /*! Interpolate linear between the values \a value1 and \a value2 using the given \a ratio.
-   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
-   *  middle.
-   */
-  static float interpolateLinear(float value1, float value2, float ratio);
-
-
-  /*! Interpolate linear between the values \a value1 and \a value2 using the given \a ratio.
-   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
-   *  middle.
-   */
-  static double interpolateLinear(double value1, double value2, double ratio);
-
-  /*! Interpolate linear between the robot JointValueMaps \a joint_state1 and \a joint_state2
-   *  using the given \a ratio.
-   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
-   *  middle.
-   */
-  static JointValueMap interpolateLinear(const JointValueMap& joint_state1,
-                                         const JointValueMap& joint_state2, float ratio);
-
-  /*! Interpolate linear between the robot joint vectors \a joint_state1 and \a joint_state2
-   *  using the given \a ratio.
-   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
-   *  middle.
-   */
-  static std::vector<float> interpolateLinear(const std::vector<float>& joint_state1,
-                                              const std::vector<float>& joint_state2, float ratio);
-
-  /*! Interpolate linear between the robot joint vectors \a joint_state1 and \a joint_state2
-   *  using the given \a ratio.
-   *  Using values out of [0.0, 1.0] will extrapolate, a value of 0.5 will interpolate in the
-   *  middle.
-   */
-  static std::vector<double> interpolateLinear(const std::vector<double>& joint_state1,
-                                               const std::vector<double>& joint_state2, double ratio);
-
-  /*! Transform each point of the point cloud by multiplication of \a matrix with that point.
-   */
-  static void transform(std::vector<Vector3f> &host_point_cloud, Matrix4f matrix);
-
-private:
-  const unsigned int m_max_nr_of_devices;
-  const unsigned int m_max_nr_of_blocks;
-  const unsigned int m_max_nr_of_threads_per_block;
 
 };
 

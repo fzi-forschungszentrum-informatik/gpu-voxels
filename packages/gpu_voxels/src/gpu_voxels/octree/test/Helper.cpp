@@ -27,8 +27,6 @@
 
 #include <algorithm>
 #include <iostream>
-//#include <pcl/io/pcd_io.h>
-//#include <pcl/point_types.h>
 
 using namespace std;
 
@@ -36,8 +34,12 @@ namespace gpu_voxels {
 namespace NTree {
 namespace Test {
 
-void initDevice()
+bool testAndInitDevice()
 {
+
+// Find/set the device.
+// The test requires an architecture SM35 or greater (CDP capable).
+
   int device_count = 0, device = -1;
   HANDLE_CUDA_ERROR(cudaGetDeviceCount(&device_count));
   for (int i = 0; i < device_count; ++i)
@@ -54,13 +56,17 @@ void initDevice()
   }
   if (device == -1)
   {
-    std::cerr << "No device found.  Exiting...\n" << std::endl;
-    exit(EXIT_SUCCESS);
+    std::cerr << "No device with SM 3.5 or higher found, which is required for CUDA Dynamic Parallelism.\n"
+        << std::endl;
+    return false;
   }
   cudaSetDevice(device);
-  HANDLE_CUDA_ERROR (cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));}
+  HANDLE_CUDA_ERROR(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+//HANDLE_CUDA_ERROR(cudaDeviceSetCacheConfig(cudaFuncCachePreferShared));
+  return true;
+}
 
-thrust::host_vector<gpu_voxels::Vector3ui> linearPoints(voxel_count num_points, VoxelID maxValue)
+thrust::host_vector<gpu_voxels::Vector3ui> linearPoints(voxel_count num_points, OctreeVoxelID maxValue)
 {
   uint32_t max_coordinate = (uint32_t) ceil(pow(maxValue, 1.0 / 3));
   thrust::host_vector<gpu_voxels::Vector3ui> points(num_points);
@@ -72,16 +78,6 @@ thrust::host_vector<gpu_voxels::Vector3ui> linearPoints(voxel_count num_points, 
     //printf("%u %u %u\n", points[i].x, points[i].y, points[i].z);
   }
   return points;
-}
-
-static bool compVec(const Vector3f& i, const Vector3f& j)
-{
-  return i.x < j.x || (i.x == j.x && i.y < j.y) || (i.x == j.x && i.y == j.y && i.z < j.z);
-}
-
-static bool eqlVec(const Vector3f& i, const Vector3f& j)
-{
-  return (i.x == j.x && i.y == j.y && i.z == j.z);
 }
 
 void getRandomPlan(vector<Vector3f>& robot, vector<Vector3f>& random_plan, const int path_points,
@@ -167,8 +163,8 @@ void getRandomPlan(vector<Vector3f>& robot, vector<Vector3f>& random_plan, const
     old_point = new_point;
 
     // remove duplicates
-    sort(random_plan.begin() + from, random_plan.end(), compVec);
-    random_plan.erase(unique(random_plan.begin() + from, random_plan.end(), eqlVec), random_plan.end());
+    sort(random_plan.begin() + from, random_plan.end(), Vector3f::compVec);
+    random_plan.erase(unique(random_plan.begin() + from, random_plan.end(), Vector3f::eqlVec), random_plan.end());
   }
 
   printf("New random_plan with %lu points\n", random_plan.size());

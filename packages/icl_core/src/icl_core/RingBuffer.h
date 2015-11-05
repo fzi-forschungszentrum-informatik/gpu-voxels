@@ -103,7 +103,7 @@ public:
     const_iterator& operator += (difference_type offset)
     {
       m_current += offset;
-      if (m_current > m_cend)
+      if (m_current >= m_cend)
       {
         m_current -= m_cend - m_cbegin;
       }
@@ -154,20 +154,24 @@ public:
     const T *operator -> () const { return m_current; }
 
   protected:
-    const_iterator(T *current, T *cbegin, T *cend, T *begin)
+    const_iterator(const T *current, const T *cbegin, const T *cend, const T *begin)
       : m_current(current), m_cbegin(cbegin), m_cend(cend), m_begin(begin)
     { }
 
-    T *m_current;
+    const T *m_current;
     //! Beginning of the container.
-    T *m_cbegin;
+    const T *m_cbegin;
     //! End of the container.
-    T *m_cend;
-    //! Actual first value in te container.
-    T *m_begin;
+    const T *m_cend;
+    //! Actual first value in the container.
+    const T *m_begin;
   };
 
-  //! Iterator for RingBuffers.
+  /*! Iterator for RingBuffers.  Extends const_iterator by providing
+   *  non-const access to the underlying pointed-to element.  This is
+   *  accomplished via const_cast<>() in order to avoid code
+   *  duplication.
+   */
   class iterator : public const_iterator
   {
     friend class RingBuffer;
@@ -186,11 +190,11 @@ public:
       return *this;
     }
 
-    T& operator * () const { return *const_iterator::m_current; }
-    T *operator -> () const { return const_iterator::m_current; }
+    T& operator * () const { return *const_cast<T *>(const_iterator::m_current); }
+    T *operator -> () const { return const_cast<T *>(const_iterator::m_current); }
 
   protected:
-    iterator(T *current, T *cbegin, T *cend, T *begin)
+    iterator(const T *current, const T *cbegin, const T *cend, const T *begin)
       : const_iterator(current, cbegin, cend, begin)
     { }
   };

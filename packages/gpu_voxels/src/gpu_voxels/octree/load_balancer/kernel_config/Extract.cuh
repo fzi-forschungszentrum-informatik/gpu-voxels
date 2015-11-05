@@ -148,7 +148,7 @@ public:
   typedef KernelParameters KernelParams;
 
   __device__
-  static void doLoadBalancedWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static void doLoadBalancedWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                                  Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     bool is_part = false;
@@ -158,8 +158,8 @@ public:
     bool is_selected = false;
     if (variables.is_active)
     {
-      node = &shared_mem.work_item_cache[constants.work_index].node[constants.work_lane];
-      const uint8_t level = shared_mem.work_item_cache[constants.work_index].level;
+      node = &shared_mem->work_item_cache[constants.work_index].node[constants.work_lane];
+      const uint8_t level = shared_mem->work_item_cache[constants.work_index].level;
       assert(level > 0);
       is_min_level = (level == kernel_params.min_level);
       is_last_level = node->hasStatus(ns_LAST_LEVEL);
@@ -175,7 +175,7 @@ public:
     }
 
     if ((constants.thread_id % WARP_SIZE) == 0)
-      shared_mem.votes_voxel_list_last_level[constants.warp_id] = 0;
+      shared_mem->votes_voxel_list_last_level[constants.warp_id] = 0;
 
     // ### handle LeafNodes ###
     if (variables.is_active)
@@ -184,9 +184,9 @@ public:
       //#pragma unroll
       for (uint32_t i = 0; i < branching_factor; ++i)
       {
-        InnerNode* node = &shared_mem.work_item_cache[constants.work_index].node[i];
+        InnerNode* node = &shared_mem->work_item_cache[constants.work_index].node[i];
         is_leaf_vote = node->hasStatus(ns_PART) & node->hasStatus(ns_LAST_LEVEL)
-            & (shared_mem.work_item_cache[constants.work_index].level != kernel_params.min_level);
+            & (shared_mem->work_item_cache[constants.work_index].level != kernel_params.min_level);
         if (is_leaf_vote)
         {
           LeafNode* leafNode = &((LeafNode*) node->getChildPtr())[constants.work_lane];
@@ -194,7 +194,7 @@ public:
         }
         uint32_t votes = __ballot(is_leaf_vote);
         if ((constants.thread_id % WARP_SIZE) == 0)
-          shared_mem.votes_voxel_list_last_level[constants.warp_id] += __popc(votes);
+          shared_mem->votes_voxel_list_last_level[constants.warp_id] += __popc(votes);
       }
     }
 
@@ -210,30 +210,30 @@ public:
 
     if ((constants.thread_id % WARP_SIZE) == 0)
     {
-      shared_mem.votes_new_queue_items[constants.warp_id] = __popc(votes_new_queue_items);
-      shared_mem.votes_voxel_list[constants.warp_id] = __popc(votes_voxel_list);
+      shared_mem->votes_new_queue_items[constants.warp_id] = __popc(votes_new_queue_items);
+      shared_mem->votes_voxel_list[constants.warp_id] = __popc(votes_voxel_list);
     }
     __syncthreads();
 
     // sequential warp prefix sum
     if (constants.thread_id == 0)
     {
-      shared_mem.new_queue_items_count = shared_mem.voxel_list_count =
-          shared_mem.voxel_list_last_level_count = 0;
+      shared_mem->new_queue_items_count = shared_mem->voxel_list_count =
+          shared_mem->voxel_list_last_level_count = 0;
 #pragma unroll
       for (uint32_t w = 0; w < num_threads / WARP_SIZE; ++w)
       {
-        uint32_t tmp = shared_mem.votes_new_queue_items[w];
-        shared_mem.votes_new_queue_items[w] = shared_mem.new_queue_items_count;
-        shared_mem.new_queue_items_count += tmp;
+        uint32_t tmp = shared_mem->votes_new_queue_items[w];
+        shared_mem->votes_new_queue_items[w] = shared_mem->new_queue_items_count;
+        shared_mem->new_queue_items_count += tmp;
 
-        tmp = shared_mem.votes_voxel_list[w];
-        shared_mem.votes_voxel_list[w] = shared_mem.voxel_list_count;
-        shared_mem.voxel_list_count += tmp;
+        tmp = shared_mem->votes_voxel_list[w];
+        shared_mem->votes_voxel_list[w] = shared_mem->voxel_list_count;
+        shared_mem->voxel_list_count += tmp;
 
-        tmp = shared_mem.votes_voxel_list_last_level[w];
-        shared_mem.votes_voxel_list_last_level[w] = shared_mem.voxel_list_last_level_count;
-        shared_mem.voxel_list_last_level_count += tmp;
+        tmp = shared_mem->votes_voxel_list_last_level[w];
+        shared_mem->votes_voxel_list_last_level[w] = shared_mem->voxel_list_last_level_count;
+        shared_mem->voxel_list_last_level_count += tmp;
       }
     }
     __syncthreads();
@@ -243,32 +243,32 @@ public:
     {
       const uint32_t warpLocalIndex = __popc(
           votes_new_queue_items << (WARP_SIZE - (constants.thread_id % WARP_SIZE)));
-      const uint32_t interWarpIndex = shared_mem.votes_new_queue_items[constants.warp_id];
-      WorkItem* stackPointer = &shared_mem.my_work_stack[shared_mem.num_stack_work_items + interWarpIndex
+      const uint32_t interWarpIndex = shared_mem->votes_new_queue_items[constants.warp_id];
+      WorkItem* stackPointer = &shared_mem->my_work_stack[shared_mem->num_stack_work_items + interWarpIndex
           + warpLocalIndex];
-      assert(shared_mem.work_item_cache[constants.work_index].level >= 1);
+      assert(shared_mem->work_item_cache[constants.work_index].level >= 1);
       *stackPointer = WorkItem(
           (InnerNode*) node->getChildPtr(),
-          getZOrderNextLevel<branching_factor>(shared_mem.work_item_cache[constants.work_index].nodeId,
+          getZOrderNextLevel<branching_factor>(shared_mem->work_item_cache[constants.work_index].nodeId,
                                                constants.work_lane),
-          shared_mem.work_item_cache[constants.work_index].level - 1);
+          shared_mem->work_item_cache[constants.work_index].level - 1);
     }
     __syncthreads();
 
     if (constants.thread_id == 0)
     {
-      shared_mem.num_stack_work_items += shared_mem.new_queue_items_count;
+      shared_mem->num_stack_work_items += shared_mem->new_queue_items_count;
       const int32_t tmp = (int32_t) atomicAdd(
           kernel_params.global_voxel_list_count,
-          shared_mem.voxel_list_count + shared_mem.voxel_list_last_level_count);
+          shared_mem->voxel_list_count + shared_mem->voxel_list_last_level_count);
       if (!count_mode)
       {
         // assure no overflow occurs for too small cubes array
-        shared_mem.voxel_list_offset = min(
+        shared_mem->voxel_list_offset = min(
             tmp,
             int32_t(
                 kernel_params.node_data_size
-                    - (shared_mem.voxel_list_count + shared_mem.voxel_list_last_level_count)));
+                    - (shared_mem->voxel_list_count + shared_mem->voxel_list_last_level_count)));
       }
     }
     __syncthreads();
@@ -280,18 +280,18 @@ public:
       {
         const uint32_t warpLocalIndex = __popc(
             votes_voxel_list << (WARP_SIZE - (constants.thread_id % WARP_SIZE)));
-        const uint32_t interWarpIndex = shared_mem.votes_voxel_list[constants.warp_id];
-        NodeData* my_cube = &kernel_params.node_data[shared_mem.voxel_list_offset + interWarpIndex
+        const uint32_t interWarpIndex = shared_mem->votes_voxel_list[constants.warp_id];
+        NodeData* my_cube = &kernel_params.node_data[shared_mem->voxel_list_offset + interWarpIndex
             + warpLocalIndex];
 
-        assert(shared_mem.work_item_cache[constants.work_index].level >= 1);
+        assert(shared_mem->work_item_cache[constants.work_index].level >= 1);
 
-        const VoxelID my_node_id = getZOrderNextLevel<branching_factor>(
-            shared_mem.work_item_cache[constants.work_index].nodeId, constants.work_lane);
+        const OctreeVoxelID my_node_id = getZOrderNextLevel<branching_factor>(
+            shared_mem->work_item_cache[constants.work_index].nodeId, constants.work_lane);
         *my_cube = node->extractData(
             getZOrderLastLevel<branching_factor>(my_node_id,
-                                                 shared_mem.work_item_cache[constants.work_index].level),
-            shared_mem.work_item_cache[constants.work_index].level);
+                                                 shared_mem->work_item_cache[constants.work_index].level),
+            shared_mem->work_item_cache[constants.work_index].level);
       }
 
       if (clear_collision_flag)
@@ -303,13 +303,13 @@ public:
       // ### handle LeafNodes ###
       if (variables.is_active & is_last_level & !is_min_level)
       {
-        uint32_t interWarpIndex = shared_mem.votes_voxel_list_last_level[constants.warp_id];
+        uint32_t interWarpIndex = shared_mem->votes_voxel_list_last_level[constants.warp_id];
 
         //#pragma unroll
         for (uint32_t i = 0; i < branching_factor; ++i)
         {
           bool is_selected = false;
-          InnerNode* node = &shared_mem.work_item_cache[constants.work_index].node[i];
+          InnerNode* node = &shared_mem->work_item_cache[constants.work_index].node[i];
           LeafNode* leafNode;
           const bool has_leaf = node->hasStatus(ns_PART) & node->hasStatus(ns_LAST_LEVEL);
           if (has_leaf)
@@ -321,13 +321,13 @@ public:
           if (is_selected)
           {
             uint32_t warpLocalIndex = __popc(leaf_votes << (WARP_SIZE - (constants.thread_id % WARP_SIZE)));
-            NodeData* my_cube = &kernel_params.node_data[shared_mem.voxel_list_offset
-                + shared_mem.voxel_list_count + interWarpIndex + warpLocalIndex];
+            NodeData* my_cube = &kernel_params.node_data[shared_mem->voxel_list_offset
+                + shared_mem->voxel_list_count + interWarpIndex + warpLocalIndex];
 
-            assert(shared_mem.work_item_cache[constants.work_index].level == 1);
+            assert(shared_mem->work_item_cache[constants.work_index].level == 1);
 
-            VoxelID my_node_id = getZOrderNextLevel<branching_factor>(
-                shared_mem.work_item_cache[constants.work_index].nodeId, i);
+            OctreeVoxelID my_node_id = getZOrderNextLevel<branching_factor>(
+                shared_mem->work_item_cache[constants.work_index].nodeId, i);
             my_node_id = getZOrderNextLevel<branching_factor>(my_node_id, constants.work_lane);
             *my_cube = leafNode->extractData(my_node_id, 0);
           }
@@ -345,14 +345,14 @@ public:
   }
 
   __device__
-   static void doReductionWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+   static void doReductionWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                                Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     // Nothing to do
   }
 
   __device__
-  static bool abortLoop(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static bool abortLoop(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
     return Base::abortLoop(shared_mem, shared_volatile_mem, variables, constants, kernel_params);

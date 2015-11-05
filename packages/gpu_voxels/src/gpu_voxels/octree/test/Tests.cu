@@ -70,12 +70,7 @@ namespace Test {
 //
 //Random_generator rnd;
 
-enum Intersection_Type
-{
-  SIMPLE, LOAD_BALANCE
-};
-
-thrust::host_vector<gpu_voxels::Vector3ui> randomPoints(voxel_count num_points, VoxelID maxValue)
+thrust::host_vector<gpu_voxels::Vector3ui> randomPoints(voxel_count num_points, OctreeVoxelID maxValue)
 {
   uint32_t max_coordinate = (uint32_t) ceil(pow(maxValue, 1.0 / 3));
   thrust::host_vector<gpu_voxels::Vector3ui> points(num_points);
@@ -88,18 +83,18 @@ thrust::host_vector<gpu_voxels::Vector3ui> randomPoints(voxel_count num_points, 
   return points;
 }
 
-thrust::host_vector<Voxel> randomVoxel(VoxelID num_points, VoxelID maxValue, Probability occupancy)
+thrust::host_vector<Voxel> randomVoxel(OctreeVoxelID num_points, OctreeVoxelID maxValue, Probability occupancy)
 {
   gpu_voxels::Vector3ui coordinates;
   thrust::host_vector<Voxel> voxel(num_points);
   uint32_t max_coordinate = (uint32_t) pow(maxValue, 1.0 / 3);
-  for (VoxelID i = 0; i < num_points; ++i)
+  for (OctreeVoxelID i = 0; i < num_points; ++i)
   {
     if ((i % (num_points / 10)) == 0)
-      printf("Progress %lu \n", (VoxelID) (i / (num_points / 10)));
+      printf("Testdata generation progress: %lu%% \n", (OctreeVoxelID) 10 * (i / (num_points / 10)));
 
     bool isDuplicate = true;
-    VoxelID newID = 0;
+    OctreeVoxelID newID = 0;
     while (isDuplicate)
     {
       //newID = (voxel_id) (drand48() * (maxValue - 1));
@@ -194,19 +189,19 @@ void rotate(thrust::host_vector<gpu_voxels::Vector3ui>& points, float angle_degr
   }
 }
 
-thrust::host_vector<VoxelID> linearVoxel(VoxelID num_points)
+thrust::host_vector<OctreeVoxelID> linearVoxel(OctreeVoxelID num_points)
 {
-  thrust::host_vector<VoxelID> voxel(num_points);
-  for (VoxelID i = 0; i < num_points; ++i)
+  thrust::host_vector<OctreeVoxelID> voxel(num_points);
+  for (OctreeVoxelID i = 0; i < num_points; ++i)
     voxel[i] = i;
   return voxel;
 }
 
-thrust::host_vector<Voxel> linearVoxel(VoxelID num_points, VoxelID offset, Probability occupancy)
+thrust::host_vector<Voxel> linearVoxel(OctreeVoxelID num_points, OctreeVoxelID offset, Probability occupancy)
 {
   gpu_voxels::Vector3ui dummy;
   thrust::host_vector<Voxel> voxel(num_points);
-  for (VoxelID i = 0; i < num_points; ++i)
+  for (OctreeVoxelID i = 0; i < num_points; ++i)
     voxel[i] = Voxel(offset + i, dummy, occupancy); // TODO: fix coordinates
   return voxel;
 }
@@ -267,7 +262,7 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 
   BuildResult<BRANCHING_FACTOR, LEVEL_COUNT, InnerNode, LeafNode> build_result;
   if (!buildOctree<BRANCHING_FACTOR, LEVEL_COUNT, InnerNode, LeafNode>(o, points, num_points, build_result, 0.1))
-    return true;
+    return false;
 
   //o->build(h_points);
   //o->print2();
@@ -281,8 +276,6 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
   time = timeDiff(time1, getCPUTime());
   printf("build: %f ms\n", time);
   //o->print2();
-
-  gpu_voxels::cuPrintDeviceMemoryInfo();
 
   printf("AllocInnerNodes: %u    AllocLeafNodes: %u\n", o->allocInnerNodes, o->allocLeafNodes);
 
@@ -300,7 +293,7 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
   o->find(build_result.h_points, resultNode);
 
 // check occupied voxel
-  for (VoxelID i = 0; i < num_points; ++i)
+  for (OctreeVoxelID i = 0; i < num_points; ++i)
   {
     //printf("Check point %lu voxel %lu\n", i, (voxel_id) hVoxel[i]);
     //std::cout << n.occupationFlags << " " << n.occupationProbablity << std::endl;
@@ -321,13 +314,13 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
   printf("max_coordinate: %u\n", max_coordinate);
   {
     thrust::host_vector<gpu_voxels::Vector3ui> unknownVoxel(NUM_VOXEL);
-    for (VoxelID i = 0; i < unknownVoxel.size(); ++i)
+    for (OctreeVoxelID i = 0; i < unknownVoxel.size(); ++i)
     {
       unknownVoxel[i] = gpu_voxels::Vector3ui(
           i % max_coordinate, (i / max_coordinate) % max_coordinate,
           (i / (max_coordinate * max_coordinate)) % max_coordinate);
     }
-    for (VoxelID i = 0; i < num_points; ++i)
+    for (OctreeVoxelID i = 0; i < num_points; ++i)
       unknownVoxel[build_result.h_points[i].x + build_result.h_points[i].y * max_coordinate
           + build_result.h_points[i].z * (max_coordinate * max_coordinate)] = INVALID_POINT;
 
@@ -335,9 +328,9 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
     o->find(unknownVoxel, resultNode);
 
 // check unknown voxel
-    for (VoxelID i = 0; i < unknownVoxel.size(); ++i)
+    for (OctreeVoxelID i = 0; i < unknownVoxel.size(); ++i)
     {
-      if (!equal((gpu_voxels::Vector3ui) unknownVoxel[i], INVALID_POINT))
+      if ((gpu_voxels::Vector3ui)unknownVoxel[i] != INVALID_POINT)
       {
         LeafNode n = (LeafNode) resultNode[i].m_node_data;
         if (n.isOccupied() || n.isFree())
@@ -355,16 +348,14 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 
   delete o;
 
-  gpu_voxels::cuPrintDeviceMemoryInfo();
-
   if (error)
     printf("##### buildTest() finished with ERRORS #####\n\n\n");
   else
     printf("buildTest() finished\n\n\n");
-  return error;
+  return !error;
 }
 
-//bool intersectionTest(voxel_id num_points, enum Intersection_Type insect_type, double & time)
+//bool intersectionTest(OctreeVoxelID num_points, enum Intersection_Type insect_type, double & time)
 //{
 //  printf("Intersection Test ");
 //  switch (insect_type)
@@ -376,44 +367,44 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 //      printf("LOAD_BALANCE\n");
 //      break;
 //  }
-//
-////  voxel_id num_points = 1024*1024;
+
+////  OctreeVoxelID num_points = 1024*1024;
 ////  rnd.sideLengthInVoxel = 128;
-//
+
 //  gpu_voxels::cuPrintDeviceMemoryInfo();
-//
+
 //  typedef Environment::InnerNode e_InnerNode;
 //  typedef Environment::LeafNode e_LeafNode;
 ////  typedef Robot::InnerNode r_InnerNode;
 ////  typedef Robot::LeafNode r_LeafNode;
 //  typedef Environment::InnerNode r_InnerNode;
 //  typedef Environment::LeafNode r_LeafNode;
-//
+
 //  printf("Environment::LeafNode sizeof(): %lu\n", sizeof(e_LeafNode));
 //  printf("Environment::InnerNode sizeof(): %lu\n", sizeof(e_InnerNode));
 //  printf("Robot::LeafNode sizeof(): %lu\n", sizeof(r_LeafNode));
 //  printf("Robot::InnerNode sizeof(): %lu\n", sizeof(r_InnerNode));
-//
+
 //// way more better results and therefore more intersections
 //  srand(12345);
-////  thrust::host_vector<voxel_id> h_r_voxel = randomVoxel(num_points, NUM_VOXEL);
-////  thrust::host_vector<voxel_id> h_e_voxel = randomVoxel(num_points, NUM_VOXEL);
-//  thrust::host_vector<voxel_id> h_r_voxel = linearVoxel(num_points);
-//  thrust::host_vector<voxel_id> h_e_voxel = linearVoxel(num_points);
-//
+////  thrust::host_vector<OctreeVoxelID> h_r_voxel = randomVoxel(num_points, NUM_VOXEL);
+////  thrust::host_vector<OctreeVoxelID> h_e_voxel = randomVoxel(num_points, NUM_VOXEL);
+//  thrust::host_vector<OctreeVoxelID> h_r_voxel = linearVoxel(num_points);
+//  thrust::host_vector<OctreeVoxelID> h_e_voxel = linearVoxel(num_points);
+
 //// copy to device
-//  thrust::device_vector<voxel_id> r_voxel = h_r_voxel;
-//  thrust::device_vector<voxel_id> e_voxel = h_e_voxel;
-//
+//  thrust::device_vector<OctreeVoxelID> r_voxel = h_r_voxel;
+//  thrust::device_vector<OctreeVoxelID> e_voxel = h_e_voxel;
+
 ////  thrust::sort(h_r_voxel.begin(), h_r_voxel.end());
 ////  thrust::sort(h_e_voxel.begin(), h_e_voxel.end());
-//
+
 ////  for (uint32_t i = 0; i < num_points; ++i)
-////    printf("[%i]: Robot %lu    Environment %lu\n", i, (voxel_id) r_voxel[i], (voxel_id) e_voxel[i]);
-//
+////    printf("[%i]: Robot %lu    Environment %lu\n", i, (OctreeVoxelID) r_voxel[i], (OctreeVoxelID) e_voxel[i]);
+
 //  gpu_voxels::Vector3ui origin;
 //  origin.x = origin.y = origin.z = 0.0f;
-//
+
 //  printf("building robot octree...\n");
 //  NTree<BRANCHING_FACTOR, LEVEL_COUNT, r_InnerNode, r_LeafNode>* r_octree = new NTree<BRANCHING_FACTOR,
 //      LEVEL_COUNT, r_InnerNode, r_LeafNode>(NUM_BLOCKS, NUM_THREADS_PER_BLOCK);
@@ -421,15 +412,15 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 //  r_octree->build(r_voxel, origin);
 //  printf("build: %f ms\n", timeDiff(time1, getCPUTime()));
 //  printf("AllocInnerNodes: %u    AllocLeafNodes: %u\n", r_octree->allocInnerNodes, r_octree->allocLeafNodes);
-//
+
 ////r_octree->print();
-//
+
 //// free voxel
 //  r_voxel.clear();
 //  r_voxel.shrink_to_fit();
-//
+
 //  printf("robot octree built\n");
-//
+
 //  printf("building environment octree...\n");
 //  NTree<BRANCHING_FACTOR, LEVEL_COUNT, e_InnerNode, e_LeafNode>* e_octree = new NTree<BRANCHING_FACTOR,
 //      LEVEL_COUNT, e_InnerNode, e_LeafNode>(NUM_BLOCKS, NUM_THREADS_PER_BLOCK);
@@ -437,20 +428,20 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 //  e_octree->build(e_voxel, origin);
 //  printf("build: %f ms\n", timeDiff(time1, getCPUTime()));
 //  printf("AllocInnerNodes: %u    AllocLeafNodes: %u\n", e_octree->allocInnerNodes, e_octree->allocLeafNodes);
-//
+
 ////e_octree->print();
 //  printf("environment octree built\n");
-//
+
 //// free voxel
 //  e_voxel.clear();
 //  e_voxel.shrink_to_fit();
-//
+
 //  gpu_voxels::cuPrintDeviceMemoryInfo();
-//
+
 //// intersect
 //  printf("intersecting both...\n");
-//  voxel_id d_numConflicts = 0;
-//
+//  OctreeVoxelID d_numConflicts = 0;
+
 //  cudaProfilerStart();
 //  time1 = getCPUTime();
 //  switch (insect_type)
@@ -465,28 +456,28 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 //  time = timeDiff(time1, getCPUTime());
 //  printf("Intersect: %f ms\n", time);
 //  cudaProfilerStop();
-//
+
 //  printf("numConflicts = %lu\n", d_numConflicts);
-//
+
 ////return true;
-//
+
 ////check numConflicts
 //  thrust::sort(h_r_voxel.begin(), h_r_voxel.end());
 //  thrust::sort(h_e_voxel.begin(), h_e_voxel.end());
-//  thrust::host_vector<voxel_id> result(num_points);
-//  thrust::host_vector<voxel_id>::iterator end = thrust::set_intersection(h_r_voxel.begin(), h_r_voxel.end(),
+//  thrust::host_vector<OctreeVoxelID> result(num_points);
+//  thrust::host_vector<OctreeVoxelID>::iterator end = thrust::set_intersection(h_r_voxel.begin(), h_r_voxel.end(),
 //                                                                         h_e_voxel.begin(), h_e_voxel.end(),
 //                                                                         result.begin());
-//  voxel_id numEl = end - result.begin();
-//  voxel_id h_numConflicts = (numEl > 0) ? 1 : 0;
+//  OctreeVoxelID numEl = end - result.begin();
+//  OctreeVoxelID h_numConflicts = (numEl > 0) ? 1 : 0;
 //// count manually since there are duplicates
 //  for (uint32_t i = 1; i < numEl; ++i)
-//    h_numConflicts += ((voxel_id) result[i - 1] != (voxel_id) result[i]) ? 1 : 0;
+//    h_numConflicts += ((OctreeVoxelID) result[i - 1] != (OctreeVoxelID) result[i]) ? 1 : 0;
 //  printf("real number of conflicts = %lu \n", h_numConflicts);
-//
+
 //  r_octree->free();
 //  e_octree->free();
-//
+
 //  if (h_numConflicts == d_numConflicts)
 //  {
 //    printf("Intersection Test finished\n\n");
@@ -499,7 +490,7 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 //  }
 //}
 
-bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool propergate_up)
+bool insertTest(OctreeVoxelID num_points, OctreeVoxelID num_inserts, bool set_free, bool propergate_up)
 {
   typedef NTree<BRANCHING_FACTOR, LEVEL_COUNT, InnerNode, LeafNode> NTREE;
 
@@ -507,24 +498,17 @@ bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool pro
 
   printf("\n\ninsertTest()\n");
 
-  gpu_voxels::cuPrintDeviceMemoryInfo();
-
 // Allocate memory for points.
-  srand(665412182);
+  srand(TEST_RAND_SEED);
   thrust::host_vector<gpu_voxels::Vector3ui> hVoxel = randomPoints(num_points, NUM_VOXEL); //randomPoints(num_points, NUM_VOXEL); //linearVoxel(num_points); //; //
-
-  gpu_voxels::cuPrintDeviceMemoryInfo();
 
   printf("create octree....\n");
   NTREE* o = new NTREE(NUM_BLOCKS, NUM_THREADS_PER_BLOCK);
 
-  gpu_voxels::Vector3ui map_dimensions;
   timespec time1 = getCPUTime();
   o->build(hVoxel);
   printf("build: %f ms\n", timeDiff(time1, getCPUTime()));
 //o->print();
-
-  gpu_voxels::cuPrintDeviceMemoryInfo();
 
   printf("AllocInnerNodes: %u    AllocLeafNodes: %u\n", o->allocInnerNodes, o->allocLeafNodes);
 
@@ -582,7 +566,7 @@ bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool pro
 
   // check occupied voxel of build
   printf("checking occupied voxel of build...\n");
-  for (VoxelID i = 0; i < hVoxel.size() - num_inserts; ++i)
+  for (OctreeVoxelID i = 0; i < hVoxel.size() - num_inserts; ++i)
   {
     LeafNode n = (LeafNode) resultNode[i].m_node_data;
     if (!n.isOccupied())
@@ -592,7 +576,7 @@ bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool pro
         error = true;
         for (uint32_t j = hVoxel.size() - num_inserts; j < hVoxel.size(); ++j)
         {
-          if (equal(hVoxel[i], hVoxel[j]))
+          if (hVoxel[i] == hVoxel[j])
           {
             error = false;
             break;
@@ -605,7 +589,7 @@ bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool pro
       if (error)
       {
         printf("Build Error! Occupied voxel with ID %lu not found in octree.\n",
-               (VoxelID) morton_code60(hVoxel[i]));
+               (OctreeVoxelID) morton_code60(hVoxel[i]));
         break;
       }
     }
@@ -613,7 +597,7 @@ bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool pro
 
   // check occupied/free voxel of insert
   printf("checking occupied/free voxel of insert...\n");
-  for (VoxelID i = hVoxel.size() - num_inserts; i < hVoxel.size(); ++i)
+  for (OctreeVoxelID i = hVoxel.size() - num_inserts; i < hVoxel.size(); ++i)
   {
     LeafNode n = (LeafNode) resultNode[i].m_node_data;
     if ((!set_free && !n.isOccupied()) || (set_free && (!n.isFree() || n.isOccupied())))
@@ -621,10 +605,10 @@ bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool pro
       error = true;
       if (set_free)
         printf("Insert Error on Nr. %lu! Free voxel with ID %lu not found in octree.\n",
-               i - (hVoxel.size() - num_inserts), (VoxelID) morton_code60(hVoxel[i]));
+               i - (hVoxel.size() - num_inserts), (OctreeVoxelID) morton_code60(hVoxel[i]));
       else
         printf("Insert Error on Nr. %lu! Occupied voxel with ID %lu not found in octree.\n",
-               i - (hVoxel.size() - num_inserts), (VoxelID) morton_code60(hVoxel[i]));
+               i - (hVoxel.size() - num_inserts), (OctreeVoxelID) morton_code60(hVoxel[i]));
       break;
     }
   }
@@ -633,18 +617,18 @@ bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool pro
 // create vector of unknown voxel
   thrust::host_vector<gpu_voxels::Vector3ui> unknownVoxel(NUM_VOXEL);
   thrust::host_vector<gpu_voxels::Vector3ui> tmp = linearPoints(NUM_VOXEL, NUM_VOXEL);
-  for (VoxelID i = 0; i < unknownVoxel.size(); ++i)
+  for (OctreeVoxelID i = 0; i < unknownVoxel.size(); ++i)
     unknownVoxel[morton_code60(tmp[i])] = tmp[i];
-  for (VoxelID i = 0; i < hVoxel.size(); ++i)
+  for (OctreeVoxelID i = 0; i < hVoxel.size(); ++i)
     unknownVoxel[morton_code60(hVoxel[i])] = INVALID_POINT;
 
   resultNode = thrust::host_vector<FindResult<LeafNode> >(unknownVoxel.size());
   o->find(unknownVoxel, resultNode);
 
 // check unknown voxel
-  for (VoxelID i = 0; i < unknownVoxel.size(); ++i)
+  for (OctreeVoxelID i = 0; i < unknownVoxel.size(); ++i)
   {
-    if (!equal(unknownVoxel[i], INVALID_POINT))
+    if (unknownVoxel[i] != INVALID_POINT)
     {
       LeafNode n = resultNode[i].m_node_data;
       if (n.isOccupied() || n.isFree())
@@ -660,134 +644,46 @@ bool insertTest(VoxelID num_points, VoxelID num_inserts, bool set_free, bool pro
 
   delete o;
 
-  gpu_voxels::cuPrintDeviceMemoryInfo();
-
   if (error)
     printf("##### insertTest() finished with ERRORS #####\n\n\n");
   else
     printf("insertTest() finished\n\n\n");
-  return error;
+  return !error;
 }
 
-bool mortonTest()
+bool mortonTest(uint32_t num_runs)
 {
-  printf("\n\nmortonTest()\n");
+  //printf("\n\nmortonTest()\n");
 
-  const uint32_t num_runs = 1000;
-  const VoxelID max_voxel_id = (VoxelID(1) << 60);
+  srand(TEST_RAND_SEED);
+  srand48(TEST_RAND_SEED);
+  const OctreeVoxelID max_voxel_id = (OctreeVoxelID(1) << 60);
   thrust::host_vector<gpu_voxels::Vector3ui> rand_points = randomPoints(num_runs, max_voxel_id);
 
   for (uint32_t i = 0; i < num_runs; ++i)
   {
     gpu_voxels::Vector3ui coord = (gpu_voxels::Vector3ui) rand_points[i];
-    VoxelID morton_code = morton_code60(coord);
+    OctreeVoxelID morton_code = morton_code60(coord);
     gpu_voxels::Vector3ui inv_morton_code;
     inv_morton_code60(morton_code, inv_morton_code);
 //    printf("coord %u %u %u, morton %lu, inv %u %u %u\n", coord.x, coord.y, coord.z, morton_code,
 //           inv_morton_code.x, inv_morton_code.y, inv_morton_code.z);
-    assert(equal((gpu_voxels::Vector3ui )rand_points[i], inv_morton_code));
+    if((gpu_voxels::Vector3ui )rand_points[i] != inv_morton_code)
+    {
+      return false;
+    }
   }
-  return false;
+  return true;
 }
 
-void run(std::vector<Vector3f>& points, uint32_t num_points)
-{
+//bool run(std::vector<Vector3f>& points, uint32_t num_points)
+//{
+//  double time = 0;
+//  bool error = false;
 
-// Constants to control the algorithm.
+//  srand(TEST_RAND_SEED);
+//  srand48(TEST_RAND_SEED);
 
-//const int max_depth  = 8;
-//const int min_points_per_node = 16;
-
-// Find/set the device.
-// The test requires an architecture SM35 or greater (CDP capable).
-// Find/set the device.
-  int device_count = 0, device = -1;
-  HANDLE_CUDA_ERROR(cudaGetDeviceCount(&device_count));
-  for (int i = 0; i < device_count; ++i)
-  {
-    cudaDeviceProp properties;
-    HANDLE_CUDA_ERROR(cudaGetDeviceProperties(&properties, i));
-    if (properties.major > 2 || (properties.major == 2 && properties.minor >= 0))
-    {
-      device = i;
-      //warp_size = properties.warpSize;
-      std::cout << "Running on GPU " << i << " (" << properties.name << ")" << std::endl;
-      break;
-    }
-    std::cout << "GPU " << i << " (" << properties.name << ") does not support CUDA Dynamic Parallelism"
-        << std::endl;
-  }
-  if (device == -1)
-  {
-    std::cerr << "cdpQuadTree requires SM 3.5 or higher to use CUDA Dynamic Parallelism.  Exiting...\n"
-        << std::endl;
-    exit(EXIT_SUCCESS);
-  }
-  cudaSetDevice(device);
-  HANDLE_CUDA_ERROR(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
-//HANDLE_CUDA_ERROR(cudaDeviceSetCacheConfig(cudaFuncCachePreferShared));
-
-  double time = 0;
-  bool error = false;
-
-  srand(TEST_RAND_SEED);
-  srand48(TEST_RAND_SEED);
-
-  // buildTest(points, num_points, time);
-  //insertTest(52466, 87421, time, false);
-
-  // ### QUICK TEST ###
-
-  // ## Morton Test ###
-  if (error)
-    return;
-  error |= mortonTest();
-
-  // ### Build Test###
-  bool rebuild;
-  for (uint32_t i = 0; i < 2; ++i)
-  {
-    rebuild = (i == 1);
-    if (rebuild)
-      printf("######### REBUILD TESTS ############\n");
-    error |= buildTest(points, num_points, time, rebuild);
-    if (error)
-      return;
-    {
-      std::vector<Vector3f> tmp;
-      // skip for release build since there will be an unexplainable "thrust::system::system_error"
-#ifndef NDEBUG
-      error |= buildTest(tmp, num_points, time, rebuild);
-#endif
-      if (error)
-        return;
-    }
-  }
-
-  // ## Insertion Test ##
-  uint32_t num_build = 32541;
-  uint32_t num_insert = 52435;
-  if (error)
-    return;
-  error |= insertTest(num_build, num_insert, false, true);
-  if (error)
-    return;
-  error |= insertTest(num_build, num_insert, true, true);
-  if (error)
-    return;
-//  error |= insertTest(num_build, num_insert, false, true);
-//  if (error)
-//    return;
-//  error |= insertTest(num_build, num_insert, true, true);
-//  if (error)
-//    return;
-
-  printf("\n\n ##############################\n");
-  if (error)
-    printf("########### FAILED ############\n");
-  else
-    printf("########### PASSED ############\n");
-  printf("##############################\n");
 
 //  Environment::InnerNode n;
 //  n.init_h();
@@ -876,7 +772,7 @@ void run(std::vector<Vector3f>& points, uint32_t num_points)
 //
 //  std::cout << "created" << std::endl;
 
-}
+//}
 
 }
 }

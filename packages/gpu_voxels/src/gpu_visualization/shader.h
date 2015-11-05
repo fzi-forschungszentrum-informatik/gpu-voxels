@@ -23,6 +23,6 @@ namespace visualization {
 
 GLuint loadShaders(const char *vertex_shader, const char *fragment_shader);
 
-}
-}
+} // end of namespace visualization
+} // end of namespace gpu_voxels
 #endif

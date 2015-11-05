@@ -18,14 +18,14 @@ namespace gpu_voxels {
 namespace NTree {
 
 __global__
-void kernel_transformKinectPoints(gpu_voxels::Vector3f* point_cloud, VoxelID num_points, Voxel* voxel,
+void kernel_transformKinectPoints(gpu_voxels::Vector3f* point_cloud, OctreeVoxelID num_points, Voxel* voxel,
                                   Sensor* sensor, gpu_voxels::Vector3f voxel_dimension)
 {
-  const VoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
-  const VoxelID numThreads = gridDim.x * blockDim.x;
+  const OctreeVoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
+  const OctreeVoxelID numThreads = gridDim.x * blockDim.x;
 
   // TODO: filter points
-  for (VoxelID i = id; i < num_points; i += numThreads)
+  for (OctreeVoxelID i = id; i < num_points; i += numThreads)
   {
 //    // handle NAN values
 //    gpu_voxels::Vector3f point = point_cloud[i];
@@ -42,7 +42,7 @@ void kernel_transformKinectPoints(gpu_voxels::Vector3f* point_cloud, VoxelID num
 
 __global__
 void kernel_transformKinectPoints_simple(gpu_voxels::Vector3f* point_cloud, const voxel_count num_points,
-                                         VoxelID* voxel, Sensor* sensor, const uint32_t resolution)
+                                         OctreeVoxelID* voxel, Sensor* sensor, const uint32_t resolution)
 {
   for (voxel_count i = blockIdx.x * blockDim.x + threadIdx.x; i < num_points; i += gridDim.x * blockDim.x)
   {
@@ -61,7 +61,7 @@ void kernel_transformKinectPoints_simple(gpu_voxels::Vector3f* point_cloud, cons
 }
 
 __global__
-void kernel_voxelize_finalStep(VoxelID* voxelInput, const voxel_count numVoxel, const voxel_count num_output_voxel,
+void kernel_voxelize_finalStep(OctreeVoxelID* voxelInput, const voxel_count numVoxel, const voxel_count num_output_voxel,
                                Voxel* voxel_output, Sensor* sensor)
 {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < num_output_voxel; i += gridDim.x * blockDim.x)
@@ -80,7 +80,7 @@ void kernel_voxelize_finalStep(VoxelID* voxelInput, const voxel_count numVoxel, 
 }
 
 __global__
-void kernel_toMortonCode(ulong3* inputVoxel, voxel_count numVoxel, VoxelID* outputVoxel)
+void kernel_toMortonCode(ulong3* inputVoxel, voxel_count numVoxel, OctreeVoxelID* outputVoxel)
 {
   const voxel_count id = blockIdx.x * blockDim.x + threadIdx.x;
   const voxel_count numThreads = gridDim.x * blockDim.x;
@@ -89,21 +89,21 @@ void kernel_toMortonCode(ulong3* inputVoxel, voxel_count numVoxel, VoxelID* outp
     outputVoxel[i] = morton_code60(inputVoxel[i].x, inputVoxel[i].y, inputVoxel[i].z);
 }
 
-__global__ void kernel_countVoxel(Voxel* voxelInput, VoxelID numVoxel, VoxelID* countVoxel)
+__global__ void kernel_countVoxel(Voxel* voxelInput, OctreeVoxelID numVoxel, OctreeVoxelID* countVoxel)
 {
-  const VoxelID chunkSize = floor(double(numVoxel) / (gridDim.x * blockDim.x));
-  const VoxelID overhead = numVoxel - chunkSize * gridDim.x * blockDim.x;
-  const VoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
-  const VoxelID from = id * chunkSize + min((unsigned long long) overhead, (unsigned long long) id);
-  const VoxelID to = min((unsigned long long) (from + chunkSize + (id < overhead) ? 1 : 0),
+  const OctreeVoxelID chunkSize = floor(double(numVoxel) / (gridDim.x * blockDim.x));
+  const OctreeVoxelID overhead = numVoxel - chunkSize * gridDim.x * blockDim.x;
+  const OctreeVoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
+  const OctreeVoxelID from = id * chunkSize + min((unsigned long long) overhead, (unsigned long long) id);
+  const OctreeVoxelID to = min((unsigned long long) (from + chunkSize + (id < overhead) ? 1 : 0),
                          (unsigned long long) numVoxel);
 
-  VoxelID myVoxelCount = 0;
+  OctreeVoxelID myVoxelCount = 0;
   if (from < numVoxel)
   {
-    VoxelID lastVoxel = voxelInput[from].voxelId;
+    OctreeVoxelID lastVoxel = voxelInput[from].voxelId;
     myVoxelCount = ((from == 0) || voxelInput[from - 1].voxelId != lastVoxel) ? 1 : 0;
-    for (VoxelID i = from + 1; i < to; ++i)
+    for (OctreeVoxelID i = from + 1; i < to; ++i)
     {
       myVoxelCount += voxelInput[i].voxelId == lastVoxel ? 0 : 1;
       lastVoxel = voxelInput[i].voxelId;
@@ -112,23 +112,23 @@ __global__ void kernel_countVoxel(Voxel* voxelInput, VoxelID numVoxel, VoxelID* 
   countVoxel[id] = myVoxelCount;
 }
 
-__global__ void kernel_combineEqualVoxel(Voxel* voxelInput, VoxelID numVoxel, VoxelID* countVoxel,
+__global__ void kernel_combineEqualVoxel(Voxel* voxelInput, OctreeVoxelID numVoxel, OctreeVoxelID* countVoxel,
                                          Voxel* outputVoxel, Sensor* sensor)
 {
-  const VoxelID chunkSize = floor(double(numVoxel) / (gridDim.x * blockDim.x));
-  const VoxelID overhead = numVoxel - chunkSize * gridDim.x * blockDim.x;
-  const VoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
-  const VoxelID from = id * chunkSize + min((unsigned long long) overhead, (unsigned long long) id);
-  const VoxelID to = min((unsigned long long) (from + chunkSize + (id < overhead) ? 1 : 0),
+  const OctreeVoxelID chunkSize = floor(double(numVoxel) / (gridDim.x * blockDim.x));
+  const OctreeVoxelID overhead = numVoxel - chunkSize * gridDim.x * blockDim.x;
+  const OctreeVoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
+  const OctreeVoxelID from = id * chunkSize + min((unsigned long long) overhead, (unsigned long long) id);
+  const OctreeVoxelID to = min((unsigned long long) (from + chunkSize + (id < overhead) ? 1 : 0),
                          (unsigned long long) numVoxel);
 
   if (from < numVoxel)
   {
-    VoxelID lastVoxel = voxelInput[from].voxelId;
-    VoxelID destPos = (id == 0) ? 0 : countVoxel[id - 1] - 1;
+    OctreeVoxelID lastVoxel = voxelInput[from].voxelId;
+    OctreeVoxelID destPos = (id == 0) ? 0 : countVoxel[id - 1] - 1;
     bool leftMost = ((from == 0) || voxelInput[from - 1].voxelId != lastVoxel);
     destPos += leftMost ? 0 : 1;
-    VoxelID firstVoxel = from;
+    OctreeVoxelID firstVoxel = from;
 
 //    // scan to next voxel
 //    voxel_id i = from + 1;
@@ -141,7 +141,7 @@ __global__ void kernel_combineEqualVoxel(Voxel* voxelInput, VoxelID numVoxel, Vo
 //                                                                  &voxelInput[i - 1]);
 //    }
 
-    for (VoxelID i = from + 1; ((i < to) | leftMost) & (i < numVoxel); ++i)
+    for (OctreeVoxelID i = from + 1; ((i < to) | leftMost) & (i < numVoxel); ++i)
     {
       if (voxelInput[i].voxelId != lastVoxel)
       {
@@ -158,7 +158,7 @@ __global__ void kernel_combineEqualVoxel(Voxel* voxelInput, VoxelID numVoxel, Vo
 }
 
 __global__
-void kernel_toMortonCode(Vector3ui* inputVoxel, voxel_count numVoxel, VoxelID* outputVoxel)
+void kernel_toMortonCode(Vector3ui* inputVoxel, voxel_count numVoxel, OctreeVoxelID* outputVoxel)
 {
   const voxel_count id = blockIdx.x * blockDim.x + threadIdx.x;
   const voxel_count numThreads = gridDim.x * blockDim.x;

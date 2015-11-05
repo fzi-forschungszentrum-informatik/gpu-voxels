@@ -57,6 +57,7 @@
 #ifndef GPU_VOXELS_ROBOT_URDF_ROBOT_ROBOT_H_INCLUDED
 #define GPU_VOXELS_ROBOT_URDF_ROBOT_ROBOT_H_INCLUDED
 
+#include "gpu_voxels/robot/robot_interface.h"
 #include "gpu_voxels/robot/urdf_robot/robot_link.h"
 #include "gpu_voxels/robot/urdf_robot/robot_joint.h"
 #include "gpu_voxels/robot/urdf_robot/node.h"
@@ -86,7 +87,7 @@ typedef std::map< std::string, RobotJoint* > M_NameToJoint;
  * A helper class to draw a representation of a robot, as specified by a URDF.  Can display either the visual models of the robot,
  * or the collision models.
  */
-class Robot
+class Robot : public RobotInterface
 {
 public:
   Robot();
@@ -99,24 +100,61 @@ public:
    * @param visual Whether or not to load the visual representation
    * @param collision Whether or not to load the collision representation
    */
-  virtual void load( const urdf::ModelInterface &urdf, bool visual = true, bool collision = true );
+  void load( const urdf::ModelInterface &urdf, bool visual = true, bool collision = true, const bool &use_model_path = true);
 
   /**
    * \brief Clears all data loaded from a URDF
    */
-  virtual void clear();
+  void clear();
+
+
+  /**
+   * @brief getJointNames Reads all joint names
+   * @param jointnames Vector of jointnames that will get extended
+   */
+  void getJointNames(std::vector<std::string> &jointnames);
 
   /**
    * @brief update Sets the robot configuration
    * @param joint_values Map of jointnames and values
    */
-  void setConfiguration(const std::map<std::string, float> &joint_values);
+  void setConfiguration(const JointValueMap &joint_values);
 
   /**
    * @brief getConfiguration Gets the robot configuration
-   * @param joint_values Map of jointnames and values
+   * @param joint_values Map of jointnames and values.
+   * This will get enlarged about missing joint names.
    */
-  void getConfiguration(std::map<std::string, float> jointmap);
+  void getConfiguration(JointValueMap &jointmap);
+
+  /**
+   * @brief getLowerJointLimits Gets the robot configuration
+   * @param lower_limits Map of jointnames and values.
+   * This will get enlarged about missing joint names.
+   */
+  void getLowerJointLimits(JointValueMap &lower_limits);
+
+  /**
+   * @brief getUpperJointLimits Gets the robot configuration
+   * @param upper_limits Map of jointnames and values.
+   * This will get enlarged about missing joint names.
+   */
+  void getUpperJointLimits(JointValueMap &upper_limits);
+
+  /**
+   * @brief updatePointcloud Changes the geometry of a single link.
+   * Useful when grasping an object, changing a tool
+   * or interpreting point cloud data from an onboard sensor as a robot link.
+   * @param link_name Link to modify
+   * @param cloud New geometry
+   */
+  void updatePointcloud(const std::string &link_name, const std::vector<Vector3f> &cloud);
+
+  /**
+   * @brief getTransformedClouds Only a dummy overwritten by robot_to_gpu!
+   * @return NULL pointer
+   */
+  virtual const MetaPointCloud *getTransformedClouds();
 
 
   RobotLink* getRootLink() { return root_link_; }
@@ -143,7 +181,6 @@ public:
 
   const MetaPointCloud* getLinkPointclouds() { return &link_pointclouds_; }
 
-  void updatePointcloud(const std::string &link_name, const std::vector<Vector3f> &cloud);
 private:
 
   MetaPointCloud link_pointclouds_;

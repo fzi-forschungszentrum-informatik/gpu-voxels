@@ -49,7 +49,7 @@ GLuint loadShaders(const char* vertex_shader, const char* fragment_shader)
 
   // Check Vertex Shader
   glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
-  LOGGING_ERROR(Shader, "Vertex Shader Compile Result is: "<< Result << endl);
+  if(Result != 1) LOGGING_ERROR(Shader, "Vertex Shader Compile Result is: "<< Result << endl);
   glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
   if (InfoLogLength > 1)
   {
@@ -65,7 +65,7 @@ GLuint loadShaders(const char* vertex_shader, const char* fragment_shader)
 
   // Check Fragment Shader
   glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &Result);
-  LOGGING_ERROR(Shader, "Frgament Shader Compile Result is: "<< Result << endl);
+  if(Result != 1) LOGGING_ERROR(Shader, "Frgament Shader Compile Result is: "<< Result << endl);
   glGetShaderiv(FragmentShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
   if (InfoLogLength > 1)
   {
@@ -96,6 +96,7 @@ GLuint loadShaders(const char* vertex_shader, const char* fragment_shader)
 
   return ProgramID;
 }
-}
-}
+
+} // end of namespace visualization
+} // end of namespace gpu_voxels
 

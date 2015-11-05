@@ -263,7 +263,7 @@ public:
   virtual void print(std::ostream& os) const
   {
     os << "[seq: " << this->m_header.sequence_number
-       << ", timestamp: " << this->m_header.timestamp
+       << ", timestamp: " << boost::posix_time::to_simple_string(this->m_header.timestamp)
        << ", DSIN: " << this->m_header.dsin
        << "; ";
 #if (BOOST_VERSION >= 104800)

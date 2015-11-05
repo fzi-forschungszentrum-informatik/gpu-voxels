@@ -182,6 +182,25 @@ void Camera_gpu::moveFocusPointFromMouseInput(int32_t xpos, int32_t ypos)
   updateViewMatrix();
 }
 
+void Camera_gpu::moveFocusPointVerticalFromMouseInput(int32_t xpos, int32_t ypos)
+{
+  ypos = m_window_height - ypos;
+  float dz;
+
+  dz = (float) (m_mouse_old_y - ypos);
+
+  m_mouse_old_x = xpos;
+  m_mouse_old_y = ypos;
+
+  glm::vec3 target = getCameraTarget();
+  target = target - glm::vec3(0, 0, dz);
+  setCameraTarget(target);
+  glm::vec3 position = getCameraPosition();
+  position = position - glm::vec3(0, 0, dz);
+  m_cur_context.camera_position = position;
+  updateViewMatrix();
+}
+
 
 void Camera_gpu::updateViewMatrix()
 {

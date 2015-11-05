@@ -30,7 +30,6 @@
 
 #include <gpu_voxels/octree/DataTypes.h>
 #include <gpu_voxels/octree/Voxel.h>
-#include <gpu_voxels/octree/VoxelTypeFlags.h>
 #include <gpu_voxels/octree/Morton.h>
 #include <gpu_voxels/octree/NTree.h>
 #include <gpu_voxels/octree/kernels/kernel_common.h>
@@ -42,11 +41,11 @@
 #include <thrust/reduce.h>
 #include <thrust/iterator/constant_iterator.h>
 
-#include <gpu_voxels/octree/cub/cub.cuh>
+#include <thrust/system/cuda/detail/cub.h>
+namespace cub = thrust::system::cuda::detail::cub_;
 
 // gpu_voxels
 #include <gpu_voxels/helpers/cuda_datatypes.h>
-//#include <gpu_voxels/voxelmap/RobotVoxel.h>
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 
 #include "shared_voxel.cuh"
@@ -59,23 +58,23 @@ namespace NTree {
  */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 __global__
-void kernel_countNodes(VoxelID* const voxel, const VoxelID numVoxel, const uint32_t level, VoxelID* const sum)
+void kernel_countNodes(OctreeVoxelID* const voxel, const OctreeVoxelID numVoxel, const uint32_t level, OctreeVoxelID* const sum)
 {
-  const VoxelID chunk_size = ceil(double(numVoxel) / (gridDim.x * blockDim.x));
-  const VoxelID id = (blockIdx.x * blockDim.x + threadIdx.x);
-  const VoxelID from = chunk_size * id;
-  const VoxelID to = (VoxelID) min((unsigned long long int) (from + chunk_size),
+  const OctreeVoxelID chunk_size = ceil(double(numVoxel) / (gridDim.x * blockDim.x));
+  const OctreeVoxelID id = (blockIdx.x * blockDim.x + threadIdx.x);
+  const OctreeVoxelID from = chunk_size * id;
+  const OctreeVoxelID to = (OctreeVoxelID) min((unsigned long long int) (from + chunk_size),
                                    (unsigned long long int) numVoxel);
-  VoxelID neededNodes = 0;
+  OctreeVoxelID neededNodes = 0;
 
   // handle idle threads
   if (from < numVoxel)
   {
     // left most thread takes care of nodes split across chunks
-    VoxelID lastPrefix = getZOrderPrefix<branching_factor>(voxel[from], level);
+    OctreeVoxelID lastPrefix = getZOrderPrefix<branching_factor>(voxel[from], level);
     neededNodes = (from == 0 || getZOrderPrefix<branching_factor>(voxel[from - 1], level) != lastPrefix);
 
-    for (VoxelID i = from + 1; i < to; ++i)
+    for (OctreeVoxelID i = from + 1; i < to; ++i)
     {
       neededNodes += (getZOrderPrefix<branching_factor>(voxel[i], level) != lastPrefix);
       lastPrefix = getZOrderPrefix<branching_factor>(voxel[i], level);
@@ -108,27 +107,27 @@ void kernel_clearNodes(const voxel_count size, T* const nodes)
  */
 template<typename T1, typename T2, std::size_t branching_factor>
 __global__
-void kernel_setNodes(VoxelID* const voxel, const VoxelID numVoxel, const uint32_t level, VoxelID* const sum, T1* const nodes,
-                     VoxelID* const nodeIds, T2* const childNodes)
+void kernel_setNodes(OctreeVoxelID* const voxel, const OctreeVoxelID numVoxel, const uint32_t level, OctreeVoxelID* const sum, T1* const nodes,
+                     OctreeVoxelID* const nodeIds, T2* const childNodes)
 {
   const uint32_t chunk_size = ceil(double(numVoxel) / (gridDim.x * blockDim.x));
-  const VoxelID id = (blockIdx.x * blockDim.x + threadIdx.x);
-  const VoxelID from = chunk_size * id;
-  const VoxelID to = (VoxelID) min((unsigned long long int) (from + chunk_size),
+  const OctreeVoxelID id = (blockIdx.x * blockDim.x + threadIdx.x);
+  const OctreeVoxelID from = chunk_size * id;
+  const OctreeVoxelID to = (OctreeVoxelID) min((unsigned long long int) (from + chunk_size),
                                    (unsigned long long int) numVoxel);
 
 // handle idle threads
   if (from < numVoxel)
   {
     // left most thread takes care of nodes split across chunks
-    VoxelID lastPrefix = getZOrderPrefix<branching_factor>(voxel[from], level);
-    VoxelID node = (id == 0) ? 0 : sum[id - 1] - 1;
+    OctreeVoxelID lastPrefix = getZOrderPrefix<branching_factor>(voxel[from], level);
+    OctreeVoxelID node = (id == 0) ? 0 : sum[id - 1] - 1;
     node += (id == 0 || getZOrderPrefix<branching_factor>(voxel[from - 1], level) == lastPrefix) ? 0 : 1;
 
     for (uint32_t i = from; i < to; ++i)
     {
       node += (getZOrderPrefix<branching_factor>(voxel[i], level) != lastPrefix);
-      const VoxelID index = branching_factor * node + getZOrderNodeId<branching_factor>(voxel[i], level);
+      const OctreeVoxelID index = branching_factor * node + getZOrderNodeId<branching_factor>(voxel[i], level);
 
       setOccupied(&nodes[index], childNodes + i * branching_factor);
 
@@ -240,12 +239,12 @@ static void getStatusString(char* status, uint8_t nodeStatus)
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 __global__
-void kernel_print2(InnerNode* root, MyTripple<InnerNode*, VoxelID, bool>* stack1,
-                   MyTripple<InnerNode*, VoxelID, bool>* stack2)
+void kernel_print2(InnerNode* root, MyTripple<InnerNode*, OctreeVoxelID, bool>* stack1,
+                   MyTripple<InnerNode*, OctreeVoxelID, bool>* stack2)
 {
   int32_t stack1Top = -1;
   int32_t stack2Top = -1;
-  stack1[++stack1Top] = MyTripple<InnerNode*, VoxelID, bool>(root, 0, false);
+  stack1[++stack1Top] = MyTripple<InnerNode*, OctreeVoxelID, bool>(root, 0, false);
 //printf("Level %i ####################### \n", level_count - 1);
 //printf("root [%lu - %lu] @ %016llX\n", 0, (voxel_id) (pow(branching_factor, level_count) - 1), octree.root);
 //printf(" root[][%016llX]\n", (*octree.root).data);
@@ -255,7 +254,7 @@ void kernel_print2(InnerNode* root, MyTripple<InnerNode*, VoxelID, bool>* stack1
     // reverse
     for (uint32_t j = 0; j < ((stack1Top + 1) / 2); ++j)
     {
-      MyTripple<InnerNode*, VoxelID, bool> tmp = stack1[j];
+      MyTripple<InnerNode*, OctreeVoxelID, bool> tmp = stack1[j];
       stack1[j] = stack1[stack1Top - j];
       stack1[stack1Top - j] = tmp;
     }
@@ -263,7 +262,7 @@ void kernel_print2(InnerNode* root, MyTripple<InnerNode*, VoxelID, bool>* stack1
     printf("\nLevel %i ####################### \n", level);
     while (stack1Top >= 0)
     {
-      MyTripple<InnerNode*, VoxelID, bool> current = stack1[stack1Top--];
+      MyTripple<InnerNode*, OctreeVoxelID, bool> current = stack1[stack1Top--];
       InnerNode* node = current.m_a;
       if (current.m_c)
       {
@@ -280,7 +279,7 @@ void kernel_print2(InnerNode* root, MyTripple<InnerNode*, VoxelID, bool>* stack1
         getStatusString(status, node->getStatus());
 
         printf("[%lu - %lu][%s][@ ] -- ", current.m_b,
-               current.m_b + (VoxelID) (powf(branching_factor, level) - 1), (char*) status);  // node);
+               current.m_b + (OctreeVoxelID) (powf(branching_factor, level) - 1), (char*) status);  // node);
 
         if (node->hasStatus(ns_PART))
         {
@@ -289,22 +288,22 @@ void kernel_print2(InnerNode* root, MyTripple<InnerNode*, VoxelID, bool>* stack1
           {
             if (node->hasStatus(ns_LAST_LEVEL))
             {
-              stack2[++stack2Top] = MyTripple<InnerNode*, VoxelID, bool>(
+              stack2[++stack2Top] = MyTripple<InnerNode*, OctreeVoxelID, bool>(
                   (InnerNode*) &((LeafNode*) (child))[c],
-                  (VoxelID) (current.m_b + (c << ((level - 1) * uint32_t(log2(float(branching_factor)))))),
+                  (OctreeVoxelID) (current.m_b + (c << ((level - 1) * uint32_t(log2(float(branching_factor)))))),
                   true);
             }
             else
-              stack2[++stack2Top] = MyTripple<InnerNode*, VoxelID, bool>(
+              stack2[++stack2Top] = MyTripple<InnerNode*, OctreeVoxelID, bool>(
                   &child[c],
-                  (VoxelID) (current.m_b + (c << ((level - 1) * uint32_t(log2(float(branching_factor)))))),
+                  (OctreeVoxelID) (current.m_b + (c << ((level - 1) * uint32_t(log2(float(branching_factor)))))),
                   false);
           }
         }
       }
     }
     stack1Top = stack2Top;
-    MyTripple<InnerNode*, VoxelID, bool>* tmp = stack1;
+    MyTripple<InnerNode*, OctreeVoxelID, bool>* tmp = stack1;
     stack1 = stack2;
     stack2 = tmp;
     stack2Top = -1;
@@ -313,18 +312,18 @@ void kernel_print2(InnerNode* root, MyTripple<InnerNode*, VoxelID, bool>* stack1
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-__global__ void kernel_find(InnerNode* root, Vector3ui* voxel, VoxelID numVoxel, void** resultNode,
+__global__ void kernel_find(InnerNode* root, Vector3ui* voxel, OctreeVoxelID numVoxel, void** resultNode,
                             enum NodeType* resultNodeType)
 {
-  const VoxelID chunk_size = ceil(double(numVoxel) / (gridDim.x * blockDim.x));
-  const VoxelID id = (blockIdx.x * blockDim.x + threadIdx.x);
-  const VoxelID from = chunk_size * id;
-  const VoxelID to = (VoxelID) min((unsigned long long int) (from + chunk_size),
+  const OctreeVoxelID chunk_size = ceil(double(numVoxel) / (gridDim.x * blockDim.x));
+  const OctreeVoxelID id = (blockIdx.x * blockDim.x + threadIdx.x);
+  const OctreeVoxelID from = chunk_size * id;
+  const OctreeVoxelID to = (OctreeVoxelID) min((unsigned long long int) (from + chunk_size),
                                    (unsigned long long int) numVoxel);
-  for (VoxelID i = from; i < to; ++i)
+  for (OctreeVoxelID i = from; i < to; ++i)
   {
     InnerNode* node = root;
-    const VoxelID nodeID = morton_code60(voxel[i].x, voxel[i].y, voxel[i].z);
+    const OctreeVoxelID nodeID = morton_code60(voxel[i].x, voxel[i].y, voxel[i].z);
     for (uint32_t level = level_count - 2; level > 0 && node->hasStatus(ns_PART); --level)
       node = &((InnerNode*) node->getChildPtr())[getZOrderNodeId<branching_factor>(nodeID, level)];
 
@@ -341,18 +340,24 @@ __global__ void kernel_find(InnerNode* root, Vector3ui* voxel, VoxelID numVoxel,
   }
 }
 
+
+/*!
+ * Iterate over an array of Voxels (given as 3D Coordinates), generate their morton code,
+ * and look up the corresponding voxel in the octree. ==> Check for collision.
+ * This kernel can not handle voxelmeanings from the colliding list!
+ */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-__global__ void kernel_intersect(InnerNode* root, Vector3ui* voxel, VoxelID numVoxel,
+__global__ void kernel_intersect(InnerNode* root, Vector3ui* voxel, OctreeVoxelID numVoxel,
                                  voxel_count* num_collisions)
 {
   __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
-  const VoxelID id = (blockIdx.x * blockDim.x + threadIdx.x);
+  const OctreeVoxelID id = (blockIdx.x * blockDim.x + threadIdx.x);
 
   voxel_count my_num_collisions = 0;
-  for (VoxelID i = id; i < numVoxel; i += gridDim.x * blockDim.x)
+  for (OctreeVoxelID i = id; i < numVoxel; i += gridDim.x * blockDim.x)
   {
     InnerNode* node = root;
-    const VoxelID nodeID = morton_code60(voxel[i].x, voxel[i].y, voxel[i].z);
+    const OctreeVoxelID nodeID = morton_code60(voxel[i].x, voxel[i].y, voxel[i].z);
     for (uint32_t level = level_count - 2; level > 0 && node->hasStatus(ns_PART); --level)
       node = &((InnerNode*) node->getChildPtr())[getZOrderNodeId<branching_factor>(nodeID, level)];
 
@@ -370,6 +375,14 @@ __global__ void kernel_intersect(InnerNode* root, Vector3ui* voxel, VoxelID numV
     num_collisions[blockIdx.x] = shared_num_collisions[0];
   __syncthreads();
 }
+
+
+// WATCH OUT: This macro will read and write the following variables:
+// int level, tmp_level;
+// InnerNode* node, tmp_node;
+// LeafNode* leaf;
+// bool collision, isLeaf;
+// voxel_count* shared_num_collisions;
 
 #define TRAVES_MACRO(NODEID, UPDATE_FLAGS, LEVEL) \
     level = tmp_level; \
@@ -421,10 +434,17 @@ void reduceVoxels(Voxel& flags, const int thread_id, const int num_threads, Voxe
   __syncthreads();
 }
 
+/*!
+ * Iterate over an array of Voxels (given as Morton Codes),
+ * and look up the corresponding voxels in the octree. ==> Check for collision.
+ * Per iteration two Voxels from the array are checked at once.
+ *
+ * WARNING: THIS KERNEL IS NOT COMPLETE (it ignores the voxel flags)!
+ */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode,
     bool set_collision_flag, typename VoxelFlags, bool compute_voxelTypeFlags>
 __global__
-void kernel_intersect(InnerNode* root, VoxelID* voxel, VoxelFlags* voxelFlags, voxel_count num_voxel,
+void kernel_intersect(InnerNode* root, OctreeVoxelID* voxel, VoxelFlags* voxelFlags, voxel_count num_voxel,
                       voxel_count* num_collisions, VoxelFlags* result_voxelFlags)
 {
   __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
@@ -435,8 +455,8 @@ void kernel_intersect(InnerNode* root, VoxelID* voxel, VoxelFlags* voxelFlags, v
   for (voxel_count i = STEPS * (blockIdx.x * blockDim.x + threadIdx.x); i < num_voxel;
       i += STEPS * (gridDim.x * blockDim.x))
   {
-    const VoxelID nodeID0 = voxel[i];
-    const VoxelID nodeID1 = (i == (num_voxel - 1)) ? nodeID0 : voxel[i + 1];
+    const OctreeVoxelID nodeID0 = voxel[i];
+    const OctreeVoxelID nodeID1 = (i == (num_voxel - 1)) ? nodeID0 : voxel[i + 1];
     //const voxel_id nodeID7 = voxel[i + 7];
     InnerNode* node = root;
     int common_level = getCommonLevel<branching_factor>(nodeID0, nodeID1);
@@ -478,10 +498,20 @@ void kernel_intersect(InnerNode* root, VoxelID* voxel, VoxelFlags* voxelFlags, v
   }
   __syncthreads();
 
+  // The collision counter per thread is incremented by TRAVES_MACRO.
+  // So this summs up the collisions per Block
   REDUCE(shared_num_collisions, threadIdx.x, blockDim.x, +)
 
+
+  // TODO: Fix this! Until then, the computation of flags is disabled.
+  // Basically this should reduce the Flags per Block via OR-Operation
+  // But: The reduction function overwrites data in the shared_num_collisions with VoxelFlags?!
   if (compute_voxelTypeFlags)
-    VoxelFlags::reduce(my_voxel_flags, threadIdx.x, blockDim.x, shared_num_collisions);
+  {
+    printf("kernel_Octree.h: compute_voxelTypeFlags IS NOT IMPLEMENTED!");
+    assert(false);
+    //VoxelFlags::reduce(my_voxel_flags, threadIdx.x, blockDim.x, shared_num_collisions);
+  }
 
   if (threadIdx.x == 0)
   {
@@ -491,6 +521,10 @@ void kernel_intersect(InnerNode* root, VoxelID* voxel, VoxelFlags* voxelFlags, v
   }
 }
 
+/*!
+ * Iterate over a complete Voxelmap, generate the Morton code of each occupied voxel and look it up
+ * in the Octree. Then check for collisions and colliding meanings.
+ */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode,
     bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
 __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, uint32_t voxelmap_size,
@@ -502,7 +536,6 @@ __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, ui
   SharedVoxel<VoxelType> shared;
   VoxelType* shared_voxels = shared.getPointer();
   VoxelType my_voxel_flags;
-  const gpu_voxels::Vector3ui dim = dimensions;
 
   shared_num_collisions[threadIdx.x] = 0;
   for (voxel_count i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
@@ -510,7 +543,7 @@ __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, ui
     const VoxelType* my_voxel = &voxels[i];
     if (isVoxelOccupied(my_voxel))
     {
-      const VoxelID nodeID = morton_code60(voxelmap::mapToVoxels(voxels, &dim, my_voxel) + voxelmap_offset);
+      const OctreeVoxelID nodeID = morton_code60(voxelmap::mapToVoxels(voxels, dimensions, my_voxel) + voxelmap_offset);
       InnerNode* node = root;
       int level = level_count - 2;
       int tmp_level = level;
@@ -536,6 +569,111 @@ __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, ui
   }
 }
 
+/*!
+ * Iterate over an array of Voxels (given as 3D Coordinates and (Bit)Voxels),
+ * generate their morton code, and look up the corresponding voxel in the octree.
+ * ==> Check for collision.
+ * This kernel can compute the meanings of the collidng voxels from the list.
+ */
+template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode,
+    bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+__global__ void kernel_intersect_VoxelList(InnerNode* root, const Vector3ui* voxel_coords, VoxelType* voxels, uint32_t voxellist_size,
+                                          voxel_count* num_collisions,
+                                          BitVectorVoxel* d_result_voxels, const uint32_t min_level,
+                                          const Vector3ui voxelmap_offset = Vector3ui(0))
+{
+  __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
+  SharedVoxel<BitVectorVoxel> shared;
+  BitVectorVoxel* shared_voxels = shared.getPointer();
+  BitVectorVoxel my_voxel_flags;
+
+  shared_num_collisions[threadIdx.x] = 0;
+  for (voxel_count i = blockIdx.x * blockDim.x + threadIdx.x; i < voxellist_size; i += gridDim.x * blockDim.x)
+  {
+    const VoxelType* my_voxel = &voxels[i];
+    if (isVoxelOccupied(my_voxel))
+    {
+      const OctreeVoxelID nodeID = morton_code60(voxel_coords[i] + voxelmap_offset);
+      InnerNode* node = root;
+      int level = level_count - 2;
+      int tmp_level = level;
+      InnerNode* tmp_node = node;
+      LeafNode* leaf = NULL;
+      bool collision, isLeaf;
+
+      TRAVES_MACRO(nodeID, my_voxel_flags = BitVectorVoxel::reduce(my_voxel_flags, *(my_voxel)), min_level)
+    }
+  }
+  __syncthreads();
+
+  REDUCE(shared_num_collisions, threadIdx.x, blockDim.x, +)
+
+  if (compute_voxelTypeFlags)
+    reduceVoxels(my_voxel_flags, threadIdx.x, blockDim.x, shared_voxels);
+
+  if (threadIdx.x == 0)
+  {
+    num_collisions[blockIdx.x] = shared_num_collisions[0];
+    if (compute_voxelTypeFlags)
+      d_result_voxels[blockIdx.x] = my_voxel_flags;
+  }
+}
+
+
+/*!
+ * Iterate over an array of Voxels (given as Morton Codes and (Bit)Voxels),
+ * and look up the corresponding voxel in the octree.
+ * ==> Check for collision.
+ * This kernel can compute the meanings of the collidng voxels from the list.
+ */
+template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode,
+    bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+__global__ void kernel_intersect_MortonVoxelList(InnerNode* root, const OctreeVoxelID* voxel_ids, VoxelType* voxels, uint32_t voxellist_size,
+                                          voxel_count* num_collisions,
+                                          BitVectorVoxel* d_result_voxels, const uint32_t min_level)
+{
+  __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
+  SharedVoxel<BitVectorVoxel> shared;
+  BitVectorVoxel* shared_voxels = shared.getPointer();
+  BitVectorVoxel my_voxel_flags;
+
+  shared_num_collisions[threadIdx.x] = 0;
+  for (voxel_count i = blockIdx.x * blockDim.x + threadIdx.x; i < voxellist_size; i += gridDim.x * blockDim.x)
+  {
+    const VoxelType* my_voxel = &voxels[i];
+    if (isVoxelOccupied(my_voxel))
+    {
+      const OctreeVoxelID nodeID = voxel_ids[i];
+      InnerNode* node = root;
+      int level = level_count - 2;
+      int tmp_level = level;
+      InnerNode* tmp_node = node;
+      LeafNode* leaf = NULL;
+      bool collision, isLeaf;
+
+      TRAVES_MACRO(nodeID, my_voxel_flags = BitVectorVoxel::reduce(my_voxel_flags, *(my_voxel)), min_level)
+    }
+  }
+  __syncthreads();
+
+  REDUCE(shared_num_collisions, threadIdx.x, blockDim.x, +)
+
+  if (compute_voxelTypeFlags)
+    reduceVoxels(my_voxel_flags, threadIdx.x, blockDim.x, shared_voxels);
+
+  if (threadIdx.x == 0)
+  {
+    num_collisions[blockIdx.x] = shared_num_collisions[0];
+    if (compute_voxelTypeFlags)
+      d_result_voxels[blockIdx.x] = my_voxel_flags;
+  }
+}
+
+
+/*!
+ * Iterate over an array of 3D coordinates and look up the corresponding voxels in the octree.
+ * Returns an array of leaf nodes.
+ */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 __global__ void kernel_find(InnerNode* const root, Vector3ui* const voxel, const voxel_count numVoxel,
                             FindResult<LeafNode>* resultNode)
@@ -544,7 +682,7 @@ __global__ void kernel_find(InnerNode* const root, Vector3ui* const voxel, const
 //printf("to: %lu\n", to);
   for (voxel_count i = blockIdx.x * blockDim.x + threadIdx.x; i < numVoxel; i += gridDim.x * blockDim.x)
   {
-    const VoxelID nodeID = morton_code60(voxel[i].x, voxel[i].y, voxel[i].z);
+    const OctreeVoxelID nodeID = morton_code60(voxel[i].x, voxel[i].y, voxel[i].z);
     InnerNode* node = root;
     uint32_t level = level_count - 2;
     for (; level > 0 && node->hasStatus(ns_PART); --level)
@@ -585,18 +723,18 @@ __global__ void kernel_find(InnerNode* const root, Vector3ui* const voxel, const
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 __global__
 static void kernel_intersect_shared(InnerNode* robot_root, InnerNode* environment_root,
-                                    VoxelID side_length_in_voxel, uint32_t num_level, VoxelID* numConflicts,
-                                    const VoxelID splitLevel)
+                                    OctreeVoxelID side_length_in_voxel, uint32_t num_level, OctreeVoxelID* numConflicts,
+                                    const OctreeVoxelID splitLevel)
 {
   extern __shared__ thrust::pair<InnerNode, InnerNode> stack[];
 
 // octrees have to model the same space
-  const VoxelID numVoxel = side_length_in_voxel * side_length_in_voxel * side_length_in_voxel;
+  const OctreeVoxelID numVoxel = side_length_in_voxel * side_length_in_voxel * side_length_in_voxel;
   const uint32_t numLevel = num_level;
 
 // TODO better splitting of work; in worst case only 1/branching_factor * #threads are busy
-  const VoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
-  const VoxelID from = id << (splitLevel * (uint32_t) log2(float(branching_factor)));
+  const OctreeVoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
+  const OctreeVoxelID from = id << (splitLevel * (uint32_t) log2(float(branching_factor)));
 //printf("llog = %lu\n", llog);
 //printf("splitLevel = %lu\n", splitLevel);
 //printf("from = %lu\n", from);
@@ -608,7 +746,7 @@ static void kernel_intersect_shared(InnerNode* robot_root, InnerNode* environmen
   uint32_t r_top = R_TOP;
 //uint32_t e_top = E_TOP;
 
-  VoxelID myNumConflicts = 0;
+  OctreeVoxelID myNumConflicts = 0;
 
   InnerNode r_node = *robot_root;
   InnerNode e_node = *environment_root;
@@ -620,7 +758,7 @@ static void kernel_intersect_shared(InnerNode* robot_root, InnerNode* environmen
   }
 
 // search for "root" of subtree
-  VoxelID level = numLevel - 2;
+  OctreeVoxelID level = numLevel - 2;
   for (; level >= splitLevel && r_node.isInConflict(e_node); --level)
   {
     unsigned char child = getZOrderNodeId<branching_factor>(from, level);
@@ -735,15 +873,15 @@ template<std::size_t branching_factor, std::size_t level_count, typename a_Inner
     typename b_InnerNode, typename b_LeafNode>
 __global__
 static void kernel_intersect_wo_stack_coalesced(a_InnerNode* nTreeA_root, b_InnerNode* nTreeB_root,
-                                                VoxelID* numConflicts, const uint32_t splitLevel)
+                                                OctreeVoxelID* numConflicts, const uint32_t splitLevel)
 {
   extern __shared__ thrust::pair<a_LeafNode*, b_LeafNode*> work[];
 
 // octrees have to model the same space
-  const VoxelID numVoxel = (VoxelID) powf(double(branching_factor), double(level_count - 1));
+  const OctreeVoxelID numVoxel = (OctreeVoxelID) powf(double(branching_factor), double(level_count - 1));
 
   const uint32_t id = blockIdx.x * blockDim.x + threadIdx.x;
-  const VoxelID from = VoxelID(id) << (splitLevel * (uint32_t) log2(float(branching_factor)));
+  const OctreeVoxelID from = OctreeVoxelID(id) << (splitLevel * (uint32_t) log2(float(branching_factor)));
 
   if (from >= numVoxel)
   {
@@ -779,7 +917,7 @@ static void kernel_intersect_wo_stack_coalesced(a_InnerNode* nTreeA_root, b_Inne
   work[threadIdx.x] = thrust::make_pair<a_LeafNode*, b_LeafNode*>(a_leaf, b_leaf);
   __syncthreads();
 
-  VoxelID myNumConflicts = 0;
+  OctreeVoxelID myNumConflicts = 0;
 #pragma unroll
   for (uint32_t i = 0; i < branching_factor; ++i)
     myNumConflicts += work[(threadIdx.x / branching_factor) * branching_factor + i].first[threadIdx.x
@@ -791,18 +929,18 @@ static void kernel_intersect_wo_stack_coalesced(a_InnerNode* nTreeA_root, b_Inne
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 __global__
 static void kernel_intersect_wo_stack(InnerNode* robot_root, InnerNode* environment_root,
-                                      VoxelID side_length_in_voxel, uint32_t num_level, VoxelID* numConflicts,
+                                      OctreeVoxelID side_length_in_voxel, uint32_t num_level, OctreeVoxelID* numConflicts,
                                       const uint32_t splitLevel)
 {
 // stack is only not needed for splitLevel == 1
   assert(splitLevel == 1);
 
 // octrees have to model the same space
-  const VoxelID numVoxel = side_length_in_voxel * side_length_in_voxel * side_length_in_voxel;
+  const OctreeVoxelID numVoxel = side_length_in_voxel * side_length_in_voxel * side_length_in_voxel;
   const uint32_t numLevel = num_level;
 
   const uint32_t id = blockIdx.x * blockDim.x + threadIdx.x;
-  const VoxelID from = VoxelID(id) << (splitLevel * (uint32_t) log2(float(branching_factor)));
+  const OctreeVoxelID from = OctreeVoxelID(id) << (splitLevel * (uint32_t) log2(float(branching_factor)));
 
   if (from >= numVoxel)
   {
@@ -840,7 +978,7 @@ static void kernel_intersect_wo_stack(InnerNode* robot_root, InnerNode* environm
 //      + r_leaf[5].isConflict(e_leaf[5]) + r_leaf[6].isConflict(e_leaf[6]) + r_leaf[7].isConflict(e_leaf[7]);
 }
 
-typedef VoxelID numChild;
+typedef OctreeVoxelID numChild;
 
 template<typename T1, typename T2, typename T3>
 struct Triple
@@ -866,23 +1004,23 @@ struct Triple
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 __global__
 static void kernel_intersect_smallStack(InnerNode* robot_root, InnerNode* environment_root,
-                                        VoxelID side_length_in_voxel, uint32_t num_level,
-                                        VoxelID* numConflicts,
+                                        OctreeVoxelID side_length_in_voxel, uint32_t num_level,
+                                        OctreeVoxelID* numConflicts,
                                         Triple<InnerNode*, InnerNode*, numChild>* stack,
                                         const uint32_t splitLevel)
 {
 // octrees have to model the same space
-  const VoxelID numVoxel = side_length_in_voxel * side_length_in_voxel * side_length_in_voxel;
+  const OctreeVoxelID numVoxel = side_length_in_voxel * side_length_in_voxel * side_length_in_voxel;
   const uint32_t numLevel = num_level;
 
   const uint32_t id = blockIdx.x * blockDim.x + threadIdx.x;
-  const VoxelID from = VoxelID(id) << (splitLevel * (uint32_t) log2(float(branching_factor)));
+  const OctreeVoxelID from = OctreeVoxelID(id) << (splitLevel * (uint32_t) log2(float(branching_factor)));
 
 // size of 2 * numLevels
   const int32_t R_TOP = id * splitLevel;
   int32_t r_top = R_TOP;
 
-  VoxelID myNumConflicts = 0;
+  OctreeVoxelID myNumConflicts = 0;
 
   if (from >= numVoxel)
   {
@@ -982,16 +1120,16 @@ static void kernel_intersect_smallStack(InnerNode* robot_root, InnerNode* enviro
 template<std::size_t branching_factor, std::size_t level_count, typename a_InnerNode, typename a_LeafNode,
     typename b_InnerNode, typename b_LeafNode>
 __global__
-static void kernel_intersect(a_InnerNode* nTreeA_root, b_InnerNode* nTreeB_root, VoxelID* numConflicts,
-                             thrust::pair<a_InnerNode*, b_InnerNode*>* stack, const VoxelID splitLevel)
+static void kernel_intersect(a_InnerNode* nTreeA_root, b_InnerNode* nTreeB_root, OctreeVoxelID* numConflicts,
+                             thrust::pair<a_InnerNode*, b_InnerNode*>* stack, const OctreeVoxelID splitLevel)
 {
 // octrees have to model the same space
-  const VoxelID numVoxel = (VoxelID) powf(double(branching_factor), double(level_count - 1));
+  const OctreeVoxelID numVoxel = (OctreeVoxelID) powf(double(branching_factor), double(level_count - 1));
 //nTree_a.sideLengthInVoxel * nTree_a.sideLengthInVoxel * nTree_a.sideLengthInVoxel;
 
 // TODO better splitting of work; in worst case only 1/branching_factor * #threads are busy
-  const VoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
-  const VoxelID from = id << (splitLevel * (uint32_t) log2(float(branching_factor)));
+  const OctreeVoxelID id = blockIdx.x * blockDim.x + threadIdx.x;
+  const OctreeVoxelID from = id << (splitLevel * (uint32_t) log2(float(branching_factor)));
 //printf("llog = %lu\n", llog);
 //printf("splitLevel = %lu\n", splitLevel);
 //printf("from = %lu\n", from);
@@ -1002,7 +1140,7 @@ static void kernel_intersect(a_InnerNode* nTreeA_root, b_InnerNode* nTreeB_root,
   uint32_t r_top = R_TOP;
 //uint32_t e_top = E_TOP;
 
-  VoxelID myNumConflicts = 0;
+  OctreeVoxelID myNumConflicts = 0;
 
   a_InnerNode* a_node = nTreeA_root;
   b_InnerNode* b_node = nTreeB_root;
@@ -1014,7 +1152,7 @@ static void kernel_intersect(a_InnerNode* nTreeA_root, b_InnerNode* nTreeB_root,
   }
 
 // search for "root" of subtree
-  VoxelID level = level_count - 2;
+  OctreeVoxelID level = level_count - 2;
   for (; level >= splitLevel && a_node->isInConflict(*b_node); --level)
   {
     unsigned char child = getZOrderNodeId<branching_factor>(from, level);
@@ -1136,7 +1274,7 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
     bool SET_UPDATE_FLAG>
 __global__
 static void kernel_insert_countNeededNodes(InnerNode* const root,
-                                           VoxelID* const d_voxel,
+                                           OctreeVoxelID* const d_voxel,
                                            const voxel_count numVoxel,
                                            voxel_count* const d_neededNodesPerLevel,
                                            void** d_traversalNodes,
@@ -1165,8 +1303,8 @@ static void kernel_insert_countNeededNodes(InnerNode* const root,
     const voxel_count index = v + thread_id;
     const bool isActive = (index < to);
     int32_t level = level_count - 2;
-    VoxelID voxelID = INVALID_VOXEL;
-    VoxelID voxelIDNeighbor = INVALID_VOXEL;
+    OctreeVoxelID voxelID = INVALID_VOXEL;
+    OctreeVoxelID voxelIDNeighbor = INVALID_VOXEL;
     if (isActive)
     {
       voxelID = d_voxel[index];
@@ -1324,7 +1462,7 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 std::size_t num_threads, typename Iterator1, typename Iterator2, typename BasicData, bool SET_UPDATE_FLAG>
 __global__
 static void kernel_insert_setNodes(InnerNode* const root,
-                                   VoxelID* const voxel,
+                                   OctreeVoxelID* const voxel,
                                    Iterator1 d_set_basic_data,
                                    Iterator2 d_reset_basic_data,
                                    const voxel_count numVoxel,
@@ -1370,11 +1508,11 @@ static void kernel_insert_setNodes(InnerNode* const root,
 
     void* node = NULL;
     const voxel_count index = v + thread_id;
-    VoxelID voxelIDNeighbor = INVALID_VOXEL;
+    OctreeVoxelID voxelIDNeighbor = INVALID_VOXEL;
     bool isActive = (index < to);
     int32_t level = level_count - 2;
     void* child = NULL;
-    VoxelID my_voxel_id;
+    OctreeVoxelID my_voxel_id;
     BasicData my_set_basic_data, my_reset_basic_data;
 
     uint32_t commonLevel = 0;
@@ -1703,8 +1841,8 @@ static void kernel_packByteMap_MemEfficient_Coa2(voxel_count* num_this_level, vo
                                                  MapProperties<uint8_t, branching_factor> byte_map_properties,
                                                  voxel_count* index_this_level = NULL,
                                                  voxel_count* index_next_level = NULL,
-                                                 VoxelID* voxel_id_this_level = NULL,
-                                                 VoxelID* voxel_id_next_level = NULL)
+                                                 OctreeVoxelID* voxel_id_this_level = NULL,
+                                                 OctreeVoxelID* voxel_id_next_level = NULL)
 {
 
   assert(branching_factor == 8);
@@ -1856,8 +1994,8 @@ static void kernel_packMortonL0Map(
     MapProperties<typename InnerNode::RayCastType, branching_factor> map_properties,
     voxel_count* index_this_level = NULL,
     voxel_count* index_next_level = NULL,
-    VoxelID* voxel_id_this_level = NULL,
-    VoxelID* voxel_id_next_level = NULL,
+    OctreeVoxelID* voxel_id_this_level = NULL,
+    OctreeVoxelID* voxel_id_next_level = NULL,
     typename InnerNode::NodeData::BasicData* basic_data_this_level = NULL,
     typename InnerNode::NodeData::BasicData* basic_data_next_level = NULL,
     MapProperties<typename InnerNode::RayCastType, branching_factor> d_next_level_map =
@@ -2006,8 +2144,8 @@ static void kernel_packMortonL0Map(
  */
 template<bool COUNT_MODE>
 __global__
-static void kernel_removeDuplicates(VoxelID* free_space, voxel_count num_voxel,
-                                    VoxelID* free_space_wo_duplicates, voxel_count* voxel_count_wo_duplicates)
+static void kernel_removeDuplicates(OctreeVoxelID* free_space, voxel_count num_voxel,
+                                    OctreeVoxelID* free_space_wo_duplicates, voxel_count* voxel_count_wo_duplicates)
 {
   assert(blockDim.x <= WARP_SIZE); // otherwise have to implement inter warp prefix sum
 
@@ -2030,7 +2168,7 @@ static void kernel_removeDuplicates(VoxelID* free_space, voxel_count num_voxel,
   for (voxel_count i = from; i < to; i += num_threads)
   {
     voxel_count my_id = i + thread_id;
-    VoxelID my_element = free_space[my_id];
+    OctreeVoxelID my_element = free_space[my_id];
     bool is_no_duplicate = (my_id < to) && ((my_id == 0) || (my_element != free_space[my_id - 1]))
         && (my_element != INVALID_VOXEL);
 
@@ -2070,9 +2208,9 @@ static void kernel_removeDuplicates(VoxelID* free_space, voxel_count num_voxel,
  */
 template<std::size_t branching_factor, bool COUNT_MODE>
 __global__
-static void kernel_packVoxel(VoxelID* free_space, voxel_count num_voxel, voxel_count* voxel_count_this_level,
+static void kernel_packVoxel(OctreeVoxelID* free_space, voxel_count num_voxel, voxel_count* voxel_count_this_level,
                              voxel_count* voxel_count_next_level, uint32_t level,
-                             VoxelID* free_space_this_level, VoxelID* free_space_next_level)
+                             OctreeVoxelID* free_space_this_level, OctreeVoxelID* free_space_next_level)
 {
   assert(blockDim.x == WARP_SIZE); // otherwise have to implement inter warp prefix sum
 
@@ -2126,7 +2264,7 @@ static void kernel_packVoxel(VoxelID* free_space, voxel_count num_voxel, voxel_c
     voxel_count my_id = i + thread_id;
     uint32_t votes = 0;
     bool has_new_parent = false;
-    VoxelID my_voxel_id = INVALID_VOXEL;
+    OctreeVoxelID my_voxel_id = INVALID_VOXEL;
     bool is_active = (my_id < to);
 
     if (is_active)
@@ -2330,7 +2468,7 @@ static void kernel_packVoxel(VoxelID* free_space, voxel_count num_voxel, voxel_c
  */
 template<bool need_voxel_id, bool need_occupancy, bool need_coordinates, bool need_separate_coordinates>
 __global__
-static void kernel_split_voxel_vector(Voxel* voxel, voxel_count num_voxel, VoxelID* voxel_id,
+static void kernel_split_voxel_vector(Voxel* voxel, voxel_count num_voxel, OctreeVoxelID* voxel_id,
                                       Probability* occupancy, gpu_voxels::Vector3ui* coordinates, uint32_t* x,
                                       uint32_t* y, uint32_t* z)
 {
@@ -2352,7 +2490,7 @@ static void kernel_split_voxel_vector(Voxel* voxel, voxel_count num_voxel, Voxel
 }
 
 __global__
-static void kernel_checkBlub(VoxelID* voxel_id1, voxel_count num_voxel, VoxelID* voxel_id2)
+static void kernel_checkBlub(OctreeVoxelID* voxel_id1, voxel_count num_voxel, OctreeVoxelID* voxel_id2)
 {
   for (uint32_t i = 0; i < num_voxel; ++i)
   {
@@ -2366,7 +2504,7 @@ static void kernel_checkBlub(VoxelID* voxel_id1, voxel_count num_voxel, VoxelID*
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 __device__ __forceinline__
-static void traverse(InnerNode* root, VoxelID voxel, uint32_t target_level, void** out_inner_node,
+static void traverse(InnerNode* root, OctreeVoxelID voxel, uint32_t target_level, void** out_inner_node,
                      uint32_t* out_level, bool* has_part_status)
 {
   InnerNode* node = root;
@@ -2399,8 +2537,8 @@ static void kernel_checkTree(InnerNode* root, uint8_t* error)
 
   *error = 0;
 
-  VoxelID last_voxel = (VoxelID) powf(branching_factor, level_count - 1);
-  for (VoxelID i = 0; i < last_voxel && !*error;)
+  OctreeVoxelID last_voxel = (OctreeVoxelID) powf(branching_factor, level_count - 1);
+  for (OctreeVoxelID i = 0; i < last_voxel && !*error;)
   {
     shared_stack[level_count - 1] = root;
     InnerNode* node = root;

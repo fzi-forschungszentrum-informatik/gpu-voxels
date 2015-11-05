@@ -64,7 +64,8 @@ public:
 
   bool getVisualizerContext(VisualizerContext* con);
   bool getVoxelmapContext(VoxelmapContext* context, uint32_t index = 0);
-  bool getOctreeContext(OctreeContext* context, uint32_t index);
+  bool getVoxellistContext(CubelistContext *context, uint32_t index = 0);
+  bool getOctreeContext(CubelistContext *context, uint32_t index);
   bool getPrimitiveArrayContext(PrimitiveArrayContext* context, uint32_t index);
 
   void getPrimtives(std::vector<Primitive*>& primitives);

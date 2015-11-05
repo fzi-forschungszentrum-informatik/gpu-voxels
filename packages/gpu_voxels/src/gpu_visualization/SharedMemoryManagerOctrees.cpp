@@ -34,6 +34,11 @@ SharedMemoryManagerOctrees::SharedMemoryManagerOctrees()
   shmm = new SharedMemoryManager(shm_segment_name_octrees, true);
 }
 
+SharedMemoryManagerOctrees::~SharedMemoryManagerOctrees()
+{
+  delete shmm;
+}
+
 std::string SharedMemoryManagerOctrees::getNameOfOctree(const uint32_t index)
 {
   std::string index_str = boost::lexical_cast<std::string>(index);
@@ -103,7 +108,7 @@ bool SharedMemoryManagerOctrees::getOctreeVisualizationData(Cube*& cubes, uint32
 
 void SharedMemoryManagerOctrees::setOctreeBufferSwappedToFalse(const uint32_t index)
 {
-  std::string swapped_buffer_name = shm_variable_name_buffer_swapped
+  std::string swapped_buffer_name = shm_variable_name_octree_buffer_swapped
       + boost::lexical_cast<std::string>(index);
   std::pair<bool*, std::size_t> swapped = shmm->getMemSegment().find<bool>(swapped_buffer_name.c_str());
   if (swapped.second)
@@ -113,7 +118,7 @@ void SharedMemoryManagerOctrees::setOctreeBufferSwappedToFalse(const uint32_t in
 }
 bool SharedMemoryManagerOctrees::hasOctreeBufferSwapped(const uint32_t index)
 {
-  std::string swapped_buffer_name = shm_variable_name_buffer_swapped
+  std::string swapped_buffer_name = shm_variable_name_octree_buffer_swapped
       + boost::lexical_cast<std::string>(index);
   std::pair<bool*, std::size_t> swapped = shmm->getMemSegment().find<bool>(swapped_buffer_name.c_str());
 

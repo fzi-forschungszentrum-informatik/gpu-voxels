@@ -25,13 +25,14 @@
 
 #include <gpu_voxels/octree/EnvironmentNodes.h>
 #include <gpu_voxels/octree/EnvNodesProbabilistic.h>
-#include <gpu_voxels/octree/VoxelTypeFlags.h>
 #include <gpu_voxels/octree/DataTypes.h>
 #include <gpu_voxels/octree/Nodes.h>
-#include <gpu_voxels/octree/cub/cub.cuh>
 
-#include <gpu_voxels/voxelmap/ProbabilisticVoxel.h>
-//#include <gpu_voxels/voxelmap/RobotVoxel.h>
+#include <gpu_voxels/voxel/BitVoxel.h>
+#include <gpu_voxels/voxel/ProbabilisticVoxel.h>
+
+#include <thrust/system/cuda/detail/cub.h>
+namespace cub = thrust::system::cuda::detail::cub_;
 
 #include <cuda_runtime.h>
 
@@ -44,7 +45,7 @@ namespace NTree {
 __constant__ uint8_t const_extract_selection[extract_selection_size];
 #define const_voxel_at_level_size 20
 // number of elements at each tree level
-__constant__ VoxelID const_voxel_at_level[const_voxel_at_level_size]; // max 20 level = 60 bit
+__constant__ OctreeVoxelID const_voxel_at_level[const_voxel_at_level_size]; // max 20 level = 60 bit
 __constant__ uint32_t const_cube_side_length[const_voxel_at_level_size]; // max 20 level = 60 bit
 
 //#define MORTON_LOOKUP_SIZE 8
@@ -144,29 +145,15 @@ __device__ __forceinline__ T1 warp_reduction(const T1 value, volatile T1* const 
   return shared_memory[first_index];
 }
 
-//template<bool use_execution_context>
-//__device__ __forceinline__
-//bool isVoxelOccupied(const gpu_voxels::RobotVoxel* voxel)
-//{
-//  return !voxel->voxel_type.isZero();
-//}
-
-//template<bool use_execution_context>
-//__device__ __forceinline__
-//bool isVoxelOccupied(const gpu_voxels::Voxel* voxel)
-//{
-//  return voxel->occupancy >= 50;;
-//}
-
 __device__ __forceinline__
-bool isVoxelOccupied(const gpu_voxels::voxelmap::ProbabilisticVoxel* voxel)
+bool isVoxelOccupied(const gpu_voxels::ProbabilisticVoxel* voxel)
 {
   return voxel->occupancy() >= 50;;
 }
 
 template<std::size_t length>
 __device__ __forceinline__
-bool isVoxelOccupied(const gpu_voxels::voxelmap::BitVoxel<length>* voxel)
+bool isVoxelOccupied(const gpu_voxels::BitVoxel<length>* voxel)
 {
   return !voxel->bitVector().isZero();;
 }
@@ -479,10 +466,32 @@ void getRayCastInit(Environment::InnerNode::RayCastType* const init)
   init->value = 0;
 }
 
+__host__ __device__ __forceinline__
+void getRayCastInit(Environment::NodeProb::RayCastType* const init)
+{
+  init->value = INITIAL_PROBABILITY;
+}
+
 __device__ __forceinline__
 void handleRayHit(Environment::InnerNode::RayCastType* a, int32_t x, int32_t y, int32_t z)
 {
   a->value = ns_FREE;
+}
+
+__device__ __forceinline__
+bool isValidValue(const Environment::NodeProb::RayCastType& a)
+{
+  Environment::NodeProb::RayCastType init;
+  getRayCastInit(&init);
+  return a.value != init.value;
+}
+
+__device__ __forceinline__
+bool isValidValue(const Environment::InnerNode::RayCastType& a)
+{
+  Environment::InnerNode::RayCastType init;
+  getRayCastInit(&init);
+  return a.value != init.value;
 }
 
 template<typename InnerNode>
@@ -503,14 +512,6 @@ bool isPackingPossible(const Environment::InnerNode::RayCastType max,
   Environment::InnerNode::RayCastType init;
   getRayCastInit(&init);
   return max.value == min.value && min.value != init.value;
-}
-
-__device__ __forceinline__
-bool isValidValue(const Environment::InnerNode::RayCastType a)
-{
-  Environment::InnerNode::RayCastType init;
-  getRayCastInit(&init);
-  return a.value != init.value;
 }
 
 __device__ __forceinline__
@@ -561,7 +562,7 @@ void packData(Environment::InnerNode::NodeData::BasicData* ptr, const uint32_t p
               const Environment::InnerNode::RayCastType value)
 {
   // nothing to do
-  // VoxelID is enough to know whether the voxel is free or not
+  // OctreeVoxelID is enough to know whether the voxel is free or not
   ptr[pos] = Environment::InnerNode::NodeData::BasicData(value.value, 0);
 }
 
@@ -974,12 +975,6 @@ void updateNode(Environment::InnerNodeProb* node, void* const childPtr,
   }
 }
 
-__host__ __device__ __forceinline__
-void getRayCastInit(Environment::NodeProb::RayCastType* const init)
-{
-  init->value = INITIAL_PROBABILITY;
-}
-
 __device__ __forceinline__
 void handleRayHit(Environment::NodeProb::RayCastType* a, int32_t x, int32_t y, int32_t z)
 {
@@ -996,14 +991,6 @@ bool isPackingPossible(const Environment::NodeProb::RayCastType max,
                        const Environment::NodeProb::RayCastType min)
 {
   return (max.value - min.value) == 0;
-}
-
-__device__ __forceinline__
-bool isValidValue(const Environment::NodeProb::RayCastType a)
-{
-  Environment::NodeProb::RayCastType init;
-  getRayCastInit(&init);
-  return a.value != init.value;
 }
 
 struct _Max_op

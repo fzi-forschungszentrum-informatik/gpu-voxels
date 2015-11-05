@@ -40,6 +40,8 @@ class SharedMemoryManagerVoxelMaps
 {
 public:
   SharedMemoryManagerVoxelMaps();
+  ~SharedMemoryManagerVoxelMaps();
+
   uint32_t getNumberOfVoxelMapsToDraw();
 
   bool getDevicePointer(void*& handler, const uint32_t index);

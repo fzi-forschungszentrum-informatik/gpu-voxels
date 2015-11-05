@@ -77,7 +77,7 @@ bool VisNTree<InnerNode, LeafNode>::visualize(const bool force_repaint)
     m_shm_numCubes = m_segment.find_or_construct<uint32_t>(
         std::string(shm_variable_name_number_cubes + id.str()).c_str())(0);
     m_shm_bufferSwapped = m_segment.find_or_construct<bool>(
-        std::string(shm_variable_name_buffer_swapped + id.str()).c_str())(false);
+        std::string(shm_variable_name_octree_buffer_swapped + id.str()).c_str())(false);
     m_shm_mapName = m_segment.find_or_construct_it<char>(
         std::string(shm_variable_name_octree_name + id.str()).c_str())[m_map_name.size()](m_map_name.data());
 

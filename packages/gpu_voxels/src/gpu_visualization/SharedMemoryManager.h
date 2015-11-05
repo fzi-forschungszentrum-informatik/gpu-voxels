@@ -28,6 +28,7 @@
 #include <gpu_voxels/helpers/CompileIssues.h>
 
 #include <boost/interprocess/managed_shared_memory.hpp>
+#include <gpu_visualization/logging/logging_visualization.h>
 
 namespace gpu_voxels {
 namespace visualization {
@@ -49,6 +50,7 @@ public:
     }
     else
     {
+      LOGGING_WARNING(Visualization, "SharedMemoryManager CREATES shared memory segment. This is meant for debugging puposes ONLY" << endl);
       boost::interprocess::permissions per;
       per.set_unrestricted();
       m_segment = boost::interprocess::managed_shared_memory(boost::interprocess::open_or_create,

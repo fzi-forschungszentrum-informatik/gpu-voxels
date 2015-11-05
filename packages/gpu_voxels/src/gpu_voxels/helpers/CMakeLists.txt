@@ -28,8 +28,8 @@ ICMAKER_ADD_HEADERS(
   XyzFileReader.h
   MetaPointCloud.h
   BitVector.h
-  BitVector.hpp
   CompileIssues.h
+  MathHelpers.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -39,6 +39,7 @@ ICMAKER_ADD_SOURCES(
   BinvoxFileReader.cpp
   PcdFileReader.cpp
   XyzFileReader.cpp
+  MathHelpers.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(
@@ -54,7 +55,6 @@ ICMAKER_ADD_CUDA_FILES(
   kernels/MetaPointCloudOperations.h
   kernels/MetaPointCloudOperations.cu
   BitVector.h
-  BitVector.hpp
   )
 
 # removing unknown pragma warnings due to OpenNI spam

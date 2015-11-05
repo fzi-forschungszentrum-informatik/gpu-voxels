@@ -91,6 +91,7 @@
 
 #include <gpu_visualization/SharedMemoryManagerOctrees.h>
 #include <gpu_visualization/SharedMemoryManagerVoxelMaps.h>
+#include <gpu_visualization/SharedMemoryManagerVoxelLists.h>
 #include <gpu_visualization/SharedMemoryManagerPrimitiveArrays.h>
 #include <gpu_visualization/SharedMemoryManagerVisualizer.h>
 
@@ -127,6 +128,7 @@ public:
 
   //Data handling functions
   void registerVoxelMap(voxelmap::AbstractVoxelMap* map, uint32_t index, std::string map_name);
+  void registerVoxelList(uint32_t index, std::string map_name);
   void registerOctree(uint32_t index, std::string map_name);
   void registerPrimitiveArray(uint32_t index, std::string prim_array_name);
 
@@ -183,7 +185,7 @@ private:
   /**
    * Calculates the new necessary size for the context and resizes it if necessary.
    */
-  bool resizeGLBufferForOctree(OctreeContext* con);
+  bool resizeGLBufferForCubelist(CubelistContext* con);
   /**
     * Calculates the new necessary size for the context and resizes it.
     */
@@ -201,13 +203,15 @@ private:
   void drawPrimitivesFromSharedMem();
 
   bool fillGLBufferWithoutPrecounting(VoxelmapContext* context);
-  void fillGLBufferWithOctree(OctreeContext* context, uint32_t index);
+  void fillGLBufferWithCubelist(CubelistContext* context, uint32_t index);
 
   void printVBO(DataContext* context);
-  void calculateNumberOfCubeTypes(OctreeContext* context);
+
+  void calculateNumberOfCubeTypes(CubelistContext *context);
 
   void updateStartEndViewVoxelIndices();
-  bool updateOctreeContext(OctreeContext* context, uint32_t index);
+  bool updateOctreeContext(CubelistContext *context, uint32_t index);
+  bool updateVoxelListContext(CubelistContext *context, uint32_t index);
 
   void increaseSuperVoxelSize();
   void decreaseSuperVoxelSize();
@@ -219,7 +223,8 @@ private:
 
   void flipDrawVoxelmap(uint32_t index);
   void flipDrawOctree(uint32_t index);
-  void flipDrawType(VoxelType type);
+  void flipDrawVoxellist(uint32_t index);
+  void flipDrawType(BitVoxelMeaning type);
   void flipDrawSweptVolume();
   void flipExternalVisibilityTrigger();
   void copyDrawTypeToDevice();
@@ -269,6 +274,7 @@ private:
 
   // enable focus point movement
   bool m_move_focus_enabled;
+  bool m_move_focus_vertical_enabled;
 
   // lighting variables for OpenGl
   GLuint m_lighting_programID;
@@ -286,6 +292,7 @@ private:
   XMLInterpreter* m_interpreter;
   SharedMemoryManagerOctrees* m_shm_manager_octrees;
   SharedMemoryManagerVoxelMaps* m_shm_manager_voxelmaps;
+  SharedMemoryManagerVoxelLists* m_shm_manager_voxellists;
   SharedMemoryManagerPrimitiveArrays* m_shm_manager_primitive_arrays;
   SharedMemoryManagerVisualizer* m_shm_manager_visualizer;
 

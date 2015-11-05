@@ -39,6 +39,7 @@ class SharedMemoryManagerOctrees
 {
 public:
   SharedMemoryManagerOctrees();
+  ~SharedMemoryManagerOctrees();
   uint32_t getNumberOfOctreesToDraw();
   std::string getNameOfOctree(const uint32_t index);
   bool getOctreeVisualizationData(Cube*& cubes, uint32_t& size,const uint32_t index);

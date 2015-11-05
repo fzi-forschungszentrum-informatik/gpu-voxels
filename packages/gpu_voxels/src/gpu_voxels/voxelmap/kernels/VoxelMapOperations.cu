@@ -20,31 +20,6 @@
 namespace gpu_voxels {
 namespace voxelmap {
 
-//
-//__global__
-//void kernelClearVoxelMap(Voxel* voxelmap, const uint32_t voxelmap_size)
-//{
-//  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
-//  {
-//    Voxel* voxel = &(voxelmap[i]);
-//    voxel->occupancy = 0;
-//    voxel->setBitvector(0);
-//  }
-//}
-
-//
-//__global__
-//void kernelDumpVoxelMap(const Voxel* voxelmap, const Vector3ui* dimensions, const uint32_t voxelmap_size)
-//{
-//  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
-//  {
-//    Vector3ui coords = mapToVoxels(voxelmap, dimensions, &(voxelmap[i]));
-//    Voxel voxel = voxelmap[i];
-//    printf("Voxel(%u) = Voxel(%u, %u, %u) = (voxeltype, occupancy) = (%u, %u)\n", i, coords.x, coords.y,
-//           coords.z, voxel.voxeltype, voxel.occupancy);
-//  }
-//}
-
 /* Transform sensor data from sensor coordinate system
  * to world system. Needs extrinsic calibration of sensor.
  */
@@ -95,66 +70,13 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
   }
 }
 
-///* Insert static data into voxel map.
-// * Data must be in world coordinate system.
-// * Static data is considered 100% certain.
-// */
-//__global__
-//void kernelInsertStaticData(Voxel* voxelmap, const uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                            const float voxel_side_length, uint32_t static_data_size,
-//                            const Vector3f* static_data)
-//{
-//  const Vector3ui map_dim = (*dimensions);
-//
-//  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; (i < voxelmap_size) && (i < static_data_size);
-//      i += gridDim.x * blockDim.x)
-//  {
-//    const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length, static_data[i]);
-//    if ((integer_coordinates.x < map_dim.x) && (integer_coordinates.y < map_dim.y)
-//        && (integer_coordinates.z < map_dim.z))
-//    {
-//      Voxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x, integer_coordinates.y,
-//                                 integer_coordinates.z);
-//      voxel->voxeltype = eVT_OCCUPIED;
-//      voxel->occupancy = 255;
-//    }
-//  }
-//}
-
-///* Inserts a link of a kinematic chain into a map.
-// * See also function with self collision check.
-// * Kinematic data is considered 100% certain.
-// */
-//__global__
-//void kernelInsertRobotKinematicLink(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                    const Vector3ui* dimensions, const float voxel_side_length,
-//                                    const MetaPointCloudStruct* robot_links, uint32_t link_nr)
-//{
-//  const Vector3ui map_dim = (*dimensions);
-//
-//  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < robot_links->cloud_sizes[link_nr];
-//      i += gridDim.x * blockDim.x)
-//  {
-//    const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length,
-//                                                      robot_links->clouds_base_addresses[link_nr][i]);
-//    if ((integer_coordinates.x < map_dim.x) && (integer_coordinates.y < map_dim.y)
-//        && (integer_coordinates.z < map_dim.z))
-//    {
-//      Voxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x, integer_coordinates.y,
-//                                 integer_coordinates.z);
-//      //printf("inserting robot voxel to position (%u, %u, %u)\n", integer_coordinates.x, integer_coordinates.y, integer_coordinates.z);
-//      voxel->voxeltype = eVT_OCCUPIED;
-//      voxel->occupancy = 255;
-//    }
-//  }
-//}
 
 //
 //void kernelCalculateBoundingBox(Voxel* voxelmap, const uint32_t voxelmap_size, )
 
 //__global__
 //void kernelInsertKinematicLinkBitvector(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                        const Vector3ui* dimensions, const float voxel_side_length,
+//                                        const Vector3ui dimensions, const float voxel_side_length,
 //                                        uint32_t link_nr, uint32_t* point_cloud_sizes,
 //                                        Vector3f** point_clouds, uint64_t bit_number)
 //{
@@ -177,32 +99,8 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //}
 
 //__global__
-//void kernelClearBitvector(Voxel* voxelmap, uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                          uint8_t bit_number)
-//{
-//  const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-//  const Vector3ui map_dim = (*dimensions);
-//  if (bit_number == 0xff) //clear all bits
-//  {
-//    if (i < voxelmap_size)
-//    {
-//      Voxel* voxel = &(voxelmap[i]);
-//      voxel->setBitvector(0);
-//    }
-//  }
-//  else //clear only one bit
-//  {
-//    if (i < voxelmap_size)
-//    {
-//      Voxel* voxel = &(voxelmap[i]);
-//      voxel->setBitvector(voxel->getBitvector() & (0x1 << bit_number));
-//    }
-//  }
-//}
-
-//__global__
 //void kernelInsertRobotKinematicLinkOverwritingSensorData(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                                         const Vector3ui* dimensions,
+//                                                         const Vector3ui dimensions,
 //                                                         const float voxel_side_length,
 //                                                         const MetaPointCloudStruct *robot_links,
 //                                                         uint32_t link_nr, const Voxel* environment_map)
@@ -221,7 +119,7 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //                                 integer_coordinates.z);
 //      Voxel* env_voxel = getVoxelPtr(environment_map, dimensions, integer_coordinates.x,
 //                                     integer_coordinates.y, integer_coordinates.z);
-//      voxel->voxeltype = eVT_OCCUPIED;
+//      voxel->voxelmeaning = eBVM_OCCUPIED;
 //      voxel->occupancy = 255;
 //      env_voxel->occupancy = 0;
 //    }
@@ -234,7 +132,7 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 // */
 //__global__
 //void kernelInsertRobotKinematicLinkWithSelfCollisionCheck(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                                          const Vector3ui* dimensions,
+//                                                          const Vector3ui dimensions,
 //                                                          const float voxel_side_length,
 //                                                          const MetaPointCloudStruct *robot_links,
 //                                                          uint32_t link_nr, bool* self_collision)
@@ -258,207 +156,14 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //      }
 //      else
 //      {
-//        voxel->voxeltype = eVT_OCCUPIED;
+//        voxel->voxelmeaning = eBVM_OCCUPIED;
 //        voxel->occupancy = 255;
 //      }
 //    }
 //  }
 //}
 
-///*! Insert a link of a kinematic chain that will be
-// * treated as swept volume into the voxel map.
-// * Different configurations may be identified by the
-// * swept_volume_index, that is limited by values defined
-// * in Voxel.h.
-// * Swept volume data is considered 100% certain.
-// */
-//__global__
-//void kernelInsertSweptVolumeConfiguration(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                          const Vector3ui* dimensions, const float voxel_side_length,
-//                                          uint32_t link_nr, uint32_t* point_cloud_sizes,
-//                                          Vector3f** point_clouds, uint8_t swept_volume_index)
-//{
-//  const Vector3ui map_dim = (*dimensions);
-//
-//  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < point_cloud_sizes[link_nr];
-//      i += gridDim.x * blockDim.x)
-//  {
-//    const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length, point_clouds[link_nr][i]);
-//    if ((integer_coordinates.x < map_dim.x) && (integer_coordinates.y < map_dim.y)
-//        && (integer_coordinates.z < map_dim.z))
-//    {
-//      Voxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x, integer_coordinates.y,
-//                                 integer_coordinates.z);
-//      voxel->voxeltype = limitSweptVolumeIndex(swept_volume_index);
-//      voxel->occupancy = 255;
-//    }
-//  }
-//}
 
-///*! Remove swept volume from voxel map.
-// * Different configurations may be identified by the
-// * swept_volume_index, that is limited by values defined
-// * in Voxel.h.
-// */
-//__global__
-//void kernelRemoveSweptVolumeConfiguration(Voxel* voxelmap, const uint32_t voxelmap_size,
-//                                          const Vector3ui* dimensions, const float voxel_side_length,
-//                                          uint32_t link_nr, uint32_t* point_cloud_sizes,
-//                                          Vector3f** point_clouds, uint8_t swept_volume_index)
-//{
-//  const Vector3ui map_dim = (*dimensions);
-//
-//  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < point_cloud_sizes[link_nr];
-//      i += gridDim.x * blockDim.x)
-//  {
-//    const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length, point_clouds[link_nr][i]);
-//    if ((integer_coordinates.x < map_dim.x) && (integer_coordinates.y < map_dim.y)
-//        && (integer_coordinates.z < map_dim.z))
-//    {
-//      Voxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x, integer_coordinates.y,
-//                                 integer_coordinates.z);
-//      // check if voxel is belonging to the swept volume index
-//      if (voxel->voxeltype == limitSweptVolumeIndex(swept_volume_index))
-//      {
-//        // if so, mark as free
-//        voxel->occupancy = 0;
-//      }
-//    }
-//  }
-//}
-
-///*! Insert data that will treated as
-// * swept volume into the voxel map.
-// * Different data sets may be identified by the
-// * swept_volume_index, that is limited by values defined
-// * in Voxel.h.
-// * Swept volume data is considered 100% certain.
-// */
-//__global__
-//void kernelInsertSweptVolume(Voxel* voxelmap, const uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                             uint32_t swept_volume_data_size, const Vector3f* swept_volume_data,
-//                             uint8_t swept_volume_index)
-//{
-//  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size && i < swept_volume_data_size;
-//      i += gridDim.x * blockDim.x)
-//  {
-//    Voxel* voxel = getVoxelPtr(voxelmap, dimensions, swept_volume_data[i].x, swept_volume_data[i].y,
-//                               swept_volume_data[i].z);
-//    voxel->voxeltype = eVT_SWEPT_VOLUME_START + limitSweptVolumeIndex(swept_volume_index);
-//    voxel->occupancy = 255;
-//  }
-//}
-
-//__global__
-//void kernelCollideVoxelMapsIndices(Voxel* voxelmap, uint8_t threshold, bool* results, uint32_t* index_list,
-//                                   uint32_t index_number)
-//{
-//  __shared__ bool cache[cMAX_NR_OF_THREADS_PER_BLOCK];
-//  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-//  uint32_t cache_index = threadIdx.x;
-//
-//  bool temp = false;
-//
-//  if (i < index_number)
-//  {
-//    uint32_t index = index_list[i];
-//    // todo / note: at the moment collision check is only used for DYNAMIC and SWEPT VOLUME type, static is used for debugging
-//    temp = temp || ((voxelmap[index].occupancy >= threshold) && (voxelmap[index].voxeltype != eVT_OCCUPIED));
-//
-////	&& (other_map[i].occupancy_execution >= other_threshold) && (other_map[i].voxeltype_execution != eVT_OCCUPIED));
-//  }
-//  cache[cache_index] = temp;
-//  __syncthreads();
-//
-//  uint32_t j = blockDim.x / 2;
-//
-//  while (j != 0)
-//  {
-//    if (cache_index < j)
-//    {
-//      cache[cache_index] = cache[cache_index] || cache[cache_index + j];
-//    }
-//    __syncthreads();
-//    j /= 2;
-//  }
-//
-//  // copy results from this block to global memory
-//  if (cache_index == 0)
-//  {
-//    //    // FOR MEASUREMENT TEMPORARILY EDITED:
-//    //    results[blockIdx.x] = true;
-////		printf("blockid: %i, result: %i \n", blockIdx.x, cache[0]);
-////		  if(i == 1328128)
-////		  {
-////			  printf("---------------------- cache: %i\n", cache[0]);
-////		  }
-//    results[blockIdx.x] = cache[0];
-//  }
-//}
-
-//__global__
-//void kernelCollideVoxelMapsIndicesBitmap(Voxel* voxelmap, uint8_t threshold, uint64_t* results,
-//                                         uint32_t* index_list, uint32_t index_number, uint64_t* bitmap_list,
-//                                         Vector3ui* dimensions)
-//{
-//  __shared__ uint64_t cache[cMAX_NR_OF_THREADS_PER_BLOCK];
-//  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-//  uint32_t cache_index = threadIdx.x;
-//
-//  uint64_t temp = 0;
-//
-//  uint32_t index = index_list[i];
-//  uint32_t temp_index = index;
-//
-//  uint32_t z = index / (dimensions->x * dimensions->y); //testing whether voxel lies in map  Vector3ui integer_coordinates. First getting position in map
-//  uint32_t y = (temp_index -= z * (dimensions->x * dimensions->y)) / dimensions->x;
-//  uint32_t x = (temp_index -= y * dimensions->x);
-//
-//  if (i < index_number)
-//  {
-//
-//    if (!((x < dimensions->x) && (y < dimensions->y) && (z < dimensions->z)))
-//    {
-//      temp = ~temp; //temp was 0 here, now it is 0xfff... => Collision because outside of map
-//      printf("voxel %i out of map\n", i);
-//    }
-//    else
-//    {
-//      if (voxelmap[index].occupancy >= threshold)
-//      {
-//        temp |= bitmap_list[i];
-//        voxelmap[index].voxeltype = 1; // This value marks a collision at this voxel, should be set to zero by the visualizer
-//      }
-//    }
-//  }
-//  cache[cache_index] = temp;
-//  __syncthreads();
-//
-//  uint32_t j = blockDim.x / 2;
-//
-//  while (j != 0)
-//  {
-//    if (cache_index < j)
-//    {
-//      cache[cache_index] = cache[cache_index] | cache[cache_index + j];
-//    }
-//    __syncthreads();
-//    j /= 2;
-//  }
-////
-////	  // copy results from this block to global memory
-//  if (cache_index == 0)
-//  {
-//    //    // FOR MEASUREMENT TEMPORARILY EDITED:
-//    //    results[blockIdx.x] = true;
-////		printf("blockid: %i, result: %i \n", blockIdx.x, cache[0]);
-////		  if(cache[0] != 0)
-////		  {
-////			  printf("---------------------- cache: %i\n", cache[0]);
-////		  }
-//    results[blockIdx.x] = cache[0];
-//  }
-//}
 
 //__global__
 //void kernelCollideVoxelMapsBoundingBox(Voxel* voxelmap, const uint32_t voxelmap_size, const uint8_t threshold,
@@ -484,10 +189,10 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //
 //  while (counter < size_x)
 //  {
-//    // todo / note: at the moment collision check is only used for DYNAMIC and SWEPT VOLUME type, static is used for debugging
+//    // todo / note: at the moment collision check is only used for DYNAMIC and SWEPT VOLUME meaning, static is used for debugging
 //    temp = temp
-//        || ((voxelmap[i].occupancy >= threshold) && (voxelmap[i].voxeltype != eVT_OCCUPIED)
-//            && (other_map[i].occupancy >= other_threshold) && (other_map[i].voxeltype != eVT_OCCUPIED));
+//        || ((voxelmap[i].occupancy >= threshold) && (voxelmap[i].voxelmeaning != eBVM_OCCUPIED)
+//            && (other_map[i].occupancy >= other_threshold) && (other_map[i].voxelmeaning != eBVM_OCCUPIED));
 //
 //    counter += 1;
 //    i += 1;
@@ -497,8 +202,8 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 ////  if(true)//(i == 30050600)
 ////  {
 ////	  printf("thread %i, collision %i \n", i, temp);
-////	  printf("--- occupation planning: %i, voxeltype planning: %i \n",
-////			  other_map[i].occupancy_planning, other_map[i].voxeltype_planning);
+////	  printf("--- occupation planning: %i, voxelmeaning planning: %i \n",
+////			  other_map[i].occupancy_planning, other_map[i].voxelmeaning_planning);
 ////  }
 //
 //  results[blockIdx.x * blockDim.x + threadIdx.x] = temp; //
@@ -527,79 +232,7 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 ////  }
 //}
 
-///* Collide two voxel maps without plain parallelization.
-// * According to hardware this may increase performance.
-// * The performance increase is dependent on loop_size.
-// * Voxels are considered occupied for values
-// * greater or equal given thresholds.
-// */
-//__global__
-//void kernelCollideVoxelMapsAlternative(Voxel* voxelmap, const uint32_t voxelmap_size, const uint8_t threshold,
-//                                       Voxel* other_map, const uint8_t other_threshold, uint32_t loop_size,
-//                                       bool* results)
-//{
-//  __shared__ bool cache[cMAX_NR_OF_THREADS_PER_BLOCK];
-//  const uint32_t i = (blockIdx.x * blockDim.x + threadIdx.x) * loop_size;
-//  uint32_t cache_index = threadIdx.x;
-//  cache[cache_index] = false;
-//  bool temp = false;
-//
-//// ToDo: replace if with while and increment:     i += blockDim.x * gridDim.x;
-//  if (i < voxelmap_size)
-//  {
-//    for (uint32_t k = 0; (k < loop_size && (i + k < voxelmap_size)); k++)
-//    {
-//      temp = temp
-//          || ((voxelmap[i + k].occupancy >= threshold) && (other_map[i + k].occupancy >= other_threshold));
-//    }
-//
-//    cache[cache_index] = temp;
-//  }
-//  __syncthreads();
-//
-//  uint32_t j = blockDim.x / 2;
-//
-//  while (j != 0)
-//  {
-//    if (cache_index < j)
-//    {
-//      cache[cache_index] = cache[cache_index] || cache[cache_index + j];
-//    }
-//    __syncthreads();
-//    j /= 2;
-//  }
-//
-//// copy results from this block to global memory
-//  if (cache_index == 0)
-//  {
-//    // FOR MEASUREMENT TEMPORARILY EDITED:
-//    //results[blockIdx.x] = true;
-//    results[blockIdx.x] = cache[0];
-//  }
-//}
 
-
-//__global__
-//void kernelInsertBox(Voxel* voxelmap, const uint32_t voxelmap_size, const Vector3ui* dimensions,
-//                     const uint32_t from_voxel_x, const uint32_t from_voxel_y, const uint32_t from_voxel_z,
-//                     const uint32_t to_voxel_x, const uint32_t to_voxel_y, const uint32_t to_voxel_z,
-//                     uint8_t voxeltype, uint8_t occupancy)
-//{
-//  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
-//  {
-//    Voxel* voxel = &(voxelmap[i]);
-//    Vector3ui voxel_coordinates = mapToVoxels(voxelmap, dimensions, voxel);
-//
-//    // check if voxel is within bounding box
-//    if ((voxel_coordinates.x >= from_voxel_x) && (voxel_coordinates.y >= from_voxel_y)
-//        && (voxel_coordinates.z >= from_voxel_z) && (voxel_coordinates.x <= to_voxel_x)
-//        && (voxel_coordinates.y <= to_voxel_y) && (voxel_coordinates.z <= to_voxel_z))
-//    {
-//      voxel->voxeltype = voxeltype;
-//      voxel->occupancy = occupancy;
-//    }
-//  }
-//}
 
 //__global__
 //void kernelShrinkCopyVoxelMapBitvector(Voxel* destination_map, const uint32_t destination_map_size,
@@ -639,42 +272,6 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //  }
 //}
 
-//__global__
-//void kernelInsertVoxelVector(Voxel* destination_map, uint32_t* voxel_list, uint32_t list_size)
-//{
-//  const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-//  if (i < list_size)
-//  {
-//    Voxel* v = destination_map + voxel_list[i];
-//    v->voxeltype = eVT_OCCUPIED;
-//    v->occupancy = 255;
-//  }
-//}
-
-//__global__
-//void kernelInsertVoxelVectorBitmap(Voxel* destination_map, uint32_t* voxel_list, uint32_t list_size,
-//                                   uint64_t mask)
-//{
-//  const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-//  if (i < list_size)
-//  {
-//    Voxel* v = destination_map + voxel_list[i];
-//    v->setBitvector(v->getBitvector() | mask);
-//  }
-//}
-
-//inserts a bitvector by the indices
-//__global__
-//void kernelInsertBitmapByIndices(Voxel* destination_map, uint32_t* voxel_list, uint32_t list_size,
-//                                 uint64_t* bitvector)
-//{
-//  const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-//  if (i < list_size)
-//  {
-//    Voxel* v = destination_map + voxel_list[i];
-//    v->setBitvector(bitvector[i]);
-//  }
-//}
 
 ////for different sized voxelmaps
 //__global__
@@ -690,7 +287,7 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //    Vector3ui dest_voxel_index = mapToVoxels(destination_map, dest_map_dim, v);
 //
 //    uint8_t occupancy = 0;
-//    uint8_t voxeltype = 0;
+//    uint8_t voxelmeaning = 0;
 //    //loop over every axis and get the value of the voxel
 //    Voxel* index_z = getVoxelPtr(source_map, source_map_dim, dest_voxel_index.x * factor,
 //                                 dest_voxel_index.y * factor, dest_voxel_index.z * factor);
@@ -707,7 +304,7 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //          if (index_x->occupancy > occupancy)
 //          {
 //            occupancy = index_x->occupancy;
-//            voxeltype = index_x->voxeltype;
+//            voxelmeaning = index_x->voxelmeaning;
 //          }
 //          index_x += 1;
 //        }
@@ -716,7 +313,7 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //      index_z += source_map_dim->y * source_map_dim->x;
 //    }
 //    v->occupancy = occupancy;
-//    v->voxeltype = voxeltype;
+//    v->voxelmeaning = voxelmeaning;
 //  }
 //}
 

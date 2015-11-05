@@ -92,6 +92,7 @@ public:
              const std::string& parent_joint_name,
              bool visual,
              bool collision,
+             bool use_model_path,
              MetaPointCloud& link_pointclouds);
 
   virtual ~RobotLink();
@@ -139,6 +140,7 @@ private:
 
   MetaPointCloud& link_pointclouds_;
   bool pose_calculated_;
+  bool use_model_path_;
 };
 
 } // namespace robot

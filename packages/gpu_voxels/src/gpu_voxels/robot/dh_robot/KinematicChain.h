@@ -84,6 +84,12 @@ public:
   __host__
   ~KinematicChain();
 
+  /**
+   * @brief getJointNames Reads all joint names
+   * @param jointnames Vector of jointnames that will get extended
+   */
+  virtual void getJointNames(std::vector<std::string> &jointnames);
+
   /*!
    * \brief setConfiguration Sets a robot configuration
    * and triggers pointcloud transformation.
@@ -91,7 +97,7 @@ public:
    * matched by names, so not all joints have to be specified.
    */
   __host__
-  void setConfiguration(const JointValueMap &joint_values);
+  virtual void setConfiguration(const JointValueMap &joint_values);
 
   /*!
    * \brief setConfiguration Reads the current config
@@ -99,14 +105,28 @@ public:
    * jointnames are missing.
    */
   __host__
-  void getConfiguration(JointValueMap &joint_values);
+  virtual void getConfiguration(JointValueMap &joint_values);
 
+
+  /**
+   * @brief getLowerJointLimits Gets the minimum joint values
+   * @param lower_limits Map of jointnames and values.
+   * This map will get extended if joints were missing.
+   */
+  virtual void getLowerJointLimits(JointValueMap &lower_limits);
+
+  /**
+   * @brief getUpperJointLimits Gets the maximum joint values
+   * @param upper_limits Map of jointnames and values.
+   * This map will get extended if joints were missing.
+   */
+  virtual void getUpperJointLimits(JointValueMap &upper_limits);
 
   /**
    * @brief getTransformedClouds
    * @return Pointers to the kinematically transformed clouds.
    */
-  const MetaPointCloud *getTransformedClouds() { return m_transformed_links_meta_cloud; }
+  virtual const MetaPointCloud *getTransformedClouds() { return m_transformed_links_meta_cloud; }
 
   /*!
    * \brief updatePointcloud Changes the geometry of a single link.
@@ -115,7 +135,9 @@ public:
    * \param link Link to modify
    * \param cloud New geometry
    */
-  void updatePointcloud(const std::string &link_name, const std::vector<Vector3f> &cloud);
+  virtual void updatePointcloud(const std::string &link_name, const std::vector<Vector3f> &cloud);
+
+
 
   //! for testing purposes
   //__host__
@@ -135,7 +157,6 @@ private:
 
   cudaEvent_t m_start;
   cudaEvent_t m_stop;
-  CudaMath m_math;
   uint32_t m_blocks;
   uint32_t m_threads_per_block;
 

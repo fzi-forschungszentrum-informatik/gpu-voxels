@@ -21,6 +21,7 @@
  */
 //----------------------------------------------------------------------/*
 #include <gpu_voxels/vis_interface/VisProvider.h>
+#include <gpu_voxels/logging/logging_gpu_voxels.h>
 
 namespace gpu_voxels {
 
@@ -40,6 +41,16 @@ VisProvider::~VisProvider()
 {
   // destroying only the named objects leads weird problems of lacking program execution
   shared_memory_object::remove(m_segment_name.c_str());
+//  bool destruction_successful = shared_memory_object::remove(m_segment_name.c_str());
+//  if(!destruction_successful)
+//  {
+//    LOGGING_ERROR_C(Gpu_voxels, VisProvider, "Destructor of VisProvider Shared Memory [" << m_segment_name <<
+//                    "] failed! Please delete remaining shared mem files at /dev/shm manually before restarting the provider/visualizer!" << endl);
+//  }
+
+  // Now we try to delete the visualizer shared mem as well. This is likely to fail, as some other instance of this call
+  // may have already deleted it. Therefore we don't care about the result.
+  shared_memory_object::remove(shm_segment_name_visualizer.c_str());
 }
 
 void VisProvider::openOrCreateSegment()

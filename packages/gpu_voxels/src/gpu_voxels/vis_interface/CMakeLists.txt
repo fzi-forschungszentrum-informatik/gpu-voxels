@@ -17,12 +17,17 @@ ICMAKER_ADD_HEADERS(
   VisualizerInterface.h
   VisProvider.h
   VisVoxelMap.h
+  VisVoxelList.h
+  VisTemplateVoxelList.h
+  VisTemplateVoxelList.hpp
   VisPrimitiveArray.h
   )
 
 ICMAKER_ADD_SOURCES(
   VisProvider.cpp
   VisVoxelMap.cpp
+  VisVoxelList.cpp
+  VisTemplateVoxelList.cpp
   VisPrimitiveArray.cpp
   )
 

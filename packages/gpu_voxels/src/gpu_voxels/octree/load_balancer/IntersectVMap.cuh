@@ -80,9 +80,9 @@ bool IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size,
   if (compute_voxelTypeFlags)
   {
     m_result_voxelTypeFlags->clear();
-    HANDLE_CUDA_ERROR(cudaMalloc((void ** ) &m_dev_result_voxelTypeFlags, sizeof(VoxelTypeFlags<vft_size>)));
+    HANDLE_CUDA_ERROR(cudaMalloc((void ** ) &m_dev_result_voxelTypeFlags, sizeof(BitVector<vft_size>)));
     HANDLE_CUDA_ERROR(
-        cudaMemcpy(m_dev_result_voxelTypeFlags, m_result_voxelTypeFlags, sizeof(VoxelTypeFlags<vft_size>),
+        cudaMemcpy(m_dev_result_voxelTypeFlags, m_result_voxelTypeFlags, sizeof(BitVector<vft_size>),
                    cudaMemcpyHostToDevice));
   }
 
@@ -127,7 +127,8 @@ void IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size,
 
 
   // Call the templated kernel function. It's behavior is defined by the given KernelConfig.
-  kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS>>>(kernel_params);
+  size_t dynamic_shared_mem_size = sizeof(typename KernelConfig::SharedMem) + sizeof(typename KernelConfig::SharedVolatileMem);
+  kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS, dynamic_shared_mem_size>>>(kernel_params);
 }
 
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,
@@ -138,7 +139,7 @@ void IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size,
   HANDLE_CUDA_ERROR(
       cudaMemcpy(&m_num_collisions, m_dev_num_collisions, sizeof(std::size_t), cudaMemcpyDeviceToHost));
   HANDLE_CUDA_ERROR(
-      cudaMemcpy(&m_result_voxelTypeFlags, m_dev_result_voxelTypeFlags, sizeof(VoxelTypeFlags<vft_size>), cudaMemcpyDeviceToHost));
+      cudaMemcpy(&m_result_voxelTypeFlags, m_dev_result_voxelTypeFlags, sizeof(BitVector<vft_size>), cudaMemcpyDeviceToHost));
 }
 // --------------------------------------------------------
 

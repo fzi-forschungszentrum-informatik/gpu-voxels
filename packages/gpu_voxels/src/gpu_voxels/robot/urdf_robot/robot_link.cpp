@@ -76,6 +76,7 @@ RobotLink::RobotLink(Robot* robot,
                       const std::string& parent_joint_name,
                       bool visual,
                       bool collision,
+                      bool use_model_path,
                       MetaPointCloud& link_pointclouds)
 : robot_( robot )
 , name_( link->name )
@@ -84,6 +85,7 @@ RobotLink::RobotLink(Robot* robot,
 , collision_node_( NULL )
 , link_pointclouds_(link_pointclouds)
 , pose_calculated_(false)
+, use_model_path_(use_model_path)
 {
   pose_property_ = KDL::Frame();
 
@@ -220,13 +222,15 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
     fs::path pc_file = fs::path(p.stem().string() + std::string(".binvox"));
 
     std::vector<Vector3f> link_cloud;
+
+    LOGGING_DEBUG_C(RobotLog, RobotLink, "Loading pointcloud of link " << pc_file.string() << endl);
     if(!file_handling::PointcloudFileHandler::Instance()->loadPointCloud(
-         pc_file.string(), true, link_cloud, false, Vector3f(), 1.0))
+         pc_file.string(), use_model_path_, link_cloud, false, Vector3f(), 1.0))
     {
       LOGGING_ERROR_C(RobotLog, RobotLink,
                       "Could not read file [" << pc_file.string() <<
-                      "]. Adding Coordsystem Model instead..." << endl);
-      file_handling::PointcloudFileHandler::Instance()->loadPointCloud("coordinate_system_hacked.binvox", true, link_cloud, false, Vector3f(), 1.0);
+                      "]. Adding single point instead..." << endl);
+      link_cloud.push_back(Vector3f());
 
     }
     link_pointclouds_.addCloud(link_cloud, false, name_);

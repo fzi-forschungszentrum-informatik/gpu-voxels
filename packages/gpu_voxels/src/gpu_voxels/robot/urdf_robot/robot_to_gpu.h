@@ -39,10 +39,10 @@ namespace gpu_voxels {
 namespace robot {
 
 
-class RobotToGPU
+class RobotToGPU : public Robot
 {
 public:
-  RobotToGPU(Robot* robot);
+  RobotToGPU(const std::string &_path, const bool &use_model_path);
   ~RobotToGPU();
 
   /**
@@ -50,9 +50,15 @@ public:
    * and triggers the transformation kernel.
    * @param jointmap Map of jointnames and values
    */
-  void setConfiguration(const std::map<std::string, float> &jointmap);
+  void setConfiguration(const JointValueMap &jointmap);
 
-  void getConfiguration(const std::map<std::string, float> jointmap);
+  /**
+   * @brief updatePointcloud Updates the internal metapointcloud for the transformed joints
+   * as new mem has to be reserved if robots pointcloud changes.
+   * @param link_name Link to change
+   * @param cloud New pointcloud
+   */
+  void updatePointcloud(const std::string &link_name, const std::vector<Vector3f> &cloud);
 
   /**
    * @brief getTransformedClouds
@@ -61,9 +67,7 @@ public:
   const MetaPointCloud *getTransformedClouds();
 
 private:
-  Robot* m_robot;
   MetaPointCloud* m_link_pointclouds_transformed;
-  CudaMath m_math;
 
   Matrix4f m_transformation;
   Matrix4f* m_transformation_dev;

@@ -25,7 +25,7 @@
 
 #include <gpu_voxels/octree/Nodes.h>
 #include <gpu_voxels/octree/DataTypes.h>
-//#include <gpu_voxels/octree/EnvironmentNodes.h>
+#include <gpu_voxels/helpers/BitVector.h>
 
 namespace gpu_voxels {
 namespace NTree {
@@ -43,11 +43,6 @@ namespace Robot {
 class LeafNode
 {
 public:
-  enum VoxelType
-  {
-    FROM_TYPE = 1, TO_TYPE = VOXELLIST_FLAGS_SIZE * 8
-  };
-
   // default constructor needed
   __device__ __host__ __forceinline__ LeafNode()
   {
@@ -57,7 +52,7 @@ public:
   __device__ __forceinline__
   void init_d()
   {
-    memset(m_voxel_type, 0, sizeof(m_voxel_type));
+    m_voxel_meaning.clear();
   }
 
   __device__ __forceinline__ void initLastLevel_d()
@@ -68,8 +63,7 @@ public:
   __host__
   void init_h()
   {
-    for (uint32_t i = 0; i < VOXELLIST_FLAGS_SIZE; ++i)
-      m_voxel_type[i] = 0;
+    m_voxel_meaning.clear();
   }
 
   __host__
@@ -81,22 +75,20 @@ public:
   __device__ __host__ __forceinline__
   bool isOccupied()
   {
-    return m_voxel_type[0] & 0xFFFFFFEF;
+    return m_voxel_meaning.getBit(eBVM_OCCUPIED);
   }
 
   __device__ __host__ __forceinline__
-  void setOccupied(uint32_t voxelType)
+  void setOccupied(BitVoxelMeaning voxelMeaning)
   {
-    // TODO handle different voxel_types
-    assert(FROM_TYPE <= voxelType && voxelType <= TO_TYPE);
-    m_voxel_type[voxelType / sizeof(uint32_t)] = m_voxel_type[voxelType / sizeof(uint32_t)]
-        | (voxelType % sizeof(uint32_t));
+    m_voxel_meaning.setBit(voxelMeaning);
+    m_voxel_meaning.setBit(eBVM_OCCUPIED);
   }
 
   __device__ __host__ __forceinline__
   void setOccupied()
   {
-    m_voxel_type[0] = (m_voxel_type[0] | 0x00000001);
+    m_voxel_meaning.setBit(eBVM_OCCUPIED);
   }
 
   __device__ __host__ __forceinline__
@@ -114,13 +106,10 @@ public:
   }
 
   __device__ __host__ __forceinline__
-  void setFree(uint32_t voxelType)
+  void setFree(BitVoxelMeaning voxelMeaning)
   {
-    // TODO handle different voxel_types
-    assert(FROM_TYPE <= voxelType && voxelType <= TO_TYPE);
-    m_voxel_type[voxelType / sizeof(uint32_t)] = m_voxel_type[voxelType / sizeof(uint32_t)]
-        & ~(1 << (voxelType % sizeof(uint32_t)));
-    m_voxel_type[0] = (m_voxel_type[0] & ~0x00000001);
+    m_voxel_meaning.setBit(voxelMeaning);
+    m_voxel_meaning.setBit(eBVM_FREE);
   }
 
 #ifdef DISABLE_SEPARATE_COMPILTION
@@ -135,7 +124,7 @@ public:
   }
 
 private:
-  uint32_t m_voxel_type[VOXELLIST_FLAGS_SIZE];
+  BitVector<BIT_VECTOR_LENGTH> m_voxel_meaning;
 }
 ;
 
@@ -164,14 +153,19 @@ public:
   void init_d()
   {
     init(ns_FREE);
-    memset(m_voxel_type, 0xFFFFFFFF, sizeof(m_voxel_type));
+    // Set all Bits
+    m_voxel_meaning.clear();
+    m_voxel_meaning = ~m_voxel_meaning;
   }
 
   __device__ __forceinline__
   void initLastLevel_d()
   {
     init(NodeStatus(ns_FREE | ns_LAST_LEVEL));
-    memset(m_voxel_type, 0xFFFFFFFF, sizeof(m_voxel_type));
+    // Set all Bits
+    m_voxel_meaning.clear();
+    m_voxel_meaning = ~m_voxel_meaning;
+
   }
 
   __device__ __host__ __forceinline__
@@ -238,7 +232,7 @@ private:
   uint8_t m_child_high;
   uint8_t m_status;
   uint16_t alignment;
-  uint32_t m_voxel_type[VOXELLIST_FLAGS_SIZE];
+  BitVector<BIT_VECTOR_LENGTH> m_voxel_meaning;
 };
 }
 

@@ -40,6 +40,7 @@ class SharedMemoryManagerVisualizer
 {
 public:
   SharedMemoryManagerVisualizer();
+  ~SharedMemoryManagerVisualizer();
   bool getCameraTargetPoint(glm::vec3& target);
   DrawTypes getDrawTypes();
 

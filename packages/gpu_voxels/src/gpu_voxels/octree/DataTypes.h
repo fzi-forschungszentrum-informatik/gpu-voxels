@@ -33,7 +33,9 @@
 #include <limits.h>
 #include <math.h>
 #include <sys/utsname.h>
+#include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
+#include <gpu_voxels/helpers/BitVector.h>
 
 namespace gpu_voxels {
 namespace NTree {
@@ -75,12 +77,9 @@ namespace NTree {
 #define UNKNOWN_OCCUPANCY -128
 #define MIN_OCCUPANCY -127
 #define MAX_OCCUPANCY 127
-#define VOXELLIST_FLAGS_SIZE 4 // 4 x 4 Byte = 16 Byte
 #define D_PTR(X) thrust::raw_pointer_cast((X).data())
 #define MAX_VALUE(TYPE) ((TYPE)((1 << (sizeof(TYPE) * 8)) - 1))
 
-// voxel_id can be any id. Doesn't have to be in a 32 bit range, since the voxel can be randomly distributed in space
-typedef uint64_t VoxelID;
 #define INVALID_VOXEL ULONG_MAX
 const gpu_voxels::Vector3ui INVALID_POINT = gpu_voxels::Vector3ui(UINT_MAX, UINT_MAX, UINT_MAX);
 
@@ -129,45 +128,6 @@ const gpu_voxels::Vector3ui INVALID_POINT = gpu_voxels::Vector3ui(UINT_MAX, UINT
 #define WARP_SIZE 32
 #define MAX_NUMBER_OF_THREADS 1024
 
-// ##################### Block Reduction ##############################
-// reduction in shared memory
-#define REDUCE(shared,idx,nThreads,op) do { for (int r = nThreads/2; r != 0; r /= 2) {\
-                                              if (idx < r) shared[idx] = shared[idx] op shared[idx + r];\
-                                              __syncthreads(); } } while (0);
-// reduction in shared memory
-#define REDUCE2(shared1,shared2,idx,nThreads,op1,op2,branching_factor) do { for (int r = branching_factor/2; r != 0; r /= 2) {\
-                                                                              if ((idx % branching_factor) < r)\
-                                                                              {\
-                                                                                shared1[idx] = shared1[idx] op1 shared1[idx + r];\
-                                                                                shared2[idx] = shared2[idx] op2 shared2[idx + r];\
-                                                                              }\
-                                                                              __syncthreads(); } } while (0);
-
-#define PARTIAL_REDUCE(shared, idx, nThreads, block_size, op) {\
-  const uint32_t idx_suffix = idx & (block_size - 1); \
-  for(uint32_t r = block_size / 2; r != 0; r /= 2) \
-  { \
-    if(idx_suffix < r) \
-      shared[idx] = op(shared[idx], shared[idx + r]); \
-    if(r > WARP_SIZE) \
-      __syncthreads();\
-  }\
-}
-
-/*
- #define PARTIAL_REDUCE(shared, idx, nThreads, size, final_size, op) {\
-  for(int r = 1; r < (size / nThreads) ; ++r) \
-    shared[idx] = op(shared[idx], shared[idx + r * nThreads]); \
-  if((size / nThreads) > 1) \
-    __syncthreads(); \
-  for (int r = nThreads / 2; r >= final_size; r /= 2) \
-  { \
-    if(idx < r) shared[idx] = op(shared[idx], shared[idx + r]); \
-    if(r > WARP_SIZE) __syncthreads();\
-  } \
-}
- */
-
 // Define min/max functions to handle different namespaces of host and device code
 #undef MIN
 #undef MAX
@@ -180,11 +140,6 @@ const gpu_voxels::Vector3ui INVALID_POINT = gpu_voxels::Vector3ui(UINT_MAX, UINT
 #endif
 
 // ######################################################################
-__host__ __device__
-inline static bool equal(gpu_voxels::Vector3ui a, gpu_voxels::Vector3ui b)
-{
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
 
 typedef uint32_t voxel_count;
 

@@ -43,7 +43,7 @@ static const DepthData INVALID_DEPTH_DATA = MAX_VALUE(DepthData);
 static const DepthData MAX_DETPTH_VALUE = MAX_VALUE(DepthData);
 
 // Transforms the point cloud output of a sensor into an sorted set of voxel without duplicates
-VoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, VoxelID num_points,
+OctreeVoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, voxel_count num_points,
                                   thrust::device_vector<Voxel>& voxel, Sensor & sensor,
                                   gpu_voxels::Vector3f voxel_dimension);
 

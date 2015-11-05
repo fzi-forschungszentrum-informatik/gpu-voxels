@@ -90,8 +90,8 @@ int main(int argc, char* argv[])
   Vector3f corner3_max;
 
   // We load the model of a coordinate system.
-  if (!gvl->getMap("myCoordinateSystemMap")->insertPointcloudFromFile("coordinate_system_100.binvox", true, eVT_OCCUPIED,
-                                                  true, Vector3f(0, 0, 0),0.010))
+  if (!gvl->insertPointcloudFromFile("myCoordinateSystemMap", "coordinate_system_100.binvox", true,
+                                     eBVM_OCCUPIED, true, Vector3f(0, 0, 0),0.010))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
   }
@@ -109,13 +109,13 @@ int main(int argc, char* argv[])
     t += 0.03;
     corner1_min = center1_min + Vector3f(0.2 * x, 0.2 * y, 0);
     corner1_max = center1_max + Vector3f(0.2 * x, 0.2 * y, 0);
-    gvl->insertBoxIntoMap(corner1_min, corner1_max, "myProbabVoxmap", eVT_OCCUPIED, 2);
+    gvl->insertBoxIntoMap(corner1_min, corner1_max, "myProbabVoxmap", eBVM_OCCUPIED, 2);
     corner2_min = center2_min + Vector3f(0.0, 0.2 * x, 0.2 * y);
     corner2_max = center2_max + Vector3f(0.0, 0.2 * x, 0.2 * y);
-    gvl->insertBoxIntoMap(corner3_min, corner3_max, "myBitmapVoxmap", eVT_OCCUPIED, 2);
+    gvl->insertBoxIntoMap(corner3_min, corner3_max, "myBitmapVoxmap", eBVM_OCCUPIED, 2);
     corner3_min = center3_min + Vector3f(0.2 * x, 0.0, 0.2 * y);
     corner3_max = center3_max + Vector3f(0.2 * x, 0.0, 0.2 * y);
-    gvl->insertBoxIntoMap(corner2_min, corner2_max, "myOctree", eVT_OCCUPIED, 2);
+    gvl->insertBoxIntoMap(corner2_min, corner2_max, "myOctree", eBVM_OCCUPIED, 2);
 
     // generate info on the occuring collisions:
     LOGGING_INFO(

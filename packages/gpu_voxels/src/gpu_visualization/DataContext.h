@@ -77,7 +77,7 @@ public:
     m_colors.push_back(p);/*color for voxel type 10*/
 
     // swept volume colors
-    for(size_t i = eVT_SWEPT_VOLUME_START + 1; i < MAX_DRAW_TYPES; ++i)
+    for(size_t i = eBVM_SWEPT_VOLUME_START + 1; i < MAX_DRAW_TYPES; ++i)
     {
       p.first = p.second = glm::vec4(1.f, 0.f, 1.f, 1.f); //magenta
       m_colors.push_back(p);

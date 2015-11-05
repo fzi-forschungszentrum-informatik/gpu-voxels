@@ -25,16 +25,10 @@ read LENGTH <<< $(awk '/longest length:/ { print $3 }' <<< "$PREVOX_OUTPUT")
 
 CLEANED=$(sed -e 's/,//g' -e 's/\[//g' <<< "$PREVOX_OUTPUT")
 read MIN_X MIN_Y MIN_Z MAX_X MAX_Y MAX_Z <<< $(awk '/Mesh::normalize bounding box:/ {print $4" "$5" "$6" "$9" "$10" "$11 }' <<< "$CLEANED")
-#read MIN_X MIN_Y MIN_Z MAX_X MAX_Y MAX_Z <<< $(awk '/Mesh::normalize bounding box:/ {print $4" "$5" "$6" "$9" "$10" "$11 }' <<< $(sed -e 's/,//g' -e 's/\[//g' <<< "$vox_output"))
 
 
 #This is a ceil function:
-if [ $SCALING -eq 1 ]
-  then
-    NUM_VOXELS=$(bc <<< "($LENGTH +1) / $SCALING")
-  else
-    NUM_VOXELS=$(bc <<< "($LENGTH + $SCALING -1) / $SCALING")
-fi
+NUM_VOXELS=$(bc <<< "sqrt( ( ($LENGTH + $SCALING) / $SCALING )^2 )")
 
 echo "==================================================="
 echo "====== Step 2: Executing BinVox final run... ======"
@@ -45,5 +39,6 @@ echo "Bounding Box maximum side lenght: ${LENGTH} ==> Voxelcube sidelength in Vo
 echo ""
 
 echo "         --------- Final-Run Output -----------"
-binvox -d $NUM_VOXELS -bb ${MIN_X} ${MIN_Y} ${MIN_Z} ${MAX_X} ${MAX_Y} ${MAX_Z} $MESH_FILE
+echo "binvox -d $NUM_VOXELS -bb ${MIN_X} ${MIN_Y} ${MIN_Z} ${MAX_X} ${MAX_Y} ${MAX_Z} $MESH_FILE"
+binvox -e -d $NUM_VOXELS -bb ${MIN_X} ${MIN_Y} ${MIN_Z} ${MAX_X} ${MAX_Y} ${MAX_Z} $MESH_FILE
 echo "         -------- END Final-Run Output --------"

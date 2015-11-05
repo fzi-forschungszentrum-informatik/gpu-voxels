@@ -17,6 +17,7 @@
  *
  * \author  Sebastian Klemm
  * \author  Florian Drews
+ * \author  Christian Juelg
  * \date    2012-06-22
  *
  */
@@ -41,22 +42,109 @@ namespace gpu_voxels {
  */
 
 /*! ---------------- Vectors ---------------- */
+
+struct Vector3ui
+{
+  __device__ __host__ Vector3ui() : x(), y(), z() {} // problematic in device shared memory arrays
+
+  __device__ __host__ explicit Vector3ui(uint32_t _x) : x(_x), y(_x), z(_x) {}
+
+  __device__ __host__ Vector3ui(uint32_t _x, uint32_t _y, uint32_t _z) : x(_x), y(_y), z(_z) {}
+
+  __device__ __host__ Vector3ui(uint3 t) : x(t.x), y(t.y), z(t.z) {}
+
+  __device__ __host__
+  operator uint3() const { uint3 t; t.x = x; t.y = y; t.z = z; return t; }
+
+  uint32_t x;
+  uint32_t y;
+  uint32_t z;
+
+  __device__ __host__
+  inline Vector3ui& operator+=(const Vector3ui& b)
+  {
+    x += b.x;
+    y += b.y;
+    z += b.z;
+    return *this;
+  }
+
+//  __device__ __host__
+//  inline Vector3ui& operator+=(const Vector3i& b)
+//  {
+//    x += b.x;
+//    y += b.y;
+//    z += b.z;
+//    return *this;
+//  }
+
+  __device__ __host__
+  inline Vector3ui& operator-=(const Vector3ui& b)
+  {
+    x -= b.x;
+    y -= b.y;
+    z -= b.z;
+    return *this;
+  }
+
+//  __device__ __host__
+//  inline Vector3ui& operator-=(const Vector3i& b)
+//  {
+//    x -= b.x;
+//    y -= b.y;
+//    z -= b.z;
+//    return *this;
+//  }
+
+  __device__ __host__
+  inline bool operator==(const Vector3ui& b) const
+  {
+    return (x == b.x && y == b.y && z == b.z);
+  }
+
+  __device__ __host__
+  inline bool operator!=(const Vector3ui& b) const
+  {
+    return (x != b.x || y != b.y || z != b.z);
+  }
+
+  __host__
+  friend std::ostream& operator<<(std::ostream& out, const Vector3ui& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+    return out;
+  }
+};
+
+
 struct Vector3i
 {
-  __device__ __host__ Vector3i()
-  {
-    x = y = z = 0;
-  }
-  __device__ __host__ Vector3i(int32_t _x, int32_t _y, int32_t _z)
-  {
-    x = _x;
-    y = _y;
-    z = _z;
-  }
+  __device__ __host__ Vector3i() : x(), y(), z() {} // problematic in device shared memory arrays
+
+  __device__ __host__ explicit Vector3i(int32_t _x) : x(_x), y(_x), z(_x) {}
+
+  __device__ __host__ Vector3i(int32_t _x, int32_t _y, int32_t _z) : x(_x), y(_y), z(_z) {}
 
   int32_t x;
   int32_t y;
   int32_t z;
+
+  __device__ __host__ Vector3i(const Vector3ui& _v)
+  {
+    x = _v.x;
+    y = _v.y;
+    z = _v.z;
+  }
+
+  __device__ __host__
+  inline Vector3i& operator=(const Vector3ui& _v)
+  {
+    x = _v.x;
+    y = _v.y;
+    z = _v.z;
+    return *this;
+  }
+
 
   __device__ __host__
   inline Vector3i& operator+=(const Vector3i& b)
@@ -87,87 +175,27 @@ struct Vector3i
   {
     return (x != b.x || y != b.y || z != b.z);
   }
-};
-
-struct Vector3ui
-{
-  __device__ __host__ Vector3ui()
-  {
-    x = y = z = 0;
-  }
-  __device__ __host__ Vector3ui(uint32_t _x)
-  {
-    x = y = z = _x;
-  }
-  __device__ __host__ Vector3ui(uint32_t _x, uint32_t _y, uint32_t _z)
-  {
-    x = _x;
-    y = _y;
-    z = _z;
-  }
-
-  uint32_t x;
-  uint32_t y;
-  uint32_t z;
-
-  __device__ __host__
-  inline Vector3ui& operator+=(const Vector3ui& b)
-  {
-    x += b.x;
-    y += b.y;
-    z += b.z;
-    return *this;
-  }
-
-  __device__ __host__
-  inline Vector3ui& operator-=(const Vector3ui& b)
-  {
-    x -= b.x;
-    y -= b.y;
-    z -= b.z;
-    return *this;
-  }
-
-  __device__ __host__
-  inline bool operator==(const Vector3ui& b) const
-  {
-    return (x == b.x && y == b.y && z == b.z);
-  }
-
-  __device__ __host__
-  inline bool operator!=(const Vector3ui& b) const
-  {
-    return (x != b.x || y != b.y || z != b.z);
-  }
-};
-
-struct Vector3f
-{
-  __device__ __host__ Vector3f()
-  {
-    x = y = z = 0;
-  }
-  __device__ __host__ Vector3f(float _x)
-  {
-    x = y = z = _x;
-  }
-  __device__ __host__ Vector3f(float _x, float _y, float _z)
-  {
-    x = _x;
-    y = _y;
-    z = _z;
-  }
-
-  float x;
-  float y;
-  float z;
 
   __host__
-     friend std::ostream& operator<<(std::ostream& out, const Vector3f& vector)
+  friend std::ostream& operator<<(std::ostream& out, const Vector3i& vector)
   {
     out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
     return out;
   }
+};
+
+
+struct Vector3f
+{
+  __device__ __host__ Vector3f() : x(), y(), z() {} //problematic in device shared memory arrays
+
+  __device__ __host__ explicit Vector3f(float _x) : x(_x), y(_x), z(_x) {}
+
+  __device__ __host__ Vector3f(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+
+  float x;
+  float y;
+  float z;
 
   __device__ __host__
   inline Vector3f& operator+=(const Vector3f& b)
@@ -186,20 +214,46 @@ struct Vector3f
     z -= b.z;
     return *this;
   }
+
+  __device__ __host__
+  inline bool operator==(const Vector3f& b) const
+  {
+    return (x == b.x && y == b.y && z == b.z);
+  }
+
+  __device__ __host__
+  inline bool operator!=(const Vector3f& b) const
+  {
+    return (x != b.x || y != b.y || z != b.z);
+  }
+
+  __device__ __host__
+  static bool compVec(const Vector3f& i, const Vector3f& j)
+  {
+    return i.x < j.x || (i.x == j.x && i.y < j.y) || (i.x == j.x && i.y == j.y && i.z < j.z);
+  }
+
+  __device__ __host__
+  static bool eqlVec(const Vector3f& i, const Vector3f& j)
+  {
+    return (i.x == j.x && i.y == j.y && i.z == j.z);
+  }
+
+  __host__
+  friend std::ostream& operator<<(std::ostream& out, const Vector3f& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+    return out;
+  }
 };
 
 struct Vector3d
 {
-  __device__ __host__ Vector3d()
-  {
-    x = y = z = 0;
-  }
-  __device__ __host__ Vector3d(double _x, double _y, double _z)
-  {
-    x = _x;
-    y = _y;
-    z = _z;
-  }
+  __device__ __host__ Vector3d() : x(), y(), z() {} //problematic in device shared memory arrays
+
+  __device__ __host__ explicit Vector3d(double _x) : x(_x), y(_x), z(_x) {}
+
+  __device__ __host__ Vector3d(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
 
   double x;
   double y;
@@ -222,66 +276,78 @@ struct Vector3d
     z -= b.z;
     return *this;
   }
+
+  __device__ __host__
+  inline bool operator==(const Vector3d& b) const
+  {
+    return (x == b.x && y == b.y && z == b.z);
+  }
+
+  __host__
+  friend std::ostream& operator<<(std::ostream& out, const Vector3d& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+    return out;
+  }
 };
 
 struct Vector4i
 {
-  __device__ __host__ Vector4i()
-  {
-    x = y = z = w = 0;
-  }
-  __device__ __host__ Vector4i(int32_t _x, int32_t _y, int32_t _z, int32_t _w)
-  {
-    x = _x;
-    y = _y;
-    z = _z;
-    w = _w;
-  }
+  __device__ __host__ Vector4i() : x(), y(), z(), w() {} //problematic in device shared memory arrays
+
+  __device__ __host__ Vector4i(int32_t _x, int32_t _y, int32_t _z, int32_t _w) : x(_x), y(_y), z(_z), w(_w) {}
 
   int32_t x;
   int32_t y;
   int32_t z;
   int32_t w;
+
+  __host__
+  friend std::ostream& operator<<(std::ostream& out, const Vector4i& vector)
+  {
+    out << "(x, y, z, w) = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+    return out;
+  }
 };
 
 struct Vector4f
 {
-  __device__ __host__ Vector4f()
-  {
-    x = y = z = w = 0;
-  }
-  __device__ __host__ Vector4f(float _x, float _y, float _z, float _w)
-  {
-    x = _x;
-    y = _y;
-    z = _z;
-    w = _w;
-  }
+  __device__ __host__ Vector4f() : x(), y(), z(), w() {} //problematic in device shared memory arrays
+
+  __device__ __host__ Vector4f(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+
 
   float x;
   float y;
   float z;
   float w;
+
+  __host__
+  friend std::ostream& operator<<(std::ostream& out, const Vector4f& vector)
+  {
+    out << "(x, y, z, w) = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+    return out;
+  }
 };
 
 struct Vector4d
 {
-  __device__ __host__ Vector4d()
-  {
-    x = y = z = w = 0;
-  }
-  __device__ __host__ Vector4d(double _x, double _y, double _z, double _w)
-  {
-    x = _x;
-    y = _y;
-    z = _z;
-    w = _w;
-  }
+  __device__ __host__ Vector4d() : x(), y(), z(), w() {} //problematic in device shared memory arrays
+
+  __device__ __host__ Vector4d(double _x, double _y, double _z, double _w) : x(_x), y(_y), z(_z), w(_w) {}
 
   double x;
   double y;
   double z;
   double w;
+
+// This seems to be compatible to Vector4f
+//    __host__
+//    friend std::ostream& operator<<(std::ostream& out, const Vector4i& Vector4d)
+//    {
+//      out << "(x, y, z, w) = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+//      return out;
+//    }
 };
 
 // *****************  Square Matrices ********************* //
@@ -301,7 +367,7 @@ struct Matrix3d
 
 struct Matrix4f
 {
-  __device__ __host__ Matrix4f()
+  __device__ __host__ Matrix4f() // problematic in device shared memory arrays
   {
     a11 = 0.0f;
     a12 = 0.0f;
@@ -387,8 +453,18 @@ struct Matrix4f
     a41 = 0;    a42 = 0;    a43 = 0;    a44 = 1;
   }
 
+  __device__ __host__
+  void print() const
+  {
+    printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n",   a11, a12, a13, a14);
+    printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n",   a21, a22, a23, a24);
+    printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n",   a31, a32, a33, a34);
+    printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n\n", a41, a42, a43, a44);
+  }
+
+
   __host__
-     friend std::ostream& operator<<(std::ostream& out, const Matrix4f& matrix)
+  friend std::ostream& operator<<(std::ostream& out, const Matrix4f& matrix)
   {
     out.precision(3);
     out << "\n" << std::fixed <<
@@ -404,7 +480,7 @@ struct Matrix4f
 
 struct Matrix4d
 {
-  __device__ __host__ Matrix4d()
+  __device__ __host__ Matrix4d() // problematic in device shared memory arrays
   {
     a11 = 0;    a12 = 0;    a13 = 0;    a14 = 0;
     a21 = 0;    a22 = 0;    a23 = 0;    a24 = 0;
@@ -436,6 +512,15 @@ struct Matrix4d
   double a21;  double a22;  double a23;  double a24;
   double a31;  double a32;  double a33;  double a34;
   double a41;  double a42;  double a43;  double a44;
+
+  __device__ __host__
+  void print() const
+  {
+    printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n",   a11, a12, a13, a14);
+    printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n",   a21, a22, a23, a24);
+    printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n",   a31, a32, a33, a34);
+    printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n\n", a41, a42, a43, a44);
+  }
 };
 
 // *********** Some operations on data types above ********//
@@ -624,6 +709,16 @@ __device__ __host__
 }
 
 __device__ __host__
+   inline Vector3f operator*(const Matrix4f& m, const Vector4f& v)
+{
+  Vector3f result;
+  result.x = m.a11 * v.x + m.a12 * v.y + m.a13 * v.z + m.a14 * v.w;
+  result.y = m.a21 * v.x + m.a22 * v.y + m.a23 * v.z + m.a24 * v.w;
+  result.z = m.a31 * v.x + m.a32 * v.y + m.a33 * v.z + m.a34 * v.w;
+  return result;
+}
+
+__device__ __host__
    inline Matrix4f operator*(const Matrix4f& x, const Matrix4f& y)
 {
   Matrix4f result;
@@ -715,12 +810,6 @@ __device__ __host__
   return Vector3f(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
-__device__ __host__
-   inline bool operator==(const Vector3ui& a, const Vector3ui& b)
-{
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-
 // ##################################################################
 
 __device__ __host__
@@ -807,8 +896,6 @@ struct MetaPointCloudStruct
     {
     }
 };
-
-typedef std::map<std::string, float > JointValueMap;
 
 } // end of namespace
 #endif

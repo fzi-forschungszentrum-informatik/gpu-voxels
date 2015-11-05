@@ -36,30 +36,30 @@ void ExitOnGLError(const std::string error_message)
   }
 }
 
-std::string typeToString(VoxelType type)
+std::string typeToString(BitVoxelMeaning type)
 {
   std::string name = "";
   switch (type)
   {
-    case eVT_UNDEFINED:
+    case eBVM_UNDEFINED:
       name = "UNDEFINED";
       break;
-    case eVT_OCCUPIED:
+    case eBVM_OCCUPIED:
       name = "OCCUPIED";
       break;
-    case eVT_FREE:
+    case eBVM_FREE:
       name = "FREE";
       break;
-    case eVT_COLLISION:
+    case eBVM_COLLISION:
       name = "COLLISION";
       break;
-    case eVT_SWEPT_VOLUME_END:
+    case eBVM_SWEPT_VOLUME_END:
       name = "SWEPT_VOLUME_END";
       break;
-    case eVT_SWEPT_VOLUME_START:
+    case eBVM_SWEPT_VOLUME_START:
       name = "SWEPT_VOLUME_START";
       break;
-    case eVT_UNKNOWN:
+    case eBVM_UNKNOWN:
       name = "UNKNOWN";
       break;
     default:

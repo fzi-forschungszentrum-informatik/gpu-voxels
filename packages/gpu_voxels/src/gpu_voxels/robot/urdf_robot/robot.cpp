@@ -95,7 +95,7 @@ void Robot::clear()
 
 }
 
-void Robot::load( const urdf::ModelInterface &urdf, bool visual, bool collision )
+void Robot::load( const urdf::ModelInterface &urdf, bool visual, bool collision, const bool &use_model_path)
 {
   // clear out any data (properties, shapes, etc) from a previously loaded robot.
   clear();
@@ -119,7 +119,7 @@ void Robot::load( const urdf::ModelInterface &urdf, bool visual, bool collision 
       }
 
       RobotLink* link = new RobotLink(this, urdf_link, parent_joint_name,
-                                   visual, collision, link_pointclouds_);
+                                   visual, collision, use_model_path, link_pointclouds_);
 
       if (urdf_link == urdf.getRoot())
       {
@@ -193,7 +193,17 @@ void Robot::updatePointcloud(const std::string &link_name, const std::vector<Vec
   link_pointclouds_.updatePointCloud(link_name, cloud, true);
 }
 
-void Robot::setConfiguration(const std::map<std::string, float> &joint_values)
+
+void Robot::getJointNames(std::vector<std::string> &jointnames)
+{
+  jointnames.clear();
+  for (M_NameToJoint::const_iterator joint=joints_.begin(); joint != joints_.end(); joint++)
+  {
+    jointnames.push_back(joint->first);
+  }
+}
+
+void Robot::setConfiguration(const JointValueMap &joint_values)
 {
   // Reset all calculation flags.
   for (M_NameToLink::const_iterator link=links_.begin(); link != links_.end(); link++)
@@ -206,7 +216,7 @@ void Robot::setConfiguration(const std::map<std::string, float> &joint_values)
     joint->second->resetPoseCalculated();
   }
 
-  for (std::map<std::string, float>::const_iterator joint=joint_values.begin(); joint != joint_values.end(); joint++)
+  for (JointValueMap::const_iterator joint=joint_values.begin(); joint != joint_values.end(); joint++)
   {
     RobotJoint* rob_joint = getJoint(joint->first);
     if(rob_joint)
@@ -219,11 +229,27 @@ void Robot::setConfiguration(const std::map<std::string, float> &joint_values)
   }
 }
 
-void Robot::getConfiguration(std::map<std::string, float> jointmap)
+void Robot::getConfiguration(JointValueMap &jointmap)
 {
   for (M_NameToJoint::const_iterator joint=joints_.begin(); joint != joints_.end(); joint++)
   {
     jointmap[joint->first] = joint->second->getJointValue();
+  }
+}
+
+void Robot::getLowerJointLimits(JointValueMap &lower_limits)
+{
+  for (M_NameToJoint::const_iterator joint=joints_.begin(); joint != joints_.end(); joint++)
+  {
+    lower_limits[joint->first] = joint->second->getLowerJointLimit();
+  }
+}
+
+void Robot::getUpperJointLimits(JointValueMap &upper_limits)
+{
+  for (M_NameToJoint::const_iterator joint=joints_.begin(); joint != joints_.end(); joint++)
+  {
+    upper_limits[joint->first] = joint->second->getUpperJointLimit();
   }
 }
 
@@ -245,6 +271,11 @@ KDL::Frame Robot::getPose()
   return root_visual_node_->getPose();
 }
 
+const MetaPointCloud* Robot::getTransformedClouds()
+{
+  LOGGING_ERROR_C(RobotLog, Robot, "This is just a DUMMY FUNCTION!! Don't call it, overwrite it!" << endl);
+  return NULL;
+}
 
 } // namespace robot
 } // namespace gpu_voxels

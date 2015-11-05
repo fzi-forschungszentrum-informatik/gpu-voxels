@@ -11,14 +11,15 @@
  *
  */
 //----------------------------------------------------------------------/*
+
+#define CUB_STDERR
+#include <thrust/system/cuda/detail/cub.h>
+
 #include <thrust/sort.h>
 #include <thrust/unique.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/copy.h>
-
-#define CUB_STDERR
-#include <gpu_voxels/octree/cub/cub.cuh>
 
 #include <gpu_voxels/octree/PointCloud.h>
 #include <gpu_voxels/octree/kernels/kernel_PointCloud.h>
@@ -30,11 +31,12 @@
 #include <algorithm>    // std::random_shuffle
 
 using namespace std;
+namespace cub = thrust::system::cuda::detail::cub_;
 
 namespace gpu_voxels {
 namespace NTree {
 
-VoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, VoxelID num_points,
+OctreeVoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, voxel_count num_points,
                                   thrust::device_vector<Voxel>& voxel, Sensor& sensor,
                                   gpu_voxels::Vector3f voxel_dimension)
 {
@@ -63,7 +65,7 @@ VoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, VoxelID num
   LOGGING_INFO(OctreeLog, "thrust::sort: " <<  timeDiff(time, getCPUTime()) << " ms" << endl);
   time = getCPUTime();
 
-  thrust::device_vector<VoxelID> count_voxel(NUM_BLOCKS * NUM_THREADS_PER_BLOCK);
+  thrust::device_vector<OctreeVoxelID> count_voxel(NUM_BLOCKS * NUM_THREADS_PER_BLOCK);
   kernel_countVoxel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(D_PTR(d_tmp_voxel), num_points, D_PTR(count_voxel));
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -76,7 +78,7 @@ VoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, VoxelID num
   LOGGING_INFO(OctreeLog, "thrust::inclusive_scan: " <<  timeDiff(time, getCPUTime()) << " ms" << endl);
   time = getCPUTime();
 
-  VoxelID num_voxel = count_voxel.back();
+  OctreeVoxelID num_voxel = count_voxel.back();
   voxel.resize(num_voxel);
 
   kernel_combineEqualVoxel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(D_PTR(d_tmp_voxel), num_voxel, D_PTR(count_voxel), D_PTR(voxel), D_PTR(d_sensor));
@@ -105,7 +107,7 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
   uint32_t num_blocks = num_points / num_threads + 1;
 
   // transform point cloud from sensor coordinates to world coordinates and return these as morton code
-  thrust::device_vector<VoxelID> d_tmp_voxel_id(num_points);
+  thrust::device_vector<OctreeVoxelID> d_tmp_voxel_id(num_points);
   kernel_transformKinectPoints_simple<<<num_blocks, num_threads>>>(d_point_cloud, num_points,
                                                                    D_PTR(d_tmp_voxel_id),
                                                                    d_sensor,
@@ -124,11 +126,11 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
       if (num_points != 0)
       {
         // use CUB since it's nearly twice as fast as thrust
-        thrust::device_vector<VoxelID> d_tmp_voxel_id2(num_points);
+        thrust::device_vector<OctreeVoxelID> d_tmp_voxel_id2(num_points);
         int num_items = (int) num_points;
-        VoxelID *d_key_buf = D_PTR(d_tmp_voxel_id);
-        VoxelID *d_key_alt_buf = D_PTR(d_tmp_voxel_id2);
-        cub::DoubleBuffer<VoxelID> d_keys(d_key_buf, d_key_alt_buf);
+        OctreeVoxelID *d_key_buf = D_PTR(d_tmp_voxel_id);
+        OctreeVoxelID *d_key_alt_buf = D_PTR(d_tmp_voxel_id2);
+        cub::DoubleBuffer<OctreeVoxelID> d_keys(d_key_buf, d_key_alt_buf);
         // Determine temporary device storage requirements
         void *d_temp_storage = NULL;
         size_t temp_storage_bytes = 0;
@@ -147,7 +149,7 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
   }
   else
   {
-    thrust::host_vector<VoxelID> h_tmp_voxel_id = d_tmp_voxel_id;
+    thrust::host_vector<OctreeVoxelID> h_tmp_voxel_id = d_tmp_voxel_id;
     thrust::sort(h_tmp_voxel_id.begin(), h_tmp_voxel_id.end());
     d_tmp_voxel_id = h_tmp_voxel_id;
   }

@@ -87,8 +87,8 @@ int main(int argc, char* argv[])
    */
   gvl->addMap(MT_BITVECTOR_OCTREE, "myEnvironmentMap");
 
-  if (!gvl->getMap("myEnvironmentMap")->insertPointcloudFromFile("pointcloud_0002.pcd", true,
-                                                                 eVT_OCCUPIED, true, Vector3f(-6, -7.3, 0)))
+  if (!gvl->insertPointcloudFromFile("myEnvironmentMap", "pointcloud_0002.pcd", true,
+                                     eBVM_OCCUPIED, true, Vector3f(-6, -7.3, 0)))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
   }
@@ -106,13 +106,13 @@ int main(int argc, char* argv[])
   linknames[0] = "z_translation";
   linknames[1] = "y_translation";
   linknames[2] = "x_translation";
-  linknames[3] = paths_to_pointclouds[0] = "arm_0_link.xyz";
-  linknames[4] = paths_to_pointclouds[1] = "arm_1_link.xyz";
-  linknames[5] = paths_to_pointclouds[2] = "arm_2_link.xyz";
-  linknames[6] = paths_to_pointclouds[3] = "arm_3_link.xyz";
-  linknames[7] = paths_to_pointclouds[4] = "arm_4_link.xyz";
-  linknames[8] = paths_to_pointclouds[5] = "arm_5_link.xyz";
-  linknames[9] = paths_to_pointclouds[6] = "arm_6_link.xyz";
+  linknames[3] = paths_to_pointclouds[0] = "hollie/arm_0_link.xyz";
+  linknames[4] = paths_to_pointclouds[1] = "hollie/arm_1_link.xyz";
+  linknames[5] = paths_to_pointclouds[2] = "hollie/arm_2_link.xyz";
+  linknames[6] = paths_to_pointclouds[3] = "hollie/arm_3_link.xyz";
+  linknames[7] = paths_to_pointclouds[4] = "hollie/arm_4_link.xyz";
+  linknames[8] = paths_to_pointclouds[5] = "hollie/arm_5_link.xyz";
+  linknames[9] = paths_to_pointclouds[6] = "hollie/arm_6_link.xyz";
 
   std::vector<robot::DHParameters> dh_params(10);
                                    // _d,  _theta,  _a,   _alpha, _value, _type
@@ -134,31 +134,31 @@ int main(int argc, char* argv[])
   std::size_t counter = 0;
   const float ratio_delta = 0.01;
 
-  JointValueMap min_joint_values;
+  robot::JointValueMap min_joint_values;
   min_joint_values["z_translation"] = 0.0; // moves along the Z axis
   min_joint_values["y_translation"] = 1.0; // moves along the Y Axis
   min_joint_values["x_translation"] = 1.0; // moves along the X Axis
-  min_joint_values["arm_0_link.xyz"] = -1.0;
-  min_joint_values["arm_1_link.xyz"] = -1.0;
-  min_joint_values["arm_2_link.xyz"] = -1.0;
-  min_joint_values["arm_3_link.xyz"] = -1.0;
-  min_joint_values["arm_4_link.xyz"] = -1.0;
+  min_joint_values["hollie/arm_0_link.xyz"] = -1.0;
+  min_joint_values["hollie/arm_1_link.xyz"] = -1.0;
+  min_joint_values["hollie/arm_2_link.xyz"] = -1.0;
+  min_joint_values["hollie/arm_3_link.xyz"] = -1.0;
+  min_joint_values["hollie/arm_4_link.xyz"] = -1.0;
 
-  JointValueMap max_joint_values;
+  robot::JointValueMap max_joint_values;
   max_joint_values["z_translation"] = 0.0; // moves along the Z axis
   max_joint_values["y_translation"] = 1.0; // moves along the Y axis
   max_joint_values["x_translation"] = 1.0; // moves along the X Axis
-  max_joint_values["arm_0_link.xyz"] = 1.5;
-  max_joint_values["arm_1_link.xyz"] = 1.5;
-  max_joint_values["arm_2_link.xyz"] = 1.5;
-  max_joint_values["arm_3_link.xyz"] = 1.5;
-  max_joint_values["arm_4_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_0_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_1_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_2_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_3_link.xyz"] = 1.5;
+  max_joint_values["hollie/arm_4_link.xyz"] = 1.5;
 
   /*
    * Now we enter "normal" operation
    * and make the robot move.
    */
-  JointValueMap myRobotJointValues;
+  robot::JointValueMap myRobotJointValues;
   while(true)
   {
     /*
@@ -167,11 +167,11 @@ int main(int argc, char* argv[])
      */
     LOGGING_INFO(Gpu_voxels, "Updating robot pose..." << endl);
 
-    myRobotJointValues = gpu_voxels::CudaMath::interpolateLinear(min_joint_values, max_joint_values, ratio_delta * counter++);
+    myRobotJointValues = gpu_voxels::interpolateLinear(min_joint_values, max_joint_values, ratio_delta * counter++);
 
     gvl->setRobotConfiguration("myRobot", myRobotJointValues);
 
-    gvl->insertRobotIntoMap("myRobot", "myRobotMap", eVT_OCCUPIED);
+    gvl->insertRobotIntoMap("myRobot", "myRobotMap", eBVM_OCCUPIED);
 
     /*
      * When the updates of the robot and the environment are

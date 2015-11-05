@@ -104,7 +104,7 @@ public:
    * @param basic_data
    */
   __host__ __device__
-  NodeData(const VoxelID voxelID, const voxel_count level, const BasicData basic_data)
+  NodeData(const OctreeVoxelID voxelID, const voxel_count level, const BasicData basic_data)
   {
     m_voxel_id = voxelID;
     m_level = level;
@@ -127,7 +127,7 @@ public:
     return in;
   }
 
-  VoxelID m_voxel_id;
+  OctreeVoxelID m_voxel_id;
   voxel_count m_level;
   BasicData m_basic_data;
 };
@@ -237,7 +237,7 @@ public:
    * @return
    */
   __device__  __host__  __forceinline__
-  NodeData extractData(const VoxelID voxel_id,
+  NodeData extractData(const OctreeVoxelID voxel_id,
                                                            const voxel_count level) const
   {
     return NodeData(voxel_id, level, NodeData::BasicData(getStatus(), 0));
@@ -301,7 +301,7 @@ public:
    * @return
    */
   __device__  __host__  __forceinline__
-  NodeData extractData(const VoxelID voxel_id,
+  NodeData extractData(const OctreeVoxelID voxel_id,
                                                            const voxel_count level) const
   {
     return NodeData(voxel_id, level, NodeData::BasicData(m_status, m_flags));

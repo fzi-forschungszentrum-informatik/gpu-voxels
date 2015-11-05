@@ -30,58 +30,29 @@
 #ifndef GPU_VOXELS_ROBOT_URDF_ROBOT_URDF_ROBOT_H_INCLUDED
 #define GPU_VOXELS_ROBOT_URDF_ROBOT_URDF_ROBOT_H_INCLUDED
 
-#include "gpu_voxels/robot/robot_interface.h"
-#include "gpu_voxels/robot/urdf_robot/robot.h"
 #include "gpu_voxels/robot/urdf_robot/robot_to_gpu.h"
-#include <urdf_model/model.h>
-#include <urdf_parser/urdf_parser.h>
 
 namespace gpu_voxels {
 namespace robot {
 
-class UrdfRobot : public RobotInterface
+/*!
+ * \brief The UrdfRobot class
+ * Basically wraps the robot_to_gpu.cu into a regular .cpp library
+ */
+class UrdfRobot : public RobotToGPU
 {
 public:
 
-  /**
-   * \brief Initializes the robot from a URDF file
-   * @param path Path to the description URDF file
-   */
-  UrdfRobot(const std::string &path, const bool use_model_path);
-
-  /**
-   * @brief Updates the joints of the robot
-   * @param jointmap Pairs of jointnames and joint values
-   * Joints get matched by names, so not all joints have to be
-   * specified.
-   */
-  void setConfiguration(const JointValueMap &jointmap);
-
-  /**
-   * @brief getConfiguration Gets the robot configuration
-   * @param joint_values Map of jointnames and values.
-   * This map will get extended if joints were missing.
-   */
-  void getConfiguration(JointValueMap &jointmap);
-
-  /**
-   * @brief getTransformedClouds
-   * @return Pointers to the kinematically transformed clouds.
-   */
-  const MetaPointCloud *getTransformedClouds();
-
   /*!
-   * \brief updatePointcloud Changes the geometry of a single link.
-   * Useful when grasping an object, changing a tool
-   * or interpreting point cloud data from an onboard sensor as a robot link.
-   * \param link Link to modify
-   * \param cloud New geometry
+   * \brief UrdfRobot::UrdfRobot Initializes the robot from a URDF file
+   *
+   * \param _path Path to the description URDF file
+   * \param use_model_path Use the path specified via
+   * GPU_VOXELS_MODEL_PATH environment variable
    */
-  void updatePointcloud(const std::string &link_name, const std::vector<Vector3f> &cloud);
+  UrdfRobot(const std::string &path, const bool &use_model_path);
 
-private:
-  Robot* robot; // the URDF description of the robot
-  RobotToGPU* rob2gpu; // the GPU part for transformation
+  ~UrdfRobot();
 
 };
 

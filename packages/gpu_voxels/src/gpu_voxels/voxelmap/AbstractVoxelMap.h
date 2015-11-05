@@ -38,15 +38,6 @@
 namespace gpu_voxels {
 namespace voxelmap {
 
-
-/**
- * @brief The VoxelTemplateId enum to compare which template is used
- */
-enum VoxelMapTemplateId{
-  VMT_PROBABILISTIC_VOXELMAP,
-  VMT_BITVECTOR_VOXELMAP
-};
-
 class AbstractVoxelMap : public GpuVoxelsMap
 {
 public:
@@ -57,12 +48,12 @@ public:
   //! get the side length of the voxels.
   virtual float getVoxelSideLength() const = 0;
 
-  virtual void insertPointCloud(const std::vector<Vector3f> &points, const uint32_t voxel_type) = 0;
+  virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning) = 0;
 
   //! get the number of bytes that is required for the voxelmap
-  virtual uint32_t getMemorySizeInByte() = 0;
+  virtual size_t getMemoryUsage() = 0;
 
-  virtual VoxelMapTemplateId getTemplateType() = 0;
+  virtual MapType getTemplateType() = 0;
 
 
 

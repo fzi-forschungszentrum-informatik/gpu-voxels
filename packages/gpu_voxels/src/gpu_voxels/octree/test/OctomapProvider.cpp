@@ -136,7 +136,7 @@ void OctomapProvider::init(Provider_Parameter& parameter)
 //  printf("voxel map dimension %u %u %u\n", map_dim.x, map_dim.y, map_dim.z);
 //
 //  m_voxelMap = new gpu_voxels::VoxelMap(map_dim.x, map_dim.y, map_dim.z, 1);
-//  m_voxelMap->insertPointCloud(points, gpu_voxels::Voxel::eC_EXECUTION, gpu_voxels::Voxel::eVT_OCCUPIED);
+//  m_voxelMap->insertPointCloud(points, gpu_voxels::Voxel::eC_EXECUTION, gpu_voxels::Voxel::eBVM_OCCUPIED);
 //
 //  m_sensor_position = gpu_voxels::Vector3f(map_dim.x / 2, map_dim.y / 2, map_dim.z / 2);
 //  m_sensor_orientation = gpu_voxels::Vector3f(0, 0, 0);

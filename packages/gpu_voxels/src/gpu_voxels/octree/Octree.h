@@ -32,6 +32,7 @@
 #include <gpu_voxels/octree/GvlNTree.h>
 #include <gpu_voxels/voxelmap/BitVoxelMap.h>
 #include <gpu_voxels/voxelmap/ProbVoxelMap.h>
+#include <gpu_voxels/voxellist/BitVoxelList.h>
 
 namespace gpu_voxels {
 namespace NTree {

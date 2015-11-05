@@ -75,9 +75,6 @@ RobotJoint::RobotJoint( Robot* robot, const boost::shared_ptr<const urdf::Joint>
   , pose_calculated_( false )
   , joint_value_(0.0)
 {
-  LOGGING_DEBUG_C(RobotLog, RobotJoint,
-                  "Creating new Robot Joint named " << name_ << endl);
-
   pose_property_ = KDL::Frame();
 
   const urdf::Vector3& pos = joint->parent_to_joint_origin_transform.position;
@@ -89,6 +86,17 @@ RobotJoint::RobotJoint( Robot* robot, const boost::shared_ptr<const urdf::Joint>
   KDL::Rotation rot2 = KDL::Rotation::Quaternion(rot.x, rot.y, rot.z, rot.w);
 
   joint_origin_pose_ = KDL::Frame(rot2, pos2);
+  if(joint->limits)
+  {
+    lower_joint_limit_ = joint->limits->lower;
+    upper_joint_limit_ = joint->limits->upper;
+  }else{
+    lower_joint_limit_ = 0.0;
+    upper_joint_limit_ = 0.0;
+  }
+
+  LOGGING_DEBUG_C(RobotLog, RobotJoint,
+                  "Creating new Robot Joint named " << name_ << "Min = " << lower_joint_limit_ << " Max = " << upper_joint_limit_ << endl);
 }
 
 RobotJoint::~RobotJoint()

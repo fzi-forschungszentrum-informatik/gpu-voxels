@@ -33,6 +33,9 @@ namespace gpu_voxels {
 namespace NTree {
 namespace LoadBalancer {
 
+// used to avoid "non-empty default constructor" problems in shared memory arrays
+extern __shared__ int dynamic_shared_mem[];
+
 /**
  * @brief First step of balancing the work stacks. For each stack the work elements are counted by level.
  * @param work_stacks Pointer to the work stacks.
@@ -424,7 +427,7 @@ public:
    * @param kernel_params
    */
   __device__
-  static void doLoadBalancedWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static void doLoadBalancedWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                                  Variables& variables, const Constants& constants, KernelParams& kernel_params);
 
   /**
@@ -436,7 +439,7 @@ public:
    * @param kernel_params
    */
   __device__
-  static void doReductionWork(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static void doReductionWork(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params);
 
   /**
@@ -449,10 +452,10 @@ public:
    * @return
    */
   __device__
-  static bool abortLoop(SharedMem& shared_mem, volatile SharedVolatileMem& shared_volatile_mem,
+  static bool abortLoop(SharedMem* const shared_mem, volatile SharedVolatileMem* const shared_volatile_mem,
                               Variables& variables, const Constants& constants, KernelParams& kernel_params)
   {
-    if ((shared_mem.num_stack_work_items == 0) || (shared_mem.num_stack_work_items >= constants.stack_items_threshold))
+    if ((shared_mem->num_stack_work_items == 0) || (shared_mem->num_stack_work_items >= constants.stack_items_threshold))
     {
       if (constants.thread_id == 0)
         atomicInc(kernel_params.tasks_idle_count, UINT_MAX);
@@ -476,37 +479,37 @@ template<class LBKernelConfig>
 __global__
 void kernelLBWorkConcept(typename LBKernelConfig::KernelParams kernel_params)
 {
-  __shared__ typename LBKernelConfig::SharedMem shared_mem;
-  volatile __shared__ typename LBKernelConfig::SharedVolatileMem shared_volatile_mem;
+  typename LBKernelConfig::SharedMem* const shared_mem = (typename LBKernelConfig::SharedMem*)dynamic_shared_mem;  //size: sizeof(typename LBKernelConfig::SharedMem)
+  volatile typename LBKernelConfig::SharedVolatileMem* const shared_volatile_mem = (volatile typename LBKernelConfig::SharedVolatileMem*)&shared_mem[1];  //size: sizeof(typename LBKernelConfig::SharedVolatileMem);
   typename LBKernelConfig::Variables variables;
   const typename LBKernelConfig::Constants constants(gridDim, blockDim, blockIdx, threadIdx, kernel_params.stack_size_per_task);
   __syncthreads(); // make sure race conditions for initializing the shared memory doen't lead to data inconsistency
 
   if (constants.thread_id == 0)
   {
-    shared_mem.num_stack_work_items = kernel_params.work_stacks_item_count[constants.block_id];
-    shared_mem.my_work_stack = &kernel_params.work_stacks[constants.block_id * kernel_params.stack_size_per_task];
+    shared_mem->num_stack_work_items = kernel_params.work_stacks_item_count[constants.block_id];
+    shared_mem->my_work_stack = &kernel_params.work_stacks[constants.block_id * kernel_params.stack_size_per_task];
   }
   __syncthreads();
 
-  assert(shared_mem.num_stack_work_items < constants.stack_items_threshold);
+  assert(shared_mem->num_stack_work_items < constants.stack_items_threshold);
 
   while (true)
   {
     if(LBKernelConfig::abortLoop(shared_mem, shared_volatile_mem, variables, constants, kernel_params))
       break;
 
-    variables.num_work_items = min((uint32_t) (LBKernelConfig::NUM_THREADS / LBKernelConfig::BRANCHING_FACTOR), shared_mem.num_stack_work_items);
+    variables.num_work_items = min((uint32_t) (LBKernelConfig::NUM_THREADS / LBKernelConfig::BRANCHING_FACTOR), shared_mem->num_stack_work_items);
     variables.is_active = constants.work_index < variables.num_work_items;
 
     // every thread grabs some work
-    blockCopy(shared_mem.work_item_cache, &shared_mem.my_work_stack[shared_mem.num_stack_work_items - variables.num_work_items],
+    blockCopy(shared_mem->work_item_cache, &shared_mem->my_work_stack[shared_mem->num_stack_work_items - variables.num_work_items],
               variables.num_work_items * sizeof(LBKernelConfig::WorkItem), constants.thread_id, LBKernelConfig::NUM_THREADS);
     __syncthreads();
 
     // decrease num work items in stack by the grabbed work
     if (constants.thread_id == 0)
-      shared_mem.num_stack_work_items -= variables.num_work_items;
+      shared_mem->num_stack_work_items -= variables.num_work_items;
     __syncthreads();
 
     LBKernelConfig::doLoadBalancedWork(shared_mem, shared_volatile_mem, variables, constants, kernel_params);
@@ -515,7 +518,7 @@ void kernelLBWorkConcept(typename LBKernelConfig::KernelParams kernel_params)
   LBKernelConfig::doReductionWork(shared_mem, shared_volatile_mem, variables, constants, kernel_params);
 
   if (constants.thread_id == 0)
-    kernel_params.work_stacks_item_count[constants.block_id] = shared_mem.num_stack_work_items;
+    kernel_params.work_stacks_item_count[constants.block_id] = shared_mem->num_stack_work_items;
 }
 
 }

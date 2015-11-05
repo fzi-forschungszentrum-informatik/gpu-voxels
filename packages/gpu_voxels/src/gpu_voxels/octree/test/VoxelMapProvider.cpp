@@ -130,7 +130,7 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
     else
     {
       // compute max scaling factor based on memory restriction
-      uint64_t max_voxel = uint64_t(parameter.max_memory) / sizeof(voxelmap::ProbabilisticVoxel);
+      uint64_t max_voxel = uint64_t(parameter.max_memory) / sizeof(ProbabilisticVoxel);
       printf("max_voxel %lu map_voxel %lu\n", max_voxel, map_voxel);
       if (max_voxel <= map_voxel)
         scaling = float(pow(max_voxel / double(map_voxel), 1.0 / 3));
@@ -194,7 +194,7 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
 
   if (insert_points.size() != 0)
   {
-    m_voxelMap->insertPointCloud(insert_points, gpu_voxels::eVT_OCCUPIED);
+    m_voxelMap->insertPointCloud(insert_points, gpu_voxels::eBVM_OCCUPIED);
 
 //    if (m_parameter->model_type == Provider_Parameter::eMT_BitVector)
 //    {
@@ -205,14 +205,14 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
 //        for (int i = 0; i < int(tmp.size()); ++i)
 //          tmp[i] = tmp[i] + offset * k;
 //
-//        m_voxelMap->insertPointCloud(tmp, gpu_voxels::eVT_UNDEFINED + k);
+//        m_voxelMap->insertPointCloud(tmp, gpu_voxels::eBVM_UNDEFINED + k);
 //      }
 //    }
 
     PERF_MON_PRINT_INFO_P(temp_timer, "Build", prefix);
   }
 
-  PERF_MON_ADD_DATA_NONTIME_P("UsedMemory", m_voxelMap->getMemorySizeInByte(), prefix);
+  PERF_MON_ADD_DATA_NONTIME_P("UsedMemory", m_voxelMap->getMemoryUsage(), prefix);
 
   m_sensor_orientation = gpu_voxels::Vector3f(0, 0, 0);
   m_sensor_position = gpu_voxels::Vector3f(
@@ -256,7 +256,7 @@ void VoxelMapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const 
   if (voxelmap::ProbVoxelMap* _voxelmap = dynamic_cast<voxelmap::ProbVoxelMap*>(m_voxelMap))
   {
     // HACK by AH: the bitvector lenght was 0 ?! But that template wasn't instantiated...
-    _voxelmap->insertSensorData<voxelmap::BIT_VECTOR_LENGTH>((const gpu_voxels::Vector3f*) h_point_cloud, true, false, eVT_OCCUPIED, NULL);
+    _voxelmap->insertSensorData<BIT_VECTOR_LENGTH>((const gpu_voxels::Vector3f*) h_point_cloud, true, false, eBVM_OCCUPIED, NULL);
   }
   else
   {
@@ -301,7 +301,7 @@ void VoxelMapProvider::collide_wo_locking()
 
       if (voxelmap::ProbVoxelMap* _voxelmap = dynamic_cast<voxelmap::ProbVoxelMap*>(_provider->getVoxelMap()))
       {
-        voxelmap::DefaultCollider c;
+        gpu_voxels::DefaultCollider c;
         num_collisions = _voxelmap->collisionCheckWithCounter(_voxelmap, c);
       }
       else
@@ -309,8 +309,6 @@ void VoxelMapProvider::collide_wo_locking()
         printf("Voxelmap can't 'collisionCheckWithCounter()'\n");
       }
 
-//      num_collisions = m_voxelMap->collisionCheckWithCounter<voxelmap::Voxel, voxelmap::DefaultCollider>((voxelmap::TemplateVoxelMap<voxelmap::Voxel>*)(voxelmap->m_voxelMap),
-//                                                                                                         voxelmap::DefaultCollider());
       PERF_MON_PRINT_INFO_P(temp_timer, "", prefix);
       PERF_MON_ADD_DATA_NONTIME_P("NumCollisions", num_collisions, prefix);
       m_changed = true;
