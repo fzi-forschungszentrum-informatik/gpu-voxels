@@ -2997,13 +2997,13 @@ void NTree<branching_factor, level_count, InnerNode,
 
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-std::size_t NTree<branching_factor, level_count, InnerNode, LeafNode>::getMemUsage()
+std::size_t NTree<branching_factor, level_count, InnerNode, LeafNode>::getMemUsage() const
 {
   return allocLeafNodes * sizeof(LeafNode) + allocInnerNodes * sizeof(InnerNode);
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-bool NTree<branching_factor, level_count, InnerNode, LeafNode>::needsRebuild()
+bool NTree<branching_factor, level_count, InnerNode, LeafNode>::needsRebuild() const
 {
   return m_max_memory_usage != 0 && getMemUsage() >= m_max_memory_usage;
 }

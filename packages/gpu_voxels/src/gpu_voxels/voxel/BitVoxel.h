@@ -46,6 +46,12 @@ public:
   ~BitVoxel();
 
   __host__ __device__
+  bool operator==(const BitVoxel<length>& other) const
+  {
+    return m_bit_vector == other.bitVector();
+  }
+
+  __host__ __device__
   BitVector<length>& bitVector();
 
   __host__ __device__

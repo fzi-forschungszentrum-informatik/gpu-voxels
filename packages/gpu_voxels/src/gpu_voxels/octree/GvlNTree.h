@@ -64,19 +64,19 @@ public:
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui(), const BitVoxelMeaning* new_meaning = NULL);
 
-  virtual std::size_t getMemoryUsage();
+  virtual std::size_t getMemoryUsage() const;
 
-  virtual void writeToDisk(const std::string path);
+  virtual bool writeToDisk(const std::string path);
 
   virtual bool readFromDisk(const std::string path);
 
-  virtual bool needsRebuild();
+  virtual bool needsRebuild() const;
 
   virtual bool rebuild();
 
-  virtual Vector3ui getDimensions();
+  virtual Vector3ui getDimensions() const;
 
-  virtual Vector3f getMetricDimensions();
+  virtual Vector3f getMetricDimensions() const;
 
   // ------ END Global API functions ------
 

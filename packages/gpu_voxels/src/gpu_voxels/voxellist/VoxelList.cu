@@ -14,6 +14,7 @@
 
 
 #include "VoxelList.hpp"
+//#include "TemplateVoxelList.hpp"
 #include <gpu_voxels/voxelmap/VoxelMap.hpp>
 
 namespace gpu_voxels {
@@ -32,8 +33,12 @@ template class BitVoxelList<BIT_VECTOR_LENGTH, OctreeVoxelID>;
 
 // ############################### TemplateVoxelList ######################################
 // Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects
-//template uint32_t TemplateVoxelMap<ProbabilisticVoxel>::collisionCheckWithCounter<ProbabilisticVoxel, DefaultCollider>(
-//                                                                TemplateVoxelMap<ProbabilisticVoxel>*, DefaultCollider);
+template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::equals(const TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>&) const;
+template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::subtract(const GpuVoxelsMapSharedPtr, const Vector3f&);
+
+//template size_t TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::collideCountingPerMeaning(const GpuVoxelsMapSharedPtr, std::vector<size_t>&, const Vector3ui&);
+
+//virtual bool subtract(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui());
 
 // ############################### ProbVoxelMap (inherits from TemplateVoxelMap) ######################################
 // Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects

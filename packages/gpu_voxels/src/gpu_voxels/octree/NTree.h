@@ -135,8 +135,6 @@ public:
    */
   void build(thrust::device_vector<Vector3ui>& d_points, const bool free_bounding_box = false);
 
-  void transformPointsToVoxel(gpu_voxels::Vector3ui* points, uint32_t num_points,
-                              thrust::host_vector<OctreeVoxelID>& voxel);
   void print();
   void print2();
   void find(thrust::device_vector<Vector3ui> voxel, void** resultNode,
@@ -272,9 +270,9 @@ public:
   /**
    * Returns true if a rebuild operation is suggested.
    */
-  bool needsRebuild();
+  bool needsRebuild() const;
 
-  std::size_t getMemUsage();
+  std::size_t getMemUsage() const;
 
   /**
    * Copy data of NTree into new one. Used for memory cleanup.
@@ -282,7 +280,7 @@ public:
    */
   void rebuild();
 
-  std::size_t getMaxMemoryUsage()
+  std::size_t getMaxMemoryUsage() const
   {
     return m_max_memory_usage;
   }

@@ -20,7 +20,7 @@
 namespace gpu_voxels {
 namespace voxelmap {
 
-bool AbstractVoxelMap::needsRebuild()
+bool AbstractVoxelMap::needsRebuild() const
 {
   LOGGING_ERROR_C(VoxelmapLog, AbstractVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
   return false;

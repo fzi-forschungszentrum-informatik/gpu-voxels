@@ -132,3 +132,22 @@ V 0.8 (2015-11-09):
     - New Doxygen version.
     - Tinyxml cmake updated.
     - Added missing Findscripts for OpenNi.
+
+V 0.81 (2015-12-14):
+====================
+- Fixed severe Bug in MetaPointCloud::updatePointCloud() that lead to Segfaults.
+- Implemented new functions for VoxelLists:
+    - Equality check (Mainly for Boost-Tests)
+    - Subtraction (Bool operation)
+    - Collisioncheck that counts the collisions per Voxel-meaning.
+    - ShrinkToFit: Frees preallocated Thrust memory
+- Fixed error handling when reading and writing all data structures.
+- Added more Boost testcases.
+- Fixed URDF robot rendering when for collision meshes.
+- Made some const functions const.
+- Visualizer:
+    - Improved python script to generate color gradients for Visualizer configfiles.
+    - Made Voxellist Voxels clickable
+    - Enhanced reliability of Visualizer (Thanks to Christian Juelg)
+    - Added slicing functionality to Visualizer (Thanks to Christian Juelg)
+- Improved voxelize.sh script to delete intermediate files.

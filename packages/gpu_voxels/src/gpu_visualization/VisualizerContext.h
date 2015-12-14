@@ -69,7 +69,9 @@ struct VisualizerContext
       m_edge_color(0.f, 0.f, 1.f, 1.f),
       m_grid_color(0.f, 0.f, 0.5f, 1.f),
       m_lighting(true),
-      m_light_intensity(2500.f)
+      m_light_intensity(2500.f),
+      m_slice_axis(0),
+      m_slice_axis_position(0)
   {
     m_draw_types = thrust::host_vector<uint8_t>(MAX_DRAW_TYPES, 0);
     m_draw_types[eBVM_OCCUPIED] = (uint8_t) 1;
@@ -122,6 +124,7 @@ struct VisualizerContext
   Vector3ui m_max_voxelmap_dim;
 
   // the position of the start and end voxel for the view in the voxel map
+  // careful: the view will actually start at m_view_start_voxel_pos and end at (m_view_end_voxel_pos + Vector3ui(-1, -1, -1)) !
   Vector3ui m_view_start_voxel_pos, m_view_end_voxel_pos;
 
   // the maximum and minimum x, y and z value that shell be drawn
@@ -179,6 +182,10 @@ struct VisualizerContext
   bool m_lighting;
   //the intensity of the light source
   float m_light_intensity;
+
+  int m_slice_axis;
+
+  int m_slice_axis_position;
 };
 
 } // end of namespace visualization

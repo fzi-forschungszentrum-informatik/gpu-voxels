@@ -42,6 +42,7 @@ template<class Voxel, class VoxelIDType>
 class TemplateVoxelList : public AbstractVoxelList
 {
   typedef typename thrust::device_vector<VoxelIDType>::iterator  keyIterator;
+
   typedef typename thrust::device_vector<Vector3ui>::iterator  coordIterator;
   typedef typename thrust::device_vector<Voxel>::iterator  voxelIterator;
 
@@ -50,6 +51,9 @@ class TemplateVoxelList : public AbstractVoxelList
 
   typedef thrust::tuple<keyIterator, voxelIterator> keyVoxelIteratorTuple;
   typedef thrust::zip_iterator<keyVoxelIteratorTuple> keyVoxelZipIterator;
+
+  typedef thrust::tuple<keyIterator, coordIterator, voxelIterator> keyCoordVoxelIteratorTriple;
+  typedef thrust::zip_iterator<keyCoordVoxelIteratorTriple> keyCoordVoxelZipIterator;
 
 
 public:
@@ -121,18 +125,23 @@ public:
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui(), const BitVoxelMeaning* new_meaning = NULL);
 
-  virtual std::size_t getMemoryUsage();
+  virtual bool subtract(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f());
+  virtual bool subtract(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui());
+
+  virtual void shrinkToFit();
+
+  virtual std::size_t getMemoryUsage() const;
 
   virtual void clearMap();
   //! set voxel occupancies for a specific voxelmeaning to zero
 
-  virtual void writeToDisk(const std::string path);
+  virtual bool writeToDisk(const std::string path);
 
   virtual bool readFromDisk(const std::string path);
 
-  virtual Vector3ui getDimensions();
+  virtual Vector3ui getDimensions() const;
 
-  virtual Vector3f getMetricDimensions();
+  virtual Vector3f getMetricDimensions() const;
 
   // ------ END Global API functions ------
 
@@ -140,12 +149,16 @@ public:
    * @brief extractCubes Extracts a cube list for visualization
    * @param [out] output_vector Resulting cube list
    */
-  virtual void extractCubes(thrust::device_vector<Cube>** output_vector);
+  virtual void extractCubes(thrust::device_vector<Cube>** output_vector) const;
 
-
-  virtual void make_unique();
-
-  virtual size_t collideVoxellists(TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3ui &offset);
+  /**
+   * @brief collideVoxellists Internal binary search between voxellists
+   * @param other Other Voxellist
+   * @param offset Offset of other map to this map
+   * @param collision_stencil Binary vector storing the collisions. Has to be the size of 'this'
+   * @return Number of collisions
+   */
+  virtual size_t collideVoxellists(TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3ui &offset, thrust::device_vector<bool>& collision_stencil);
 
   /**
    * @brief collisionCheckWithCollider
@@ -167,6 +180,13 @@ public:
   template< class OtherVoxel, class Collider>
   size_t collisionCheckWithCollider(voxelmap::TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
 
+  /**
+   * @brief equals compares two voxellists by their elements.
+   * @return true, if all elements are equal, false otherwise
+   */
+  template< class OtherVoxel, class OtherVoxelIDType>
+  bool equals(const TemplateVoxelList<OtherVoxel, OtherVoxelIDType>& other) const;
+
   struct VoxelToCube
   {
     VoxelToCube() {}
@@ -180,6 +200,8 @@ public:
   };
 
 protected:
+
+  virtual void make_unique();
 
   /* ======== Variables with content on host ======== */
   float m_voxel_side_length;

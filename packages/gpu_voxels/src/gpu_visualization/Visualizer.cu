@@ -787,8 +787,31 @@ void Visualizer::updateStartEndViewVoxelIndices()
 {
   if (m_cur_context->m_draw_whole_map)
   {
-    m_cur_context->m_view_start_voxel_pos = m_cur_context->m_min_xyz_to_draw;
-    m_cur_context->m_view_end_voxel_pos = m_cur_context->m_max_xyz_to_draw;
+    if (m_cur_context->m_slice_axis == 0) {
+      m_cur_context->m_view_start_voxel_pos = m_cur_context->m_min_xyz_to_draw;
+      m_cur_context->m_view_end_voxel_pos = m_cur_context->m_max_xyz_to_draw;
+      return;
+    }
+
+    if (m_cur_context->m_slice_axis == 1) {
+      m_cur_context->m_view_start_voxel_pos = Vector3ui(m_cur_context->m_slice_axis_position, 0, 0);
+      m_cur_context->m_view_end_voxel_pos = Vector3ui(m_cur_context->m_slice_axis_position + 1, (unsigned)-1, (unsigned)-1);
+      return;
+    }
+
+    if (m_cur_context->m_slice_axis == 2) {
+      m_cur_context->m_view_start_voxel_pos = Vector3ui(0, m_cur_context->m_slice_axis_position, 0);
+      m_cur_context->m_view_end_voxel_pos = Vector3ui((unsigned)-1, m_cur_context->m_slice_axis_position + 1, (unsigned)-1);
+      return;
+    }
+
+    if (m_cur_context->m_slice_axis == 3) {
+      m_cur_context->m_view_start_voxel_pos = Vector3ui(0, 0, m_cur_context->m_slice_axis_position);
+      m_cur_context->m_view_end_voxel_pos = Vector3ui((unsigned)-1, (unsigned)-1, m_cur_context->m_slice_axis_position + 1);
+      return;
+    }
+
+    //should not happen
     return;
   }
 
@@ -929,7 +952,11 @@ uint32_t Visualizer::getDataPositionFromColorMap(const int32_t c_x, const int32_
   { 0.f, 0.f, 0.f };
   renderFrameWithColorMap(axis, con);
   glReadPixels(c_x, m_cur_context->m_camera->getWindowHeight() - c_y, 1, 1, GL_RGB, GL_FLOAT, pixel);
+
+  // reconstruct axis position from color tuple
+  // color channel values are float [0..1]
   float v = 256.f * 256.f * pixel[0]/*r*/+ 256.f * pixel[1]/*g*/+ pixel[2]/*b*/;
+  // scale color channel values back to int [0..255]
   return v * 255;
 }
 /*!
@@ -1439,7 +1466,7 @@ void Visualizer::mouseClickFunction(int32_t button, int32_t state, int32_t xpos,
   float speed_multiplier = 80.f;
   if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
   {
-    printPositionOfVoxelUnderMouseCurser(xpos, ypos);
+    printPositionOfVoxelUnderMouseCursor(xpos, ypos);
   }
   else if (button == 3 && state == GLUT_DOWN) /*mouse wheel up*/
   {
@@ -1541,6 +1568,61 @@ void Visualizer::timerFunction(int32_t value, void (*callback)(int32_t))
   glutTimerFunc(250, callback, 1);
 }
 
+void Visualizer::rotate_slice_axis() {
+  // update axis:
+  // 0 none, 1 x, 2 y, 3 z
+  m_cur_context->m_slice_axis++;
+  if (m_cur_context->m_slice_axis > 3) {
+    m_cur_context->m_slice_axis = 0;
+  }
+
+  // find equivalent to m_max_voxelmap_dim for octrees and voxellists?
+  uint32_t max_voxelmap_dim;
+  switch (m_cur_context->m_slice_axis) {
+    case 1: max_voxelmap_dim = m_cur_context->m_max_voxelmap_dim.x; break;
+    case 2: max_voxelmap_dim = m_cur_context->m_max_voxelmap_dim.y; break;
+    case 3: max_voxelmap_dim = m_cur_context->m_max_voxelmap_dim.z; break;
+    default: max_voxelmap_dim = 0; break;
+  }
+
+  // initialize axisposition to some value. guess: interesting things are near the midst of the map
+  if (m_cur_context->m_slice_axis == 1 && m_cur_context->m_slice_axis_position == 0) {
+    m_cur_context->m_slice_axis_position = max_voxelmap_dim / 2;
+  }
+
+  updateStartEndViewVoxelIndices(); // modify draw_whole_map case
+  m_cur_context->m_camera->setViewChanged(true);
+}
+
+void Visualizer::move_slice_axis(int offset) {
+  // update position
+  m_cur_context->m_slice_axis_position += offset;
+
+  if (m_cur_context->m_slice_axis_position < 0) { //prevents bugs caused by unsigned m_min_xyz_to_draw processing
+    m_cur_context->m_slice_axis_position = 0;
+  }
+
+// //disabled: would limit min/max value of slice_axis_position; correct values are sometimes hard to discover
+//
+//  // find equivalent to m_max_voxelmap_dim for octrees and voxellists?
+//  uint32_t max_voxelmap_dim =
+//      (m_cur_context->m_slice_axis == 1) ?
+//        (m_cur_context->m_max_voxelmap_dim.x) :
+//        ((m_cur_context->m_slice_axis == 2) ?
+//          (m_cur_context->m_max_voxelmap_dim.y) :
+//          ((m_cur_context->m_slice_axis == 3) ?
+//             (m_cur_context->m_max_voxelmap_dim.z) :
+//             0));
+//  if (m_cur_context->m_slice_axis_position < 0) {
+//    m_cur_context->m_slice_axis_position = 0;
+//  } else if (m_cur_context->m_slice_axis_position >= max_voxelmap_dim) {
+//    m_cur_context->m_slice_axis_position = max_voxelmap_dim; // get a better value for max size?
+//  }
+
+  updateStartEndViewVoxelIndices();
+  m_cur_context->m_camera->setViewChanged(true);
+}
+
 void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
 {
   float multiplier = 1.f;
@@ -1557,10 +1639,46 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
   bool alt_pressed = modi & GLUT_ACTIVE_ALT;
   printf("Keycode: %c, Modifier value: %d, shift_pressed=%u\n", key, modi, alt_pressed);
 
-
-  // size_t temp = 0;
   switch (key)
   {
+    case 't':
+    {
+      rotate_slice_axis();
+
+      const char* axis_name = "";
+      switch (m_cur_context->m_slice_axis) {
+        case 0: axis_name = "none"; break;
+        case 1: axis_name = "x"; break;
+        case 2: axis_name = "y"; break;
+        case 3: axis_name = "z"; break;
+        default: axis_name = "invalid value"; break;
+      }
+      std::cout << "slice_axis: " << axis_name  << std::endl;
+
+      std::cout << "m_view_start_voxel_pos: " << (m_cur_context->m_view_start_voxel_pos.x) << " / " << (m_cur_context->m_view_start_voxel_pos.y) << " / " << (m_cur_context->m_view_start_voxel_pos.z);
+      std::cout << ", m_view_end_voxel_pos: " << (m_cur_context->m_view_end_voxel_pos.x) << " / " << (m_cur_context->m_view_end_voxel_pos.y) << " / " << (m_cur_context->m_view_end_voxel_pos.z) << std::endl;
+      break;
+    }
+    case 'q':
+      if (m_cur_context->m_slice_axis == 0) {
+        std::cout << "no slice axis selected. use 't' to set a slice axis" << std::endl;
+      } else {
+        move_slice_axis(+1);
+        std::cout << "m_cur_context->m_slice_axis_position: " << m_cur_context->m_slice_axis_position << std::endl;
+        std::cout << "m_view_start_voxel_pos: " << (m_cur_context->m_view_start_voxel_pos.x) << " / " << (m_cur_context->m_view_start_voxel_pos.y) << " / " << (m_cur_context->m_view_start_voxel_pos.z);
+        std::cout << ", m_view_end_voxel_pos: " << (m_cur_context->m_view_end_voxel_pos.x) << " / " << (m_cur_context->m_view_end_voxel_pos.y) << " / " << (m_cur_context->m_view_end_voxel_pos.z) << std::endl;
+      }
+      break;
+    case 'a':
+      if (m_cur_context->m_slice_axis == 0) {
+        std::cout << "no slice axis selected. use 't' to set a slice axis" << std::endl;
+      } else {
+        move_slice_axis(-1);
+        std::cout << "m_cur_context->m_slice_axis_position: " << m_cur_context->m_slice_axis_position << std::endl;
+        std::cout << "m_view_start_voxel_pos: " << (m_cur_context->m_view_start_voxel_pos.x) << " / " << (m_cur_context->m_view_start_voxel_pos.y) << " / " << (m_cur_context->m_view_start_voxel_pos.z);
+        std::cout << ", m_view_end_voxel_pos: " << (m_cur_context->m_view_end_voxel_pos.x) << " / " << (m_cur_context->m_view_end_voxel_pos.y) << " / " << (m_cur_context->m_view_end_voxel_pos.z) << std::endl;
+      }
+      break;
     case 'b':
       printNumberOfVoxelsDrawn();
       break;
@@ -2019,9 +2137,9 @@ void Visualizer::updateTypesSegmentMapping(DataContext* context)
 }
 
 /**
- * Prints the position of the voxel under the mouse curser.
+ * Prints the position of the voxel under the mouse cursor.
  */
-void Visualizer::printPositionOfVoxelUnderMouseCurser(int32_t xpos, int32_t ypos)
+void Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos)
 {
 //clear background color
   glClearColor(1.f, 1.f, 1.f, 1.f);
@@ -2031,6 +2149,7 @@ void Visualizer::printPositionOfVoxelUnderMouseCurser(int32_t xpos, int32_t ypos
   glm::vec3 c_pos = m_cur_context->m_camera->getCameraPosition();
   bool found_in_voxelmap = false;
   bool found_in_octree = false;
+  bool found_in_voxellist = false;
   Vector3ui n_pos;
   uint32_t data_index = 0;
   float distance = FLT_MAX;
@@ -2088,12 +2207,40 @@ void Visualizer::printPositionOfVoxelUnderMouseCurser(int32_t xpos, int32_t ypos
       found_in_voxelmap = false;
     }
   }
+  for (uint32_t i = 0; i < m_cur_context->m_voxel_lists.size(); i++)
+  {
+    CubelistContext * con = m_cur_context->m_voxel_lists[i];
+    if (!con->m_draw_context)
+    {/*If this voxellist isn't drawn => don't look there for voxels*/
+      continue;
+    }
+    Vector3ui pos = Vector3ui(getDataPositionFromColorMap(xpos, ypos, 0, con),
+                              getDataPositionFromColorMap(xpos, ypos, 1, con),
+                              getDataPositionFromColorMap(xpos, ypos, 2, con));
+    if (pos.x == background_pos || pos.y == background_pos || pos.z == background_pos)
+    {
+      /*If no voxel was found in this map try the next one*/
+      continue;
+    }
+    found_in_voxellist = true;
+    /*If a voxel was found check if it is nearer than a previously found one (relative to the camera position).*/
+    glm::vec3 v_pos = convertFromVector3uiToVec3(pos);
+    float distance_camera_voxel = glm::distance(c_pos, v_pos);
+    if (distance_camera_voxel < distance)
+    {
+      distance = distance_camera_voxel;
+      n_pos = pos;
+      data_index = i;
+      found_in_octree = false;
+      found_in_voxelmap = false;
+    }
+  }
 
 //reset background color
   glm::vec4 bc = m_cur_context->m_background_color;
   glClearColor(bc.x, bc.y, bc.z, 1.f);
   std::cout << std::endl;
-  if (!found_in_voxelmap && !found_in_octree)
+  if (!found_in_voxelmap && !found_in_octree && !found_in_voxellist)
   {
     std::cout << "There is no voxel!" << std::endl;
     return;
@@ -2132,6 +2279,13 @@ void Visualizer::printPositionOfVoxelUnderMouseCurser(int32_t xpos, int32_t ypos
   if (found_in_octree)
   {
     std::cout << "Found voxel in octree: " << m_cur_context->m_octrees[data_index]->m_map_name << std::endl;
+    std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
+    std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
+        << " z: " << n_pos.z * scale << unit << std::endl;
+  }
+  if (found_in_voxellist)
+  {
+    std::cout << "Found voxel in Voxellist: " << m_cur_context->m_voxel_lists[data_index]->m_map_name << std::endl;
     std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
     std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
         << " z: " << n_pos.z * scale << unit << std::endl;
@@ -2251,6 +2405,8 @@ void Visualizer::printHelp()
   std::cout << "n: print device memory info." << std::endl;
   std::cout << "" << std::endl;
   std::cout << "g: toggle draw whole map." << std::endl;
+  std::cout << "t: change slice axis (none/x/y/z). requires 'draw whole map mode' to show slices." << std::endl;
+  std::cout << "q|a: increment/decrement slice axis position (see 't'')" << std::endl;
   std::cout << "d: toggle draw grid." << std::endl;
   std::cout << "e: toggle draw edges of the triangles." << std::endl;
   std::cout << "f: toggle draw filled triangles." << std::endl;

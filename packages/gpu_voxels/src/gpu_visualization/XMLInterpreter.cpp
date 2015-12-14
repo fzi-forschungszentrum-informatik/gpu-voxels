@@ -240,8 +240,17 @@ bool XMLInterpreter::getVisualizerContext(VisualizerContext* con)
   con->m_min_view_dim = icl_core::config::getDefault<float>((c_path / "min_view_dim").string(), 25.f);
   c_path /= "min_xyz_value";
   con->m_min_xyz_to_draw.x = icl_core::config::getDefault<uint32_t>((c_path / "x").string(), 0);
+  if (con->m_min_xyz_to_draw.x == (uint32_t)0xffffffff) { //prevents strange gaps in visualization
+    con->m_min_xyz_to_draw.x = 0;
+  }
   con->m_min_xyz_to_draw.y = icl_core::config::getDefault<uint32_t>((c_path / "y").string(), 0);
+  if (con->m_min_xyz_to_draw.y == (uint32_t)0xffffffff) { //prevents strange gaps in visualization
+    con->m_min_xyz_to_draw.y = 0;
+  }
   con->m_min_xyz_to_draw.z = icl_core::config::getDefault<uint32_t>((c_path / "z").string(), 0);
+  if (con->m_min_xyz_to_draw.z == (uint32_t)0xffffffff) { //prevents strange gaps in visualization
+    con->m_min_xyz_to_draw.z = 0;
+  }
   c_path.remove_leaf();
   c_path /= "max_xyz_value";
   uint32_t m = 0xffffffff;

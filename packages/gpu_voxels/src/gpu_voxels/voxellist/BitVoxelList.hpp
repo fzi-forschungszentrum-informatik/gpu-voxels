@@ -216,6 +216,76 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const GpuVoxelsMapSha
   }
 }
 
+
+
+template<std::size_t length, class VoxelIDType>
+size_t BitVoxelList<length, VoxelIDType>::collideCountingPerMeaning(const GpuVoxelsMapSharedPtr other_,
+                                                           std::vector<size_t>&  collisions_per_meaning,
+                                                           const Vector3ui &offset_)
+{
+  // Map locking for the lists is performed in "findMatchingVoxels"
+  // TODO: Implement locking for the maps seperately!
+  try
+  {
+    switch (other_->getMapType())
+    {
+      case MT_BITVECTOR_VOXELLIST:
+      {
+        TemplatedBitVectorVoxelList* other = dynamic_cast<TemplatedBitVectorVoxelList*>(other_.get());
+
+        //========== Search for Voxels at the same spot in both lists: ==============
+        TemplatedBitVectorVoxelList matching_voxels_list1(this->m_ref_map_dim, this->m_voxel_side_length, this->m_map_type);
+        TemplatedBitVectorVoxelList matching_voxels_list2(this->m_ref_map_dim, this->m_voxel_side_length, this->m_map_type);
+        findMatchingVoxels(this, other, 0, offset_, &matching_voxels_list1, &matching_voxels_list2);
+
+        // matching_voxels_list1 now contains all Voxels that lie in collision
+        // Copy it to the host, iterate over all voxels and count the Meanings:
+
+        size_t summed_colls = 0;
+        thrust::host_vector<BitVectorVoxel> h_colliding_voxels;
+        h_colliding_voxels = matching_voxels_list1.m_dev_list;
+
+        assert(collisions_per_meaning.size() == BIT_VECTOR_LENGTH);
+
+        // TODO: Put this in a kernel!
+        for(size_t i = 0; i < h_colliding_voxels.size(); i++)
+        {
+          for(size_t j = 0; j < BIT_VECTOR_LENGTH; j++)
+          {
+            if(h_colliding_voxels[i].bitVector().getBit(j))
+            {
+              collisions_per_meaning[j]++;
+              summed_colls ++;
+            }
+          }
+        }
+
+        return summed_colls;
+      }
+      default:
+      {
+        LOGGING_ERROR_C(VoxellistLog, BitVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
+        return SSIZE_MAX;
+      }
+    }
+  }
+  catch(thrust::system_error &e)
+  {
+    LOGGING_ERROR_C(VoxellistLog, BitVoxelList, "Caught Thrust exception " << e.what() << endl);
+    exit(-1);
+  }
+
+}
+
+/*!
+ * \brief BitVoxelList<length, VoxelIDType>::findMatchingVoxels
+ * \param list1 Const input
+ * \param list2 Const input
+ * \param margin
+ * \param offset
+ * \param matching_voxels_list1 Contains all Voxels from list1 whose position matches a Voxel from list2
+ * \param matching_voxels_list2 Contains all Voxels from list2 whose position matches a Voxel from list1
+ */
 template<std::size_t length, class VoxelIDType>
 void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(TemplatedBitVectorVoxelList* list1, TemplatedBitVectorVoxelList* list2,
                                               const u_int8_t margin, const Vector3ui &offset,

@@ -131,7 +131,7 @@ public:
   }
 
   //! get the number of voxels held in the voxelmap
-  inline uint32_t getVoxelMapSize()
+  inline uint32_t getVoxelMapSize() const
   {
     return m_dim.x * m_dim.y * m_dim.z;
   }
@@ -255,7 +255,7 @@ public:
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui(), const BitVoxelMeaning* new_meaning = NULL);
 
-  virtual std::size_t getMemoryUsage()
+  virtual std::size_t getMemoryUsage() const
   {
     return m_dim.x * m_dim.y * m_dim.z * sizeof(Voxel);
   }
@@ -263,13 +263,13 @@ public:
   virtual void clearMap();
   //! set voxel occupancies for a specific voxelmeaning to zero
 
-  virtual void writeToDisk(const std::string path);
+  virtual bool writeToDisk(const std::string path);
 
   virtual bool readFromDisk(const std::string path);
 
-  virtual Vector3ui getDimensions();
+  virtual Vector3ui getDimensions() const;
 
-  virtual Vector3f getMetricDimensions();
+  virtual Vector3f getMetricDimensions() const;
 
   // ------ END Global API functions ------
 

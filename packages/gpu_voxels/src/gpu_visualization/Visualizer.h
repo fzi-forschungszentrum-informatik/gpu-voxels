@@ -237,9 +237,12 @@ private:
   void printViewInfo();
   void printNumberOfVoxelsDrawn();
   void printTotalVBOsizes();
-  void printPositionOfVoxelUnderMouseCurser(int32_t xpos, int32_t ypos);
+  void printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos);
   void log();
   void logCreate();
+
+  void rotate_slice_axis();
+  void move_slice_axis(int offset);
 /////////////////////////////////////////member variables//////////////////////////////////////////
   // the current context of the visualizer
   VisualizerContext* m_cur_context;

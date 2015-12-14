@@ -72,7 +72,7 @@ public:
 
   virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
 
-  virtual MapType getTemplateType() { return MT_BITVECTOR_VOXELMAP; }
+  virtual MapType getTemplateType() const { return MT_BITVECTOR_VOXELMAP; }
 
   virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision,
                                   float coll_threshold, const Vector3ui &offset);

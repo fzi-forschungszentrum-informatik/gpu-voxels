@@ -124,6 +124,106 @@ BOOST_AUTO_TEST_CASE(bitvoxellist_bitshift_collision)
   }
 }
 
+BOOST_AUTO_TEST_CASE(voxellist_equals_function)
+{
+  BitVectorVoxelList list1( Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+  BitVectorVoxelList list2(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+
+  Vector3f b1_min(1.1,1.1,1.1);
+  Vector3f b1_max(3.9,3.9,3.9);
+  Vector3f b2_min(2.1,2.1,2.1);
+  Vector3f b2_max(4.9,4.9,4.9);
+
+  std::vector<BitVoxelMeaning> voxel_meanings;
+  voxel_meanings.push_back(BitVoxelMeaning(11));
+  voxel_meanings.push_back(BitVoxelMeaning(12));
+
+  std::vector<std::vector<Vector3f> > box_clouds;
+  float delta = 0.1;
+
+  box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+  box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+
+  MetaPointCloud boxes(box_clouds);
+  boxes.syncToDevice();
+
+  std::vector<Vector3f> outliers;
+  outliers.push_back(Vector3f(9.22, 9.22, 9.22));
+
+  list1.insertMetaPointCloud(boxes, voxel_meanings);
+  list2.insertMetaPointCloud(boxes, voxel_meanings);
+  BOOST_CHECK_MESSAGE(list1.equals(list2), "Lists are equal.");
+
+  list1.insertPointCloud(outliers, BitVoxelMeaning(11));
+  list2.insertPointCloud(outliers, BitVoxelMeaning(12));
+  BOOST_CHECK_MESSAGE(!list1.equals(list2), "Lists differ.");
+}
+
+
+BOOST_AUTO_TEST_CASE(voxellist_disk_io)
+{
+  BitVectorVoxelList list( Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+
+  Vector3f b1_min(1.1,1.1,1.1);
+  Vector3f b1_max(3.9,3.9,3.9);
+  Vector3f b2_min(2.1,2.1,2.1);
+  Vector3f b2_max(4.9,4.9,4.9);
+
+  std::vector<BitVoxelMeaning> voxel_meanings;
+  voxel_meanings.push_back(BitVoxelMeaning(11));
+  voxel_meanings.push_back(BitVoxelMeaning(12));
+
+  std::vector<std::vector<Vector3f> > box_clouds;
+  float delta = 0.1;
+
+  box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+  box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+
+  MetaPointCloud boxes(box_clouds);
+  boxes.syncToDevice();
+
+  list.insertMetaPointCloud(boxes, voxel_meanings);
+
+  list.writeToDisk("temp_list.lst");
+
+  BitVectorVoxelList list2(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+
+  list2.readFromDisk("temp_list.lst");
+
+  BOOST_CHECK_MESSAGE(list.equals(list2), "List from Disk equals original list.");
+}
+
+
+BOOST_AUTO_TEST_CASE(bitvoxellist_subtract)
+{
+  // Generate two boxes that each occupie 27 Voxel.
+  // They overlap each other by 8 Voxels. Subtract them. ==> 19 Voxels should remain in the list.
+  GpuVoxelsMapSharedPtr list1(new BitVectorVoxelList(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST));
+  GpuVoxelsMapSharedPtr list2(new BitVectorVoxelList(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST));
+
+  Vector3f b1_min(1.1,1.1,1.1);
+  Vector3f b1_max(3.9,3.9,3.9);
+  Vector3f b2_min(2.1,2.1,2.1);
+  Vector3f b2_max(4.9,4.9,4.9);
+
+  float delta = 0.1;
+  std::vector<Vector3f> box_cloud1 = createBoxOfPoints(b1_min, b1_max, delta);
+  std::vector<Vector3f> box_cloud2 = createBoxOfPoints(b2_min, b2_max, delta);
+
+  list1->insertPointCloud(box_cloud1, BitVoxelMeaning(11));
+  list2->insertPointCloud(box_cloud2, BitVoxelMeaning(12));
+
+  BitVectorVoxelList* lst1_base_ptr = dynamic_cast<BitVectorVoxelList*>(list1.get());
+  lst1_base_ptr->subtract(list2, Vector3f());
+
+  thrust::device_vector<Cube>* d_cubes = NULL;
+  lst1_base_ptr->extractCubes(&d_cubes);
+  thrust::host_vector<Cube> h_cubes = *d_cubes;
+
+  BOOST_CHECK_MESSAGE(h_cubes.size() == 19, "Number of cubes after subtract == 19");
+
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 

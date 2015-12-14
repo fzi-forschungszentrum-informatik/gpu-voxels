@@ -55,7 +55,7 @@ public:
    * \brief getMapType returns the type of the map
    * \return the type of the map
    */
-  MapType getMapType();
+  MapType getMapType() const;
 
   /*!
    * \brief insertPointCloud Inserts a pointcloud with global coordinates
@@ -160,7 +160,7 @@ public:
    * \brief writeToDisk serializes the map and dumps it to a file
    * \param path filename
    */
-  virtual void writeToDisk(const std::string path) = 0;
+  virtual bool writeToDisk(const std::string path) = 0;
 
   /*!
    * \brief readFromDisk reads a serialized mapdump from disk
@@ -190,7 +190,7 @@ public:
    * Use this function in combination with 'rebuild()' to schedule map rebuilds on your own.
    * \return True, if rebuild is advised.
    */
-  virtual bool needsRebuild() = 0;
+  virtual bool needsRebuild() const = 0;
 
   /*!
    * \brief rebuild Rebuilds the map to free memory.
@@ -210,19 +210,19 @@ public:
    * \brief getMemoryUsage
    * \return Returns the size of the used memory in byte
    */
-  virtual std::size_t getMemoryUsage() = 0;
+  virtual std::size_t getMemoryUsage() const = 0;
 
   /*!
    * \brief getDimensions
    * \return Returns the dimensions of the map in voxels.
    */
-  virtual Vector3ui getDimensions() = 0;
+  virtual Vector3ui getDimensions() const = 0;
 
   /*!
    * \brief getMetricDimensions
    * \return Returns the dimensions of the map in meter.
    */
-  virtual Vector3f getMetricDimensions() = 0;
+  virtual Vector3f getMetricDimensions() const = 0;
 
 protected:
   MapType m_map_type;

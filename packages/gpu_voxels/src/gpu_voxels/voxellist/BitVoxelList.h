@@ -134,6 +134,8 @@ public:
 
   virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3ui &offset = Vector3ui());
 
+
+  size_t collideCountingPerMeaning(const GpuVoxelsMapSharedPtr other, std::vector<size_t>&  collisions_per_meaning, const Vector3ui &offset_ = Vector3ui());
   /**
    * @brief Shifts all swept-volume-IDs by shift_size towards lower IDs.
    * Currently this is limited to a shift size <64

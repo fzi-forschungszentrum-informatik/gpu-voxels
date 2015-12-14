@@ -52,7 +52,7 @@ public:
 
   virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
 
-  virtual MapType getTemplateType() { return MT_PROBAB_VOXELMAP; }
+  virtual MapType getTemplateType() const { return MT_PROBAB_VOXELMAP; }
 
   virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision,
                                   float coll_threshold, const Vector3ui &offset);

@@ -61,7 +61,7 @@ bool GpuVoxelsMap::rebuildIfNeeded()
     return false;
 }
 
-MapType GpuVoxelsMap::getMapType()
+MapType GpuVoxelsMap::getMapType() const
 {
   return m_map_type;
 }

@@ -340,7 +340,12 @@ void MetaPointCloud::updatePointCloud(uint16_t cloud, const std::vector<Vector3f
 
 void MetaPointCloud::updatePointCloud(const std::string &cloud_name, const std::vector<Vector3f> &pointcloud, bool sync)
 {
-  updatePointCloud(getCloudNumber(cloud_name), pointcloud.data(), pointcloud.size(), sync);
+  int16_t cloud_id = getCloudNumber(cloud_name);
+  if(cloud_id > 0)
+  {
+    updatePointCloud(cloud_id, pointcloud.data(), pointcloud.size(), sync);
+  }
+
 }
 
 void MetaPointCloud::updatePointCloud(uint16_t cloud, const Vector3f* pointcloud, uint32_t pointcloud_size,
@@ -367,7 +372,7 @@ void MetaPointCloud::updatePointCloud(uint16_t cloud, const Vector3f* pointcloud
       if(i != cloud)
       {
         tmp_clouds.push_back(new Vector3f[m_point_cloud_sizes.at(i)]);
-        memcpy(tmp_clouds.at(i), m_point_clouds_local->clouds_base_addresses[i],
+        memcpy(tmp_clouds.back(), m_point_clouds_local->clouds_base_addresses[i],
                sizeof(Vector3f) * m_point_cloud_sizes.at(i));
       }else{
         // skip the modified cloud
@@ -376,12 +381,14 @@ void MetaPointCloud::updatePointCloud(uint16_t cloud, const Vector3f* pointcloud
     destruct();      // Destruct current clouds on host and device
     init(new_sizes); // Allocate new mem
     // Restore previous data to new mem addresses
+    uint16_t j = 0;
     for(uint16_t i = 0; i < m_num_clouds; i++)
     {
       if(i != cloud)
       {
-        memcpy(m_point_clouds_local->clouds_base_addresses[i], tmp_clouds[i],
+        memcpy(m_point_clouds_local->clouds_base_addresses[i], tmp_clouds[j],
                sizeof(Vector3f) * m_point_cloud_sizes.at(i));
+        j++;
       }else{
         memcpy(m_point_clouds_local->clouds_base_addresses[i], pointcloud,
                sizeof(Vector3f) * m_point_cloud_sizes.at(i));

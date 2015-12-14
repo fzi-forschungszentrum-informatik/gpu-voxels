@@ -27,13 +27,51 @@
 #include <thrust/execution_policy.h>
 #include <thrust/unique.h>
 #include <thrust/pair.h>
+#include <thrust/tuple.h>
 #include <thrust/count.h>
 #include <thrust/sort.h>
+#include <thrust/remove.h>
 #include <thrust/binary_search.h>
 #include <thrust/system_error.h>
 
 namespace gpu_voxels {
 namespace voxellist {
+
+template<class Voxel, class VoxelIDType>
+TemplateVoxelList<Voxel, VoxelIDType>::TemplateVoxelList(const Vector3ui ref_map_dim, const float voxel_sidelength, const MapType map_type)
+  : m_voxel_side_length(voxel_sidelength),
+    m_ref_map_dim(ref_map_dim)
+{
+  this->m_map_type = map_type;
+
+  m_collision_check_results = new bool[cMAX_NR_OF_BLOCKS];
+  m_collision_check_results_counter = new uint16_t[cMAX_NR_OF_BLOCKS];
+
+  // initialize result arrays
+  for (uint32_t i = 0; i < cMAX_NR_OF_BLOCKS; i++)
+  {
+    m_collision_check_results[i] = false;
+    m_collision_check_results_counter[i] = 0;
+  }
+
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_dev_collision_check_results, cMAX_NR_OF_BLOCKS * sizeof(bool)));
+  HANDLE_CUDA_ERROR(
+      cudaMalloc((void** )&m_dev_collision_check_results_counter, cMAX_NR_OF_BLOCKS * sizeof(uint16_t)));
+
+  // copy initialized arrays to device
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(m_dev_collision_check_results, m_collision_check_results, cMAX_NR_OF_BLOCKS * sizeof(bool),
+                 cudaMemcpyHostToDevice));
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(m_dev_collision_check_results_counter, m_collision_check_results_counter,
+                 cMAX_NR_OF_BLOCKS * sizeof(uint16_t), cudaMemcpyHostToDevice));
+}
+
+template<class Voxel, class VoxelIDType>
+TemplateVoxelList<Voxel, VoxelIDType>::~TemplateVoxelList()
+{
+}
+
 
 /*!
  * \brief TemplateVoxelList<Voxel>::make_unique
@@ -99,12 +137,11 @@ void TemplateVoxelList<Voxel, VoxelIDType>::make_unique()
 
 
 template<class Voxel, class VoxelIDType>
-size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3ui &offset)
+size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3ui &offset, thrust::device_vector<bool>& collision_stencil)
 {
   bool locked_this = false;
   bool locked_other = false;
   uint32_t counter = 0;
-  thrust::device_vector<bool> output(other->m_dev_id_list.size()); // the result as vector of bools
 
   while (!locked_this && !locked_other)
   {
@@ -130,7 +167,7 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(TemplateVoxelLis
   }
 
 
-
+  // searching for the elements of "other" in "this". Therefore stencil has to be the size of "this"
   try
   {
     // if offset is given, we need our own comparison opperator!
@@ -138,21 +175,20 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(TemplateVoxelLis
     {
       LOGGING_WARNING_C(VoxellistLog, TemplateVoxelList, "Offset for VoxelList collision was given. Thrust performace is not optimal with that!" << endl);
       thrust::binary_search(thrust::device,
-                            m_dev_id_list.begin(), m_dev_id_list.end(),
                             other->m_dev_id_list.begin(), other->m_dev_id_list.end(),
-                            output.begin(), offsetLessOperator<VoxelIDType>(m_ref_map_dim, offset));
+                            m_dev_id_list.begin(), m_dev_id_list.end(),
+                            collision_stencil.begin(), offsetLessOperator<VoxelIDType>(m_ref_map_dim, offset));
     }else{
-      //todo: tests what performs better: shorter vec search in longer vec or vice versa
       thrust::binary_search(thrust::device,
-                            m_dev_id_list.begin(), m_dev_id_list.end(),
                             other->m_dev_id_list.begin(), other->m_dev_id_list.end(),
-                            output.begin());
+                            m_dev_id_list.begin(), m_dev_id_list.end(),
+                            collision_stencil.begin());
     }
     other->unlockMutex();
     unlockMutex();
 
 
-    return thrust::count(output.begin(), output.end(), true);
+    return thrust::count(collision_stencil.begin(), collision_stencil.end(), true);
   }
   catch(thrust::system_error &e)
   {
@@ -160,43 +196,6 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(TemplateVoxelLis
     exit(-1);
   }
 }
-
-
-template<class Voxel, class VoxelIDType>
-TemplateVoxelList<Voxel, VoxelIDType>::TemplateVoxelList(const Vector3ui ref_map_dim, const float voxel_sidelength, const MapType map_type)
-  : m_voxel_side_length(voxel_sidelength),
-    m_ref_map_dim(ref_map_dim)
-{
-  this->m_map_type = map_type;
-
-  m_collision_check_results = new bool[cMAX_NR_OF_BLOCKS];
-  m_collision_check_results_counter = new uint16_t[cMAX_NR_OF_BLOCKS];
-
-  // initialize result arrays
-  for (uint32_t i = 0; i < cMAX_NR_OF_BLOCKS; i++)
-  {
-    m_collision_check_results[i] = false;
-    m_collision_check_results_counter[i] = 0;
-  }
-
-  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_dev_collision_check_results, cMAX_NR_OF_BLOCKS * sizeof(bool)));
-  HANDLE_CUDA_ERROR(
-      cudaMalloc((void** )&m_dev_collision_check_results_counter, cMAX_NR_OF_BLOCKS * sizeof(uint16_t)));
-
-  // copy initialized arrays to device
-  HANDLE_CUDA_ERROR(
-      cudaMemcpy(m_dev_collision_check_results, m_collision_check_results, cMAX_NR_OF_BLOCKS * sizeof(bool),
-                 cudaMemcpyHostToDevice));
-  HANDLE_CUDA_ERROR(
-      cudaMemcpy(m_dev_collision_check_results_counter, m_collision_check_results_counter,
-                 cMAX_NR_OF_BLOCKS * sizeof(uint16_t), cudaMemcpyHostToDevice));
-}
-
-template<class Voxel, class VoxelIDType>
-TemplateVoxelList<Voxel, VoxelIDType>::~TemplateVoxelList()
-{
-}
-
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning)
@@ -311,7 +310,8 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideWith(const GpuVoxelsMapShar
     case MT_BITVECTOR_VOXELLIST:
     {
       BitVoxelList<BIT_VECTOR_LENGTH, VoxelIDType>* m = (BitVoxelList<BIT_VECTOR_LENGTH, VoxelIDType>*) other.get();
-      collisions = collideVoxellists(m, offset);
+      thrust::device_vector<bool> collision_stencil(m_dev_id_list.size()); // Temporary data structure
+      collisions = collideVoxellists(m, offset, collision_stencil);
       break;
     }
     case MT_BITVECTOR_VOXELMAP:
@@ -345,7 +345,15 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideWithResolution(const GpuVox
 }
 
 template<class Voxel, class VoxelIDType>
-size_t TemplateVoxelList<Voxel, VoxelIDType>::getMemoryUsage()
+void TemplateVoxelList<Voxel, VoxelIDType>::shrinkToFit()
+{
+  m_dev_list.shrink_to_fit();
+  m_dev_coord_list.shrink_to_fit();
+  m_dev_id_list.shrink_to_fit();
+}
+
+template<class Voxel, class VoxelIDType>
+size_t TemplateVoxelList<Voxel, VoxelIDType>::getMemoryUsage() const
 {
   return (m_dev_list.size() * sizeof(Voxel) +
           m_dev_coord_list.size() * sizeof(Vector3ui) +
@@ -360,20 +368,100 @@ void TemplateVoxelList<Voxel, VoxelIDType>::clearMap()
     boost::this_thread::yield();
   }
   m_dev_list.clear();
+  m_dev_coord_list.clear();
+  m_dev_id_list.clear();
   unlockMutex();
 }
 
 template<class Voxel, class VoxelIDType>
-void TemplateVoxelList<Voxel, VoxelIDType>::writeToDisk(const std::string path)
+bool TemplateVoxelList<Voxel, VoxelIDType>::writeToDisk(const std::string path)
 {
-  LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+  LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Dumping VoxelList to disk: " <<
+                 getDimensions().x << " Voxels ==> " << (getMemoryUsage() / 1024.0 / 1024.0) << " MB. ..." << endl);
+
+  std::ofstream out(path.c_str());
+
+  if(!out.is_open())
+  {
+    LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Write to file " << path << " failed!" << endl);
+    return false;
+  }
+  thrust::host_vector<VoxelIDType> host_id_list = m_dev_id_list;
+  thrust::host_vector<Vector3ui> host_coord_list = m_dev_coord_list;
+  thrust::host_vector<Voxel> host_list = m_dev_list;
+
+  uint32_t num_voxels = host_list.size();
+  int32_t map_type = m_map_type;
+
+  out.write((char*) &map_type, sizeof(int32_t));
+  out.write((char*) &m_ref_map_dim, sizeof(Vector3ui));
+  out.write((char*) &m_voxel_side_length, sizeof(float));
+  out.write((char*) &num_voxels, sizeof(uint32_t));
+  out.write((char*) &host_id_list[0], num_voxels * sizeof(VoxelIDType));
+  out.write((char*) &host_coord_list[0], num_voxels * sizeof(Vector3ui));
+  out.write((char*) &host_list[0], num_voxels * sizeof(Voxel));
+
+  out.close();
+  LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Write to disk done: Extracted "<< num_voxels << " Voxels." << endl);
+  return true;
 }
 
 template<class Voxel, class VoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::readFromDisk(const std::string path)
 {
-  LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-  return false;
+
+  thrust::host_vector<VoxelIDType> host_id_list;
+  thrust::host_vector<Vector3ui> host_coord_list;
+  thrust::host_vector<Voxel> host_list;
+
+  uint32_t num_voxels;
+  float voxel_side_lenght;
+  Vector3ui ref_map_dim;
+  int32_t map_type;
+
+  std::ifstream in(path.c_str());
+  if(!in.is_open())
+  {
+    LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file " << path << " failed!"<< endl);
+    return false;
+  }
+
+  in.read((char*) &map_type, sizeof(int32_t));
+  if(map_type != m_map_type)
+  {
+    LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file failed: The map type does not match current object!" << endl);
+    return false;
+  }
+  in.read((char*)&ref_map_dim, sizeof(Vector3ui));
+  if(ref_map_dim != m_ref_map_dim)
+  {
+    LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file failed: Read reference map dimension does not match current object!" << endl);
+    return false;
+  }
+  in.read((char*)&voxel_side_lenght, sizeof(float));
+  if(voxel_side_lenght != m_voxel_side_length)
+  {
+    LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file failed: Read Voxel side lenght does not match current object!" << endl);
+    return false;
+  }
+  in.read((char*)&num_voxels, sizeof(uint32_t));
+
+  host_id_list.resize(num_voxels);
+  host_coord_list.resize(num_voxels);
+  host_list.resize(num_voxels);
+  in.read((char*) &host_id_list[0], num_voxels * sizeof(VoxelIDType));
+  in.read((char*) &host_coord_list[0], num_voxels * sizeof(Vector3ui));
+  in.read((char*) &host_list[0], num_voxels * sizeof(Voxel));
+
+  in.close();
+  LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Read "<< num_voxels << " Voxels from file." << endl;);
+
+
+  m_dev_id_list = host_id_list;
+  m_dev_coord_list = host_coord_list;
+  m_dev_list = host_list;
+
+  return true;
 }
 
 template<class Voxel, class VoxelIDType>
@@ -436,21 +524,65 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr ot
 }
 
 template<class Voxel, class VoxelIDType>
-Vector3ui TemplateVoxelList<Voxel, VoxelIDType>::getDimensions()
+bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset)
+{
+  switch (other->getMapType())
+  {
+    case MT_BITVECTOR_VOXELLIST:
+    {
+      BitVoxelList<BIT_VECTOR_LENGTH, VoxelIDType>* m = (BitVoxelList<BIT_VECTOR_LENGTH, VoxelIDType>*) other.get();
+
+      // find the overlapping voxels:
+      thrust::device_vector<bool> overlap_stencil(m_dev_id_list.size()); // A stencil of the voxels in collision
+      size_t overlapping_voxels = collideVoxellists(m, voxel_offset, overlap_stencil);
+
+      keyCoordVoxelZipIterator new_end;
+
+      // remove the overlapping voxels:
+      new_end = thrust::remove_if(thrust::make_zip_iterator( thrust::make_tuple(m_dev_id_list.begin(), m_dev_coord_list.begin(), m_dev_list.begin()) ),
+                                  thrust::make_zip_iterator( thrust::make_tuple(m_dev_id_list.end(), m_dev_coord_list.end(), m_dev_list.end()) ),
+                                  overlap_stencil.begin(),
+                                  thrust::identity<bool>());
+
+      size_t new_lenght = thrust::distance(m_dev_id_list.begin(), thrust::get<0>(new_end.get_iterator_tuple()));
+      m_dev_id_list.resize(new_lenght);
+      m_dev_coord_list.resize(new_lenght);
+      m_dev_list.resize(new_lenght);
+
+      return true;
+    }
+    default:
+    {
+      LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+      return false;
+    }
+  }
+}
+
+template<class Voxel, class VoxelIDType>
+bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset)
+{
+  Vector3ui voxel_offset = voxelmap::mapToVoxels(m_voxel_side_length, metric_offset);
+  return subtract(other, voxel_offset);
+}
+
+
+template<class Voxel, class VoxelIDType>
+Vector3ui TemplateVoxelList<Voxel, VoxelIDType>::getDimensions() const
 {
   //LOGGING_WARNING_C(VoxellistLog, TemplateVoxelList, "This is not the xyz dimension! The x value contains the number of voxels in the list." << endl);
   return Vector3ui(m_dev_list.size(), 0, 0);
 }
 
 template<class Voxel, class VoxelIDType>
-Vector3f TemplateVoxelList<Voxel, VoxelIDType>::getMetricDimensions()
+Vector3f TemplateVoxelList<Voxel, VoxelIDType>::getMetricDimensions() const
 {
   return Vector3f(m_ref_map_dim.x, m_ref_map_dim.y, m_ref_map_dim.z) * getVoxelSideLength();
 }
 
 
 template <class Voxel, class VoxelIDType>
-void TemplateVoxelList<Voxel, VoxelIDType>::extractCubes(thrust::device_vector<Cube>** output_vector)
+void TemplateVoxelList<Voxel, VoxelIDType>::extractCubes(thrust::device_vector<Cube>** output_vector) const
 {
   try
   {
@@ -543,6 +675,25 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collisionCheckWithCollider(voxelma
   unlockMutex();
 
   return number_of_collisions;
+}
+
+
+template <class Voxel, class VoxelIDType>
+template<class OtherVoxel, class OtherVoxelIDType>
+bool TemplateVoxelList<Voxel, VoxelIDType>::equals(const TemplateVoxelList<OtherVoxel, OtherVoxelIDType>& other) const
+{
+  if((m_ref_map_dim != other.m_ref_map_dim) ||
+     (m_voxel_side_length != other.m_voxel_side_length) ||
+     (getDimensions()) != other.getDimensions())
+  {
+    return false;
+  }
+
+  bool equal = true;
+  equal &= thrust::equal(m_dev_list.begin(), m_dev_list.end(), other.m_dev_list.begin());
+  equal &= thrust::equal(m_dev_id_list.begin(), m_dev_id_list.end(), other.m_dev_id_list.begin());
+  equal &= thrust::equal(m_dev_coord_list.begin(), m_dev_coord_list.end(), other.m_dev_coord_list.begin());
+  return equal;
 }
 
 } // end of namespace voxellist

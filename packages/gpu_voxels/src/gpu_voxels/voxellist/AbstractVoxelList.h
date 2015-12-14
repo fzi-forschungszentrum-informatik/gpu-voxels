@@ -33,12 +33,12 @@ public:
   virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning) = 0;
 
   //! get the number of bytes that is required for the voxelmap
-  virtual size_t getMemoryUsage() = 0;
+  virtual size_t getMemoryUsage() const = 0;
 
   virtual MapType getTemplateType() = 0;
 
   // ------ BEGIN Global API functions ------
-  virtual bool needsRebuild();
+  virtual bool needsRebuild() const;
 
   virtual bool rebuild();
   // ------ END Global API functions ------

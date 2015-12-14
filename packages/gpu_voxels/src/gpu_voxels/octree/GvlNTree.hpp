@@ -267,7 +267,7 @@ bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::merge(
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-std::size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::getMemoryUsage()
+std::size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::getMemoryUsage() const
 {
   return this->getMemUsage();
 }
@@ -288,31 +288,35 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::clearBitVoxel
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::writeToDisk(const std::string path)
+bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::writeToDisk(const std::string path)
 {
   std::ofstream out(path.c_str());
+  if(!out.is_open())
+  {
+    LOGGING_ERROR_C(OctreeLog, NTree, "Write to file " << path << " failed!" <<  endl);
+    return false;
+  }
   this->serialize(out);
   out.close();
+  return true;
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::readFromDisk(const std::string path)
 {
-  try
+  std::ifstream in(path.c_str());
+  if(!in.is_open())
   {
-    std::ifstream in(path.c_str());
-    this->deserialize(in);
-    in.close();
-    return true;
-  } catch (std::ifstream::failure& e)
-  {
-    LOGGING_ERROR_C(OctreeLog, NTree, "DESERIALIZE FAILD!" << endl);
+    LOGGING_ERROR_C(OctreeLog, NTree, "Read from file " << path << " failed!" << endl);
     return false;
   }
+  this->deserialize(in);
+  in.close();
+  return true;
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::needsRebuild()
+bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::needsRebuild() const
 {
   return this->NTree<branching_factor, level_count, InnerNode, LeafNode>::needsRebuild();
 }
@@ -325,14 +329,14 @@ bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::rebuild()
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-Vector3ui GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::getDimensions()
+Vector3ui GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::getDimensions() const
 {
   uint32_t s = static_cast<uint32_t>(getVoxelSideLength<branching_factor>(level_count - 1));
   return Vector3ui(s, s, s);
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-Vector3f GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::getMetricDimensions()
+Vector3f GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::getMetricDimensions() const
 {
   Vector3ui dim_in_voxel = getDimensions();
   return Vector3f(dim_in_voxel.x, dim_in_voxel.z, dim_in_voxel.z) * float(base::m_resolution / 1000.0f);

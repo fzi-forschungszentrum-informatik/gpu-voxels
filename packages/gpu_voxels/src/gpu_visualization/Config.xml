@@ -159,7 +159,7 @@
     <y> 0 </y>
     <z> 0 </z>
   </min_xyz_value>
-  <max_xyz_value>    <!--maximal x,y,z value that will be drawn. Input will be treated as unsigned integer-->
+  <max_xyz_value>    <!--exclusive upper x,y,z boundary. Input will be treated as unsigned integer-->
     <x> -1 </x>
     <y> -1 </y>
     <z> -1 </z>
