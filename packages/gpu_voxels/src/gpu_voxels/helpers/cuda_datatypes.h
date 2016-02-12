@@ -897,5 +897,16 @@ struct MetaPointCloudStruct
     }
 };
 
+
+/*!
+ * \brief The OrientedBoxParams struct
+ */
+struct OrientedBoxParams
+{
+  gpu_voxels::Vector3f dim; //< half the side length
+  gpu_voxels::Vector3f center; //< center of the cube
+  gpu_voxels::Vector3f rot; //< rotation of the cube
+};
+
 } // end of namespace
 #endif

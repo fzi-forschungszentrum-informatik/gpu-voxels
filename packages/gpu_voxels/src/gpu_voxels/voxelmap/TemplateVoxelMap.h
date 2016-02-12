@@ -100,9 +100,19 @@ public:
     return m_dev_data;
   }
 
+  const Voxel* getConstDeviceDataPtr() const
+  {
+    return m_dev_data;
+  }
+
   inline virtual void* getVoidDeviceDataPtr()
   {
     return (void*) m_dev_data;
+  }
+
+  inline virtual const void* getConstVoidDeviceDataPtr() const
+  {
+    return (const void*) m_dev_data;
   }
 
   //! gets an offset in pointer arithmetics
@@ -159,6 +169,7 @@ public:
 //  bool writeLog(std::string filename, uint32_t loop_size = 1, bool reset_values = false);
 
   /* ----- mutex locking and unlocking ----- */
+  mutable boost::mutex m_mutex;
   bool lockMutex();
 
   void unlockMutex();
@@ -434,7 +445,6 @@ protected:
   //! device array for transformed sensor data
   Vector3f* m_dev_transformed_sensor_data;
 
-  boost::mutex m_mutex;
   // ------------------- BEGIN Env map specific: -------------------
   uint32_t m_update_counter;
   // ------------------- END Env map specific -------------------

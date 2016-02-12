@@ -58,7 +58,6 @@ void BitVoxelList<length, VoxelIDType>::clearBitVoxelMeaning(BitVoxelMeaning vox
 template<std::size_t length, class VoxelIDType>
 size_t BitVoxelList<length, VoxelIDType>::collideWithBitcheck(const GpuVoxelsMapSharedPtr other_, const u_int8_t margin, const Vector3ui &offset)
 {
-  // Map locking for the lists is performed in "findMatchingVoxels"
   // TODO: Implement locking for the maps seperately!
   try
   {
@@ -67,7 +66,7 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithBitcheck(const GpuVoxelsMap
       case MT_BITVECTOR_VOXELLIST:
       {
         TemplatedBitVectorVoxelList* other = dynamic_cast<TemplatedBitVectorVoxelList*>(other_.get());
-
+        this->lockBoth(this, other, "collideWithBitcheck");
         //========== Search for Voxels at the same spot in both lists: ==============
         TemplatedBitVectorVoxelList matching_voxels_list1(this->m_ref_map_dim, this->m_voxel_side_length, this->m_map_type);
         TemplatedBitVectorVoxelList matching_voxels_list2(this->m_ref_map_dim, this->m_voxel_side_length, this->m_map_type);
@@ -88,6 +87,8 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithBitcheck(const GpuVoxelsMap
                             matching_voxels_list2.m_dev_list.begin(),
                             dev_colliding_bits_list.begin(), BitvectorCollisionWithBitshift(margin, 0));
         }
+        this->m_mutex.unlock();
+        other->m_mutex.unlock();
 
         return thrust::count(dev_colliding_bits_list.begin(), dev_colliding_bits_list.end(), true);
       }
@@ -121,7 +122,6 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const GpuVoxelsMapSha
                                                            BitVectorVoxel&  meanings_in_collision,
                                                            float coll_threshold, const Vector3ui &offset_)
 {
-  // Map locking for the lists is performed in "findMatchingVoxels"
   // TODO: Implement locking for the maps seperately!
   try
   {
@@ -130,7 +130,7 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const GpuVoxelsMapSha
       case MT_BITVECTOR_VOXELLIST:
       {
         TemplatedBitVectorVoxelList* other = dynamic_cast<TemplatedBitVectorVoxelList*>(other_.get());
-
+        this->lockBoth(this, other, "collideWithTypes");
         //========== Search for Voxels at the same spot in both lists: ==============
         TemplatedBitVectorVoxelList matching_voxels_list1(this->m_ref_map_dim, this->m_voxel_side_length, this->m_map_type);
         TemplatedBitVectorVoxelList matching_voxels_list2(this->m_ref_map_dim, this->m_voxel_side_length, this->m_map_type);
@@ -145,7 +145,8 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const GpuVoxelsMapSha
 
         meanings_in_collision = thrust::reduce(dev_merged_voxel_list.begin(), dev_merged_voxel_list.end(),
                                                BitVectorVoxel(), BitVectorVoxel::reduce_op());
-
+        this->m_mutex.unlock();
+        other->m_mutex.unlock();
         return matching_voxels_list1.m_dev_id_list.size();
       }
       case MT_PROBAB_VOXELMAP:
@@ -158,9 +159,8 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const GpuVoxelsMapSha
           return SSIZE_MAX;
         }
 
-
         ProbVoxelMap* other = dynamic_cast<voxellist::ProbVoxelMap*>(other_.get());
-
+        this->lockBoth(this, other, "collideWithTypes");
         // get raw pointers to the thrust vectors data:
         BitVectorVoxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(this->m_dev_list.data());
         VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(this->m_dev_id_list.data());
@@ -189,6 +189,8 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const GpuVoxelsMapSha
           meanings_in_collision.bitVector() |= this->m_colliding_bits_result_list[i].bitVector();
         }
 
+        this->m_mutex.unlock();
+        other->m_mutex.unlock();
         return number_of_collisions;
       }
       case MT_BITVECTOR_OCTREE:
@@ -223,7 +225,6 @@ size_t BitVoxelList<length, VoxelIDType>::collideCountingPerMeaning(const GpuVox
                                                            std::vector<size_t>&  collisions_per_meaning,
                                                            const Vector3ui &offset_)
 {
-  // Map locking for the lists is performed in "findMatchingVoxels"
   // TODO: Implement locking for the maps seperately!
   try
   {
@@ -232,6 +233,7 @@ size_t BitVoxelList<length, VoxelIDType>::collideCountingPerMeaning(const GpuVox
       case MT_BITVECTOR_VOXELLIST:
       {
         TemplatedBitVectorVoxelList* other = dynamic_cast<TemplatedBitVectorVoxelList*>(other_.get());
+        this->lockBoth(this, other, "collideCountingPerMeaning");
 
         //========== Search for Voxels at the same spot in both lists: ==============
         TemplatedBitVectorVoxelList matching_voxels_list1(this->m_ref_map_dim, this->m_voxel_side_length, this->m_map_type);
@@ -259,7 +261,8 @@ size_t BitVoxelList<length, VoxelIDType>::collideCountingPerMeaning(const GpuVox
             }
           }
         }
-
+        this->m_mutex.unlock();
+        other->m_mutex.unlock();
         return summed_colls;
       }
       default:
@@ -277,48 +280,11 @@ size_t BitVoxelList<length, VoxelIDType>::collideCountingPerMeaning(const GpuVox
 
 }
 
-/*!
- * \brief BitVoxelList<length, VoxelIDType>::findMatchingVoxels
- * \param list1 Const input
- * \param list2 Const input
- * \param margin
- * \param offset
- * \param matching_voxels_list1 Contains all Voxels from list1 whose position matches a Voxel from list2
- * \param matching_voxels_list2 Contains all Voxels from list2 whose position matches a Voxel from list1
- */
 template<std::size_t length, class VoxelIDType>
-void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(TemplatedBitVectorVoxelList* list1, TemplatedBitVectorVoxelList* list2,
+void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(const TemplatedBitVectorVoxelList *list1, const TemplatedBitVectorVoxelList *list2,
                                               const u_int8_t margin, const Vector3ui &offset,
-                                              TemplatedBitVectorVoxelList* matching_voxels_list1, TemplatedBitVectorVoxelList* matching_voxels_list2)
+                                              TemplatedBitVectorVoxelList* matching_voxels_list1, TemplatedBitVectorVoxelList* matching_voxels_list2) const
 {
-  bool locked_list_1 = false;
-  bool locked_list_2 = false;
-  uint32_t counter = 0;
-
-  while (!locked_list_1 && !locked_list_2)
-  {
-    // lock mutexes
-    while (!locked_list_1)
-    {
-      locked_list_1 = list1->lockMutex();
-      if(!locked_list_1) boost::this_thread::yield();
-    }
-    while (!locked_list_2 && (counter < 50))
-    {
-      locked_list_2 = list2->lockMutex();
-      if(!locked_list_2) boost::this_thread::yield();
-      counter++;
-    }
-    if (!locked_list_2)
-    {
-      LOGGING_WARNING_C(VoxellistLog, BitVoxelList, "Could not lock second list since 50 trials!" << endl);
-      counter = 0;
-      list1->unlockMutex();
-      boost::this_thread::yield();
-    }
-  }
-
-
 
   //std::cout << "List1: ";
   //for(size_t i = 0; i < list1->m_dev_id_list.size(); i++)
@@ -419,15 +385,17 @@ void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(TemplatedBitVectorVox
     exit(-1);
   }
 
-  list1->unlockMutex();
-  list2->unlockMutex();
-
   //for(size_t i = 0; i < num_hits1; i++)
   //{
   //  std::cout << "Keys: " << matching_voxels_list1->m_dev_id_list[i] << " | " << matching_voxels_list1->m_dev_id_list[i] << std::endl;
   //  std::cout << matching_voxels_list1->m_dev_list[i] << std::endl;
   //  std::cout << matching_voxels_list2->m_dev_list[i] << std::endl;
   //}
+
+  if(num_hits1 != num_hits2)
+  {
+    LOGGING_ERROR_C(VoxellistLog, BitVoxelList, "ASSERT 'num_hits1 == num_hits2' failed! " << num_hits1 << " != " << num_hits2 << endl);
+  }
   assert(num_hits1 == num_hits2);
 }
 
@@ -440,16 +408,8 @@ void BitVoxelList<length, VoxelIDType>::shiftLeftSweptVolumeIDs(uint8_t shift_si
     LOGGING_ERROR_C(VoxellistLog, BitVoxelList, "Maximum shift size is 63! Higher shift number requested. Not performing shift operation." << endl);
     return;
   }
-  size_t counter = 1;
-  while (!this->lockMutex())
-  {
-    boost::this_thread::yield();
-    if(counter % 50 == 0)
-    {
-      LOGGING_WARNING_C(VoxellistLog, BitVoxelList, "Could not lock list since 50 trials!" << endl);
-    }
-    counter++;
-  }
+
+  this->lockSelf("shiftLeftSweptVolumeIDs");
 
   try
   {
@@ -463,7 +423,7 @@ void BitVoxelList<length, VoxelIDType>::shiftLeftSweptVolumeIDs(uint8_t shift_si
     exit(-1);
   }
 
-  this->unlockMutex();
+  this->m_mutex.unlock();
 }
 
 

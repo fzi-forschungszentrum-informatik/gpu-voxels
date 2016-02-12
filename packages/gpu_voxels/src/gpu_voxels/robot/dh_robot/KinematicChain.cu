@@ -78,13 +78,10 @@ void KinematicChain::init(const std::vector<std::string> &linknames,
   // allocate a copy of the pointclouds to store the transformed clouds (host and device)
   m_transformed_links_meta_cloud = new MetaPointCloud(m_links_meta_cloud);
 
-  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_dev_transformation, sizeof(Matrix4f)));
 }
 
 KinematicChain::~KinematicChain()
 {
-  HANDLE_CUDA_ERROR(cudaFree(m_dev_transformation));
-
   // destroy the copy of the transformed meta cloud on host and device:
   delete m_links_meta_cloud;
   delete m_transformed_links_meta_cloud;
@@ -106,8 +103,6 @@ void KinematicChain::setConfiguration(const JointValueMap &jointmap)
 
   Matrix4f transformation;
   transformation.setIdentity();
-  HANDLE_CUDA_ERROR(
-      cudaMemcpy(m_dev_transformation, &transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
 
   // Iterate over all links and transform pointclouds with the according name
   // if no pointcloud was found, still the transformation has to be calculated and copied to the device
@@ -117,17 +112,8 @@ void KinematicChain::setConfiguration(const JointValueMap &jointmap)
     std::string linkname = m_linknames[i];
     int16_t pc_num = m_links_meta_cloud->getCloudNumber(linkname);
     if(pc_num != -1)
-    {
-      size_t pc_size = m_links_meta_cloud->getPointcloudSize(pc_num);
-      computeLinearLoad(pc_size, &m_blocks, &m_threads_per_block);
-      //    printf("for joint %u: blocks = %u, threads = %u\n", i, m_blocks, m_threads_per_block);
-      //    printf("    to address %u points in cloud.\n", m_point_cloud_sizes[i]);
-      //First inserting the Link with the current transformation
-      cudaDeviceSynchronize();
-      kernelKinematicChainTransform<<< m_blocks, m_threads_per_block >>>
-      (pc_num, m_dev_transformation,
-          m_links_meta_cloud->getDeviceConstPointer(),
-          m_transformed_links_meta_cloud->getDevicePointer());
+    {      
+      m_links_meta_cloud->transformSubCloud(pc_num, &transformation, m_transformed_links_meta_cloud);
     }
     // Sending the actual transformation for this link to the GPU.
     // This means the DH Transformation i is not applied to link-pointcloud i,
@@ -136,8 +122,6 @@ void KinematicChain::setConfiguration(const JointValueMap &jointmap)
     transformation = transformation * m_dh_transformation;
     //std::cout << "Trafo Matrix ["<< linkname <<"] = " << m_dh_transformation  << std::endl;
     //std::cout << "Accumulated Trafo Matrix ["<< linkname <<"] = " << transformation << std::endl;
-    HANDLE_CUDA_ERROR(
-        cudaMemcpy(m_dev_transformation, &transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
   }
   cudaDeviceSynchronize();
 }

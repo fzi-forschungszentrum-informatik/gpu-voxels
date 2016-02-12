@@ -157,12 +157,8 @@ private:
 
   cudaEvent_t m_start;
   cudaEvent_t m_stop;
-  uint32_t m_blocks;
-  uint32_t m_threads_per_block;
 
   Matrix4f m_dh_transformation;
-  /* device stored contents */
-  Matrix4f* m_dev_transformation;
 };
 
 } // end of namespace

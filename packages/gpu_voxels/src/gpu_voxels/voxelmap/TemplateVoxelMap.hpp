@@ -342,7 +342,7 @@ void TemplateVoxelMap<Voxel>::printVoxelMapData()
 ////  bool locked_other = false;
 ////  uint32_t counter = 0;
 ////
-////  while (!locked_this && !locked_other)
+////  while (!locked_this || !locked_other)
 ////  {
 ////    // lock mutexes
 ////    while (!locked_this)
@@ -406,7 +406,7 @@ bool TemplateVoxelMap<Voxel>::collisionCheck(TemplateVoxelMap<OtherVoxel>* other
   bool locked_other = false;
   uint32_t counter = 0;
 
-  while (!locked_this && !locked_other)
+  while (!locked_this || !locked_other)
   {
     // lock mutexes
     while (!locked_this)
@@ -745,7 +745,7 @@ uint32_t TemplateVoxelMap<Voxel>::collisionCheckWithCounterRelativeTransform(Tem
   bool locked_other = false;
   uint32_t counter = 0;
 
-  while (!locked_this && !locked_other)
+  while (!locked_this || !locked_other)
   {
     // lock mutexes
     while (!locked_this)
@@ -1012,7 +1012,7 @@ bool TemplateVoxelMap<Voxel>::writeToDisk(const std::string path)
   LOGGING_INFO_C(VoxelmapLog, VoxelMap, "Dumping Voxelmap to disk: " <<
                  getVoxelMapSize() << " Voxels ==> " << (buffer_size / 1024.0 / 1024.0) << " MB. ..." << endl);
 
-  HANDLE_CUDA_ERROR(cudaMemcpy((void*)buffer, this->getVoidDeviceDataPtr(), buffer_size, cudaMemcpyDeviceToHost));
+  HANDLE_CUDA_ERROR(cudaMemcpy((void*)buffer, this->getConstVoidDeviceDataPtr(), buffer_size, cudaMemcpyDeviceToHost));
 
   bool bin_mode = true;
   // Write meta data and actual data
@@ -1457,7 +1457,7 @@ void TemplateVoxelMap<Voxel>::transformSensorData()
 //  bool locked_other = false;
 //  uint32_t counter = 0;
 //
-//  while (!locked_this && !locked_other)
+//  while (!locked_this || !locked_other)
 //  {
 //    // lock mutexes
 //    while (!locked_this)

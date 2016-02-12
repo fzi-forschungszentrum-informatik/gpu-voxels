@@ -33,8 +33,8 @@ __host__ __device__
 inline void Vec3ToMat4(const Vector3f& vec_in, Matrix4f& mat_out)
 {
   mat_out.a14 = vec_in.x;
-  mat_out.a24 = vec_in.x;
-  mat_out.a34 = vec_in.x;
+  mat_out.a24 = vec_in.y;
+  mat_out.a34 = vec_in.z;
   mat_out.a44 = 1;
 }
 
@@ -99,10 +99,10 @@ inline gpu_voxels::Matrix4f roll(float angle)
   m.a14 = 0;
   m.a21 = 0;
   m.a22 = cos(angle);
-  m.a23 = sin(angle);
+  m.a23 = -sin(angle);
   m.a24 = 0;
   m.a31 = 0;
-  m.a32 = -sin(angle);
+  m.a32 = sin(angle);
   m.a33 = cos(angle);
   m.a34 = 0;
   m.a41 = 0;
@@ -140,10 +140,10 @@ inline gpu_voxels::Matrix4f yaw(float angle)
 {
   gpu_voxels::Matrix4f m;
   m.a11 = cos(angle);
-  m.a12 = sin(angle);
+  m.a12 = -sin(angle);
   m.a13 = 0;
   m.a14 = 0;
-  m.a21 = -sin(angle);
+  m.a21 = sin(angle);
   m.a22 = cos(angle);
   m.a23 = 0;
   m.a24 = 0;
@@ -182,6 +182,28 @@ __host__ __device__
 inline gpu_voxels::Matrix4f rotateRPY(float _yaw, float _pitch, float _roll)
 {
   return roll(_roll) * (pitch(_pitch) * yaw(_yaw));
+}
+
+/*!
+ * \brief rotateYPR Constructs a rotation matrix
+ * \param ypr Vector of Yaw Pitch and Roll
+ * \return
+ */
+__host__ __device__
+inline gpu_voxels::Matrix4f rotateYPR(gpu_voxels::Vector3f ypr)
+{
+  return yaw(ypr.x) * (pitch(ypr.y) * roll(ypr.z));
+}
+
+/*!
+ * \brief rotateRPY Constructs a rotation matrix
+ * \param ypr Vector of Yaw Pitch and Roll
+ * \return
+ */
+__host__ __device__
+inline gpu_voxels::Matrix4f rotateRPY(gpu_voxels::Vector3f ypr)
+{
+  return roll(ypr.z) * (pitch(ypr.y) * yaw(ypr.x));
 }
 
 

@@ -30,29 +30,6 @@ namespace gpu_voxels {
 
 /* kernels */
 
-/*!  Transformations of PointClouds along a kinematic chain.
- *  The kernel has to be called for each joint within a chain
- *  and should be configured by
- *  point_cloud_sizes[joint_to_transform].
- *
- *  This way all points within a point cloud are transformed along the
- *  kinematic chain stored in dh_transformations up to joint_to_transform
- */
-__global__
-void kernelKinematicChainTransform(uint8_t chain_size, uint8_t joint_to_transform, const Matrix4f* basis_transformation,
-                                   const Matrix4f* dh_transformations, const Matrix4f* local_transformations,
-                                   const uint32_t* point_cloud_sizes, const Vector3f** point_clouds, Vector3f** transformed_point_clouds);
-
-/*!
- * Same as kernelUpdateTransformations, but the Transformation is not computed inside the kernel *
- */
-__global__
-void kernelKinematicChainTransform(uint8_t joint_to_transform, const Matrix4f* transformation, const MetaPointCloudStruct *point_clouds, MetaPointCloudStruct *transformed_point_clouds);
-
-
-
-
-
 /*! Transform one point along kinematic chain.
  * The kernel has to be called for each joint within a chain
  * and should be configured << 1, 1 >>

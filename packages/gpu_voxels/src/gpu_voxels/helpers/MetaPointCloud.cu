@@ -12,6 +12,7 @@
  */
 //----------------------------------------------------------------------
 #include "MetaPointCloud.h"
+#include "gpu_voxels/helpers/MathHelpers.h"
 #include <cstdlib>
 
 namespace gpu_voxels {
@@ -95,6 +96,9 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
       cudaMemcpy(m_dev_ptr_to_point_clouds_struct, m_dev_point_clouds_local, sizeof(MetaPointCloudStruct),
                  cudaMemcpyHostToDevice));
 
+  // used for transformations:
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
+
   LOGGING_DEBUG_C(
       Gpu_voxels_helpers,
       MetaPointCloud,
@@ -177,7 +181,10 @@ MetaPointCloud::MetaPointCloud(const MetaPointCloud &other)
   {
     updatePointCloud(i, other.getPointCloud(i), other.getPointcloudSize(i), false);
   }
-  syncToDevice();
+  // copy all clouds on the device
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(m_dev_ptr_to_accumulated_cloud, other.m_dev_ptr_to_accumulated_cloud,
+                 sizeof(Vector3f) * other.getAccumulatedPointcloudSize(), cudaMemcpyDeviceToDevice));
 }
 
 MetaPointCloud::MetaPointCloud(const MetaPointCloud *other)
@@ -188,7 +195,29 @@ MetaPointCloud::MetaPointCloud(const MetaPointCloud *other)
   {
     updatePointCloud(i, other->getPointCloud(i), other->getPointcloudSize(i), false);
   }
-  syncToDevice();
+  // copy all clouds on the device
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(m_dev_ptr_to_accumulated_cloud, other->m_dev_ptr_to_accumulated_cloud,
+                 sizeof(Vector3f) * other->getAccumulatedPointcloudSize(), cudaMemcpyDeviceToDevice));
+}
+
+// copy assignment
+MetaPointCloud& MetaPointCloud::operator=(const MetaPointCloud& other)
+{
+  if (this != &other) // self-assignment check expected
+  {
+    init(other.getPointcloudSizes());
+    m_point_cloud_names = other.getCloudNames();
+    for (uint16_t i = 0; i < other.getNumberOfPointclouds(); i++)
+    {
+      updatePointCloud(i, other.getPointCloud(i), other.getPointcloudSize(i), false);
+    }
+    // copy all clouds on the device
+    HANDLE_CUDA_ERROR(
+        cudaMemcpy(m_dev_ptr_to_accumulated_cloud, other.m_dev_ptr_to_accumulated_cloud,
+                   sizeof(Vector3f) * other.getAccumulatedPointcloudSize(), cudaMemcpyDeviceToDevice));
+  }
+  return *this;
 }
 
 MetaPointCloud::MetaPointCloud(const std::vector<std::vector<Vector3f> > &point_clouds)
@@ -462,4 +491,48 @@ void MetaPointCloud::debugPointCloud() const
   kernelDebugMetaPointCloud<<< 1,1 >>>(m_dev_ptr_to_point_clouds_struct);
 }
 
-} // end of ns
+void MetaPointCloud::transformSelfSubCloud(uint8_t subcloud_to_transform, const Matrix4f* transformation)
+{
+  transformSubCloud(subcloud_to_transform, transformation, this);
+}
+
+void MetaPointCloud::transformSelf(const Matrix4f* transformation)
+{
+  transform(transformation, this);
+}
+
+void MetaPointCloud::transform(const Matrix4f* transformation, MetaPointCloud* transformed_cloud) const
+{
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(m_transformation_dev, transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
+
+  computeLinearLoad(getAccumulatedPointcloudSize(),
+                    &m_blocks, &m_threads_per_block);
+  cudaDeviceSynchronize();
+  // transform the cloud via Kernel.
+  kernelTransformCloud<<< m_blocks, m_threads_per_block >>>
+     (m_transformation_dev,
+      getDeviceConstPointer(),
+      transformed_cloud->getDevicePointer());
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+void MetaPointCloud::transformSubCloud(uint8_t subcloud_to_transform, const Matrix4f* transformation, MetaPointCloud* transformed_cloud) const
+{
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(m_transformation_dev, transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
+
+  computeLinearLoad(getPointcloudSize(subcloud_to_transform),
+                    &m_blocks, &m_threads_per_block);
+  cudaDeviceSynchronize();
+  // transform the cloud via Kernel.
+  kernelTransformSubCloud<<< m_blocks, m_threads_per_block >>>
+     (subcloud_to_transform, m_transformation_dev,
+      getDeviceConstPointer(),
+      transformed_cloud->getDevicePointer());
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+} // end of ns gpu_voxels

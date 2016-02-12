@@ -183,6 +183,8 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
   gpu_voxels::Vector3f scale;
 
   KDL::Vector offset_pos = KDL::Vector(origin.position.x, origin.position.y, origin.position.z);
+
+  // Rotational offset of Meshes is NOT supported in GPU-Voxels yet!!
   KDL::Rotation offset_rot = KDL::Rotation::Quaternion(origin.rotation.x, origin.rotation.y, origin.rotation.z, origin.rotation.w);
   KDL::Frame offset_pose = KDL::Frame(offset_rot, offset_pos);
 
@@ -222,10 +224,12 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
     fs::path pc_file = fs::path(p.stem().string() + std::string(".binvox"));
 
     std::vector<Vector3f> link_cloud;
+    Vector3f mesh_offset(origin.position.x, origin.position.y, origin.position.z);
+
 
     LOGGING_DEBUG_C(RobotLog, RobotLink, "Loading pointcloud of link " << pc_file.string() << endl);
     if(!file_handling::PointcloudFileHandler::Instance()->loadPointCloud(
-         pc_file.string(), use_model_path_, link_cloud, false, Vector3f(), 1.0))
+         pc_file.string(), use_model_path_, link_cloud, false, mesh_offset, 1.0))
     {
       LOGGING_ERROR_C(RobotLog, RobotLink,
                       "Could not read file [" << pc_file.string() <<

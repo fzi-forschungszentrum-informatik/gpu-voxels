@@ -49,9 +49,11 @@ public:
                  const std::vector<std::string> &_point_cloud_names, bool use_model_path);
   MetaPointCloud(const std::vector<uint32_t> &_point_cloud_sizes);
   MetaPointCloud(const std::vector< std::vector<Vector3f> > &point_clouds);
+
+  // Deep Copy Operators
   MetaPointCloud(const MetaPointCloud &other);
   MetaPointCloud(const MetaPointCloud *other);
-
+  MetaPointCloud& operator=(const MetaPointCloud& other);
 
   //! Destructor
   ~MetaPointCloud();
@@ -155,6 +157,39 @@ public:
 
   void debugPointCloud() const;
 
+
+  /*!
+   * \brief transform transforms this whole MetaPointCloud and writes it into the output MetaPointCloud.
+   * \param transformation The transformation to apply
+   * \param transformed_cloud The transformed cloud. Has to be of the same size as this cloud!
+   */
+  void transform(const Matrix4f* transformation, MetaPointCloud* transformed_cloud) const;
+
+
+  /*!
+   * \brief transform transforms a subcloud of this MetaPointCloud and writes it into the output MetaPointCloud.
+   * \param subcloud_to_transform The ID of the subcloud which is transformed
+   * \param transformation The transformation to apply
+   * \param transformed_cloud The transformed cloud. Has to be of the same size as this cloud!
+   */
+  void transformSubCloud(uint8_t subcloud_to_transform, const Matrix4f* transformation, MetaPointCloud* transformed_cloud) const;
+
+
+  /*!
+   * \brief transform transforms this whole MetaPointCloud
+   * \param transformation The transformation to apply
+   */
+  void transformSelf(const Matrix4f* transformation);
+
+
+  /*!
+   * \brief transform transforms a subcloud of this MetaPointCloud
+   * \param subcloud_to_transform The ID of the subcloud which is transformed
+   * \param transformation The transformation to apply
+   */
+  void transformSelfSubCloud(uint8_t subcloud_to_transform, const Matrix4f* transformation);
+
+
 private:
 
   /*!
@@ -184,6 +219,11 @@ private:
   Vector3f** m_dev_ptrs_to_addrs;
   uint32_t *m_dev_ptr_to_cloud_sizes;
   Vector3f** m_dev_ptr_to_clouds_base_addresses;
+
+  // used for const transformation calls:
+  mutable Matrix4f* m_transformation_dev;
+  mutable uint32_t m_blocks;
+  mutable uint32_t m_threads_per_block;
 };
 
 }

@@ -32,5 +32,28 @@ __global__
 void kernelDebugMetaPointCloud(MetaPointCloudStruct* meta_point_clouds_struct);
 
 
+
+
+/*!
+ * \brief kernelTransformCloud transforms the whole cloud
+ * \param transformation_ The transformation to be applied
+ * \param input_cloud Original cloud
+ * \param transformed_cloud Can be the same as the input_cloud
+ */
+__global__
+void kernelTransformCloud(const Matrix4f* transformation, const MetaPointCloudStruct *input_cloud, MetaPointCloudStruct *transformed_cloud);
+
+
+/*!
+ * \brief kernelTransformCloud transforms a sub cloud of the metaPointCloud
+ * \param subcloud_to_transform ID of the subcloud to transform
+ * \param transformation_ The transformation to be applied
+ * \param input_cloud Original cloud
+ * \param transformed_cloud Can be the same as the input_cloud
+ */
+__global__
+void kernelTransformSubCloud(uint8_t subcloud_to_transform, const Matrix4f* transformation_,
+                          const MetaPointCloudStruct *input_cloud, MetaPointCloudStruct *transformed_cloud);
+
 }
 #endif

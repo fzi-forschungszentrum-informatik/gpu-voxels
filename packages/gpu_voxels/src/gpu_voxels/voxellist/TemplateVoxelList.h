@@ -90,9 +90,21 @@ public:
   }
 
   /* ----- mutex locking and unlocking ----- */
-  bool lockMutex() {return m_mutex.try_lock();}
+  mutable boost::mutex m_mutex;
+  void lockSelf(const std::string& function_name) const;
+  void unlockSelf(const std::string& function_name) const;
 
-  void unlockMutex() {m_mutex.unlock();}
+  template< class OtherVoxel, class OtherVoxelIDType>
+  void lockBoth(const TemplateVoxelList<Voxel, VoxelIDType>* map1, const TemplateVoxelList<OtherVoxel, OtherVoxelIDType>* map2, const std::string& function_name) const;
+
+  template< class OtherVoxel, class OtherVoxelIDType>
+  void unlockBoth(const TemplateVoxelList<Voxel, VoxelIDType>* map1, const TemplateVoxelList<OtherVoxel, OtherVoxelIDType>* map2, const std::string& function_name) const;
+
+  template<class OtherVoxel>
+  void lockBoth(const TemplateVoxelList<Voxel, VoxelIDType>* map1, const voxelmap::TemplateVoxelMap<OtherVoxel>* map2, const std::string& function_name) const;
+
+  template<class OtherVoxel>
+  void unlockBoth(const TemplateVoxelList<Voxel, VoxelIDType>* map1, const voxelmap::TemplateVoxelMap<OtherVoxel>* map2, const std::string& function_name) const;
 
   // ------ BEGIN Global API functions ------
   virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
@@ -158,7 +170,8 @@ public:
    * @param collision_stencil Binary vector storing the collisions. Has to be the size of 'this'
    * @return Number of collisions
    */
-  virtual size_t collideVoxellists(TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3ui &offset, thrust::device_vector<bool>& collision_stencil);
+  virtual size_t collideVoxellists(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3ui &offset,
+                                   thrust::device_vector<bool>& collision_stencil, bool do_locking = true) const;
 
   /**
    * @brief collisionCheckWithCollider
@@ -168,7 +181,7 @@ public:
    * @return number of collisions
    */
   template< class OtherVoxel, class Collider>
-  size_t collisionCheckWithCollider(TemplateVoxelList<OtherVoxel, VoxelIDType>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
+  size_t collisionCheckWithCollider(const TemplateVoxelList<OtherVoxel, VoxelIDType>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
 
   /**
    * @brief collisionCheckWithCollider
@@ -178,7 +191,7 @@ public:
    * @return number of collisions
    */
   template< class OtherVoxel, class Collider>
-  size_t collisionCheckWithCollider(voxelmap::TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
+  size_t collisionCheckWithCollider(const voxelmap::TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
 
   /**
    * @brief equals compares two voxellists by their elements.
@@ -214,7 +227,6 @@ protected:
   bool* m_collision_check_results;
   //! result array for collision check with counter
   uint16_t* m_collision_check_results_counter;
-  boost::mutex m_mutex;
 
 //  thrust::device_vector<BitVoxel<length> > m_host_id_list;
 //  thrust::device_vector<Voxel> m_host_list;

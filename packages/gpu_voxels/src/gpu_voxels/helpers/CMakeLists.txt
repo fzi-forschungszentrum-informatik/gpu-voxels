@@ -30,6 +30,7 @@ ICMAKER_ADD_HEADERS(
   BitVector.h
   CompileIssues.h
   MathHelpers.h
+  GeometryGeneration.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -40,6 +41,7 @@ ICMAKER_ADD_SOURCES(
   PcdFileReader.cpp
   XyzFileReader.cpp
   MathHelpers.cpp
+  GeometryGeneration.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(

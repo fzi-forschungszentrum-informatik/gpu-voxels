@@ -151,3 +151,19 @@ V 0.81 (2015-12-14):
     - Enhanced reliability of Visualizer (Thanks to Christian Juelg)
     - Added slicing functionality to Visualizer (Thanks to Christian Juelg)
 - Improved voxelize.sh script to delete intermediate files.
+
+V 0.82 (2016-02-12):
+====================
+- Fixed severe Bug in the locking of Voxellists. Warning: This only concerns VoxelLists.
+- Added collision check between ProbabilisticVoxelMaps and VoxelLists.
+- Added transform functionality to MetaPointClouds and removed it from Robot classes.
+- Fixed Vec3ToMat4() function.
+- Implemented Deep-Copy operator for MetaPointClouds.
+- Implemented Pointcloud-Offsets for geometry entities of URDF models.
+    - Warning: Only translation, NO rotation available here!
+- Added new struct to describe oriented boxes.
+- Added new file for helper functions to generate pointclouds from geometric primitives.
+- Fixed RPY rotation matrices.
+- Added Boost testcase for shifted collision checks.
+- Added script to generate Visualizer configuration with random colors for SweptVolume IDs.
+- Refined the models of the SVH with 0.4 mm resolution.

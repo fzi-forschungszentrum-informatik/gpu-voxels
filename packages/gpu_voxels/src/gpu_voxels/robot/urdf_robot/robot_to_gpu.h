@@ -68,11 +68,7 @@ public:
 
 private:
   MetaPointCloud* m_link_pointclouds_transformed;
-
   Matrix4f m_transformation;
-  Matrix4f* m_transformation_dev;
-  uint32_t m_blocks;
-  uint32_t m_threads_per_block;
 };
 
 } // namespace robot

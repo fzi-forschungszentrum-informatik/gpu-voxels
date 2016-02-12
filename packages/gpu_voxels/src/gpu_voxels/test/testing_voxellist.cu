@@ -13,6 +13,7 @@
 //----------------------------------------------------------------------
 
 #include <gpu_voxels/voxellist/BitVoxelList.h>
+#include <gpu_voxels/voxelmap/VoxelMap.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 
@@ -21,8 +22,83 @@
 
 using namespace gpu_voxels;
 using namespace voxellist;
+using namespace voxelmap;
 
 BOOST_AUTO_TEST_SUITE(voxellists)
+
+BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap)
+{
+  Vector3ui dim(103, 123, 105);
+  float side_length = 1.f;
+
+  BitVectorVoxelList* list = new BitVectorVoxelList(dim, side_length, MT_BITVECTOR_VOXELLIST);
+
+  Vector3f b1_min(1.1,1.1,1.1);
+  Vector3f b1_max(3.9,3.9,3.9);
+  Vector3f b2_min(2.1,2.1,2.1);
+  Vector3f b2_max(4.9,4.9,4.9);
+
+  std::vector<BitVoxelMeaning> voxel_meanings;
+  voxel_meanings.push_back(BitVoxelMeaning(11));
+  voxel_meanings.push_back(BitVoxelMeaning(12));
+
+  std::vector<std::vector<Vector3f> > box_clouds;
+  float delta = 0.1;
+
+  box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+  box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+
+  MetaPointCloud boxes(box_clouds);
+  boxes.syncToDevice();
+
+  list->insertMetaPointCloud(boxes, voxel_meanings);
+
+  GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP));
+  map_2->insertMetaPointCloud(boxes, eBVM_OCCUPIED);
+
+  size_t num_colls = list->collideWith(map_2, 1.0);
+  BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
+
+}
+
+BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap_shifting)
+{
+  Vector3ui dim(103, 123, 105);
+  float side_length = 1.f;
+
+  BitVectorVoxelList* list = new BitVectorVoxelList(dim, side_length, MT_BITVECTOR_VOXELLIST);
+
+  Vector3f b1_min(1.1,1.1,1.1);
+  Vector3f b1_max(3.9,3.9,3.9);
+
+  std::vector<std::vector<Vector3f> > box_cloud;
+  float delta = 0.1;
+  box_cloud.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+
+  MetaPointCloud box(box_cloud);
+  box.syncToDevice();
+
+  list->insertMetaPointCloud(box, eBVM_OCCUPIED);
+
+  GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP));
+
+  size_t num_colls;
+  map_2->insertMetaPointCloud(box, eBVM_OCCUPIED);
+
+  for(float shift = 0.0; shift < 4.0; shift += 0.5)
+  {
+    num_colls = list->collideWith(map_2, 1.0, Vector3ui(shift, 0,0));
+    if(shift < 1.0)
+      BOOST_CHECK_MESSAGE(num_colls == 27, "Number of Collisions == 27");
+    else if(shift < 2.0)
+      BOOST_CHECK_MESSAGE(num_colls == 18, "Number of Collisions == 18");
+    else if(shift < 3.0)
+      BOOST_CHECK_MESSAGE(num_colls == 9, "Number of Collisions == 9");
+    else
+      BOOST_CHECK_MESSAGE(num_colls == 0, "Number of Collisions == 0");
+  }
+}
+
 
 BOOST_AUTO_TEST_CASE(bitvoxellist_insert_metapointcloud)
 {

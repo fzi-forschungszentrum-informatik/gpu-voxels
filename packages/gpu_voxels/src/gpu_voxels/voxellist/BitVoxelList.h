@@ -147,9 +147,19 @@ protected:
 //  virtual void clearVoxelMapRemoteLock(const uint32_t bit_index);
 
 private:
-  void findMatchingVoxels(TemplatedBitVectorVoxelList *list1, TemplatedBitVectorVoxelList *list2,
+
+  /**
+   * @brief findMatchingVoxels Assure to lock the input maps before calling this function.
+   * \param list1 Const input
+   * \param list2 Const input
+   * \param margin
+   * \param offset
+   * \param matching_voxels_list1 Contains all Voxels from list1 whose position matches a Voxel from list2
+   * \param matching_voxels_list2 Contains all Voxels from list2 whose position matches a Voxel from list1
+   */
+  void findMatchingVoxels(const TemplatedBitVectorVoxelList *list1, const TemplatedBitVectorVoxelList *list2,
                           const u_int8_t margin, const Vector3ui &offset,
-                          TemplatedBitVectorVoxelList* matching_voxels_list1, TemplatedBitVectorVoxelList* matching_voxels_list2);
+                          TemplatedBitVectorVoxelList* matching_voxels_list1, TemplatedBitVectorVoxelList* matching_voxels_list2) const;
 
   thrust::device_vector< BitVectorVoxel > m_dev_colliding_bits_result_list;
   thrust::host_vector< BitVectorVoxel > m_colliding_bits_result_list;

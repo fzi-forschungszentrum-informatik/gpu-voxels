@@ -56,13 +56,10 @@ RobotToGPU::RobotToGPU(const std::string &_path, const bool &use_model_path) :
   // allocate a copy of the pointcloud, which will hold the transformed version
   m_link_pointclouds_transformed = new MetaPointCloud( Robot::getLinkPointclouds());
 
-  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
-
 }
 
 RobotToGPU::~RobotToGPU()
 {
-  HANDLE_CUDA_ERROR(cudaFree(m_transformation_dev));
 }
 
 void RobotToGPU::updatePointcloud(const std::string &link_name, const std::vector<Vector3f> &cloud)
@@ -82,22 +79,12 @@ void RobotToGPU::setConfiguration(const JointValueMap &jointmap)
   {
     // get the trafo of the according URDF link
     m_transformation = Robot::getLink( Robot::getLinkPointclouds()->getCloudName(i) )->getPoseAsGpuMat4f();
-//    std::cout << "RobotToGPU::update() transform of " << robot->getLinkPointclouds()->getCloudName(i)
-//              << " = " << transformation << std::endl;
 
-    HANDLE_CUDA_ERROR(
-        cudaMemcpy(m_transformation_dev, &m_transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
+//    std::cout << "RobotToGPU::update() transform of " << Robot::getLinkPointclouds()->getCloudName(i)
+//              << " = " << m_transformation << std::endl;
 
-    computeLinearLoad(m_link_pointclouds_transformed->getPointcloudSize(i),
-                      &m_blocks, &m_threads_per_block);
-    cudaDeviceSynchronize();
-    // transform the cloud via Kernel.
-    kernelKinematicChainTransform<<< m_blocks, m_threads_per_block >>>
-       (i, m_transformation_dev,
-        Robot::getLinkPointclouds()->getDeviceConstPointer(),
-        m_link_pointclouds_transformed->getDevicePointer());
+    Robot::getLinkPointclouds()->transformSubCloud(i, &m_transformation, m_link_pointclouds_transformed);
 
-    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   }
 }
 
