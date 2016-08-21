@@ -167,3 +167,65 @@ V 0.82 (2016-02-12):
 - Added Boost testcase for shifted collision checks.
 - Added script to generate Visualizer configuration with random colors for SweptVolume IDs.
 - Refined the models of the SVH with 0.4 mm resolution.
+
+V 0.9 (2016-08-21):
+====================
+API breaking changes:
+- GpuVoxels is now a singleton and has to be initialized
+- BitVoxelMeaning enum changed! 0 = Free, 1 = Occupied. More SV IDs.
+- Added as() operator to cast general maps into specific maps
+- Map-Offsets may now be negative, so Voxel-pointers changed datatype.
+- Shifted main API from general map type to specific implementations:
+  Many functions can no longer be called on basic map types but only on
+  specific maps. As not all map types offer all interfaces, this allowed
+  us to remove unimplemented function stubs (thanks to Herbert Pietrzyk)
+- RPY rotation order changed to ROS standards:
+  First rotated around roll, then pitch, then yaw
+    
+Major changes:
+- Unified map-locking for all map types to guarantee thread-safety
+- Added new Pointcloud class for single clouds (thanks to Herbert Pietrzyk)
+- Added Octree-API function: insertPointCloudWithFreespaceCalculation
+  to trigger raycasting
+- Added option to interpret unknown cells of an octree as obstacles
+  when checking collisions
+- Added tfHelper class to interact easily with ROS tf
+- New Math functions:
+    - Added host function to invert matrices.
+      Code thankfully copied from Maxim Singer
+    - Function to convert Mat4 to Roll, Pitch, Yaw
+      together with Boost tests
+    - Vector3f now offers: apprx_equal, length, normalize, dot, cross
+    - angleBetween two vectors, orientationMatrixDiff between two matrices
+    - Matrix4f now offers: equality, approximate equality and subtract
+      together with Boost tests
+    
+Minor changes:
+- Added visualizer config file and a python generator for random swept
+  volume colors (this time for real)
+- New Boost testcases for Pointclouds and MetaPointClouds
+- Simplified sensor code for Raycasting in Octree
+- Restructured keyboard shortcuts in visualizer:
+    - Added "command mode" to switch between data types so
+      all Function keys can toggle maps of the selected kind.
+    - Using ALT+digit to set decimal preposition of SweptVol IDs
+- Right-Click available for more datatypes in Visualizer to
+  print voxel information
+- Fixed updates of subclouds in MetaPointClouds
+- Added sanity check in computeLinearLoad
+- Added Getter functions for GVL parameters
+- Added some general HTML pages to Doxygen docu (thanks to Darius Pietsch)
+- Unified probability type in all maps
+- Fixed memory leaks in MetaPointCloud
+- Added Kernel for GPU memory comparison
+- Unified geometric transformation kernels
+- Clarified singed and unsigned voxel indices (thanks to Christian Juelg)
+- GPU Voxels main class now checks for Compute Capability at init
+- Added PointCloud constructor to load file
+    
+Other changes:
+- Added enlarged UR5 model
+- Updated list of contributors
+- Compiles with Ubuntu 16.04
+    - Added CMake macro to remove VTK defines
+    - Required lib glm fix: https://github.com/g-truc/glm/issues/530

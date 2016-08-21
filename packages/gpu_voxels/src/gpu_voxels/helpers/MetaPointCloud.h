@@ -33,7 +33,7 @@
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/cuda_handling.hpp>
 #include <gpu_voxels/helpers/PointcloudFileHandler.h>
-#include <gpu_voxels/helpers/kernels/MetaPointCloudOperations.h>
+#include <gpu_voxels/helpers/PointCloud.h>
 
 #include <gpu_voxels/logging/logging_gpu_voxels_helpers.h>
 
@@ -44,22 +44,26 @@ class MetaPointCloud
 public:
 
   MetaPointCloud();
-  MetaPointCloud(const std::vector<std::string> &_point_cloud_files, bool use_model_path);
-  MetaPointCloud(const std::vector<std::string> &_point_cloud_files,
-                 const std::vector<std::string> &_point_cloud_names, bool use_model_path);
-  MetaPointCloud(const std::vector<uint32_t> &_point_cloud_sizes);
-  MetaPointCloud(const std::vector< std::vector<Vector3f> > &point_clouds);
+  explicit MetaPointCloud(const std::vector<std::string> &_point_cloud_files, bool use_model_path);
+  explicit MetaPointCloud(const std::vector<std::string> &_point_cloud_files,
+                          const std::vector<std::string> &_point_cloud_names, bool use_model_path);
+  explicit MetaPointCloud(const std::vector<uint32_t> &_point_cloud_sizes);
+  explicit MetaPointCloud(const std::vector< std::vector<Vector3f> > &point_clouds);
 
   // Deep Copy Operators
-  MetaPointCloud(const MetaPointCloud &other);
-  MetaPointCloud(const MetaPointCloud *other);
+  explicit MetaPointCloud(const MetaPointCloud &other);
   MetaPointCloud& operator=(const MetaPointCloud& other);
+
+  // Deep equality check
+  bool operator==(const MetaPointCloud& other) const;
 
   //! Destructor
   ~MetaPointCloud();
 
   void addCloud(uint32_t cloud_size);
   void addCloud(const std::vector<Vector3f> &cloud, bool sync = false, const std::string &name = "");
+  void addCloud(const Vector3f *points, uint32_t pointcloud_size, bool sync = false, const std::string &name = "");
+  void addCloud(const PointCloud &cloud, bool sync = false, const std::string &name = "");
   void addClouds(const std::vector<std::string> &_point_cloud_files, bool use_model_path);
   std::string getCloudName(uint16_t i) const;
   const std::map<uint16_t, std::string> getCloudNames() const;
@@ -89,6 +93,17 @@ public:
    * \param sync If set to true, only this modified cloud is synced to the GPU.
    */
   void updatePointCloud(uint16_t cloud, const std::vector<Vector3f> &pointcloud, bool sync = false);
+
+  /*!
+   * \brief updatePointCloud This updates a specific cloud on the host.
+   * Call syncToDevice() after updating all clouds or set sync to true
+   * to only sync this current cloud to the GPU.
+   * \param cloud Id of the cloud to update
+   * \param pointcloud The new cloud. May differ in size.
+   * \param sync If set to true, only this modified cloud is synced to the GPU.
+   */
+  void updatePointCloud(uint16_t cloud, const PointCloud &pointcloud, bool sync = false);
+
 
   /*!
    * \brief updatePointCloud This updates a specific cloud on the host.

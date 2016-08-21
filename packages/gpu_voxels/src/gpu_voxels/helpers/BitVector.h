@@ -244,11 +244,12 @@ public:
    }
 
   /**
-   * @brief operator >> Overloaded ostream operator. Please note that the output bit string is starting from
+   * @brief operator << Overloaded ostream operator. Please note that the output bit string is starting from
    * Type 0.
    */
+   template<typename T>
   __host__
-  friend std::ostream& operator<<(std::ostream& os, const BitVector<num_bits>& dt)
+  friend T& operator<<(T& os, const BitVector<num_bits>& dt)
   {
     const size_t byte_size = sizeof(typename BitVector<num_bits>::item_type);
     typename BitVector<num_bits>::item_type byte = 0;
@@ -260,14 +261,13 @@ public:
       byte = (byte & 0xCC) >> 2 | (byte & 0x33) << 2;
       byte = (byte & 0xAA) >> 1 | (byte & 0x55) << 1;
       std::bitset<byte_size*8> bs(byte);
-      os << bs;
+      os << bs.to_string();
     }
     return os;
   }
 
-
   /**
-   * @brief operator << Overloaded istream operator. Please note that the input bit string should
+   * @brief operator >> Overloaded istream operator. Please note that the input bit string should
    * be starting from Type 0 and it should be complete, meaning it should have all Bits defined.
    */
   __host__
@@ -287,8 +287,6 @@ public:
     }
     return in;
   }
-
-
 
   // This CUDA Code was taken from Florians BitVoxelFlags that got replaced by BitVectors
   #ifdef __CUDACC__
@@ -334,40 +332,50 @@ protected:
 
 /**
  * @brief performLeftShift Shifts the bits of a bitvector to the left
- * @param shift_size How many bits to shift.
+ * (decrease the SV Meaning and therefore shift the bits to the right)
+ * This function sets the non Swept-Volume Meanings to 0!
+ * @param shift_size How many bits to shift. Must be smaller than 56 bits due to buffer size.
  */
 template<std::size_t num_bits>
 __host__ __device__
 void performLeftShift(BitVector<num_bits>& bit_vector, const uint8_t shift_size)
 {
+  // This function uses a 64 Bit buffer to shift Bytes of the input bit_vector
+  // by a maximum of 56 Bits to the right (Buffer Size - Byte = 56).
+
   uint64_t buffer = 0;
-  uint8_t byte_shift_size = shift_size/8;
 
-//    printf("Shifting by %d byte and %d bit to the right\n", byte_shift_size, bit_shift_size);
-
+  // 1) Fill the buffer with the first 8 byte of the input vector:
   for (uint32_t byte_idx = 0; byte_idx < 8; ++byte_idx)
   {
-    const uint32_t shifted_byte_idx = (byte_idx+1) * 8;
-    typename BitVector<num_bits>::item_type byte = bit_vector.getByte(shifted_byte_idx, 1);
-    buffer += static_cast<uint64_t>(byte) << (byte_idx*8);
+    // getByte gives the byte wich contains the requested bit
+    buffer += static_cast<uint64_t>(bit_vector.getByte(byte_idx * 8, 1)) << (byte_idx * 8);
   }
 
-//    printf("Buffer at start is %lu\n", buffer);
+  //printf("Buffer at start is %lu\n", buffer);
 
-  for (uint32_t byte_idx = 1; byte_idx < num_bits/8 - byte_shift_size - 1; ++byte_idx)
+  // 2) Iterate over all Input Bytes.
+  //    Copy the lowest byte of the shifted version of the buffer
+  //    Write that byte into the lowest output byte
+  //    Shift buffer about one byte (shifts in Zeros at highest byte)
+  //    Fill highest byte of buffer with the (buffersize+1)th byte of input
+  for (uint32_t byte_idx = 0; byte_idx < num_bits/8; ++byte_idx)
   {
     uint8_t new_byte;
     new_byte = static_cast<uint8_t>(buffer >> shift_size);
-    // only watch SV meanings
-    if (byte_idx == 1)
+    // only watch SV meanings and reset other meanings
+    if (byte_idx == 0)
     {
-      new_byte = new_byte & 0xFC; //0b11111100;
+      new_byte = new_byte & 0b11110000;
     }
     bit_vector.setByte(byte_idx * 8, new_byte);
-    buffer = buffer >> 8;
-//      printf("New buffer at step %u is %lu\n", byte_idx*8, buffer);
+    buffer = buffer >> 8; // This shifts in Zeros
 
-    buffer += static_cast<uint64_t>(bit_vector.getByte((byte_idx+8) * 8, 1)) << 56;
+    // Prevent out of bounds accesses on input vector:
+    if( (byte_idx+8) < (num_bits/8) )
+    {
+      buffer += static_cast<uint64_t>(bit_vector.getByte((byte_idx+8) * 8, 1)) << 56;
+    }
   }
 }
 
@@ -394,17 +402,24 @@ bool bitMarginCollisionCheck(const BitVector<num_bits>& v1, const BitVector<num_
     printf("ERROR: Window size for SV collision check must be smaller than %lu\n", buffer_half);
   }
 
-  // Fill buffer with first 4 bytes. We start at byte 1 and not 0 because we're only interested in SV IDs
-  for (size_t byte_nr = 1; byte_nr < 5; ++byte_nr)
+  // Fill buffer with first 4 bytes of v2 into the upper half of the buffer.
+  uint8_t input_byte = 0;
+  for (size_t byte_nr = 0; byte_nr < 4; ++byte_nr)
   {
-    buffer += static_cast<uint64_t>(v2.getByte(byte_nr * 8)) << (3*8 + byte_nr*8);
+    input_byte = (v2.getByte(byte_nr * 8));
+    if (byte_nr == 0)
+    {
+      input_byte = input_byte & 0b11110000; // Mask out the non SV Bits of first byte.
+    }
+    buffer += static_cast<uint64_t>(input_byte) << (buffer_half + byte_nr*8);
   }
+
 
   uint8_t byte_offset = sv_offset % 8;
   uint8_t bit_offset = sv_offset / 8;
 
-  // We start at bit 8 and not 0 because we're only interested in SV IDs
-  for (uint32_t i = 8 + byte_offset; i < eBVM_SWEPT_VOLUME_END; i+=8)
+  // We start at bit 4 and not 0 because we're only interested in SV IDs
+  for (uint32_t i = eBVM_SWEPT_VOLUME_START + byte_offset; i < eBVM_SWEPT_VOLUME_END; i+=8)
   {
 
     uint8_t byte = 0;

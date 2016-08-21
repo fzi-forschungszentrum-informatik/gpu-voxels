@@ -106,7 +106,10 @@ struct ShiftBitvector : public thrust::unary_function<BitVectorVoxel,BitVectorVo
 
 
 template<std::size_t length, class VoxelIDType>
-class BitVoxelList : public TemplateVoxelList<BitVectorVoxel, VoxelIDType>
+class BitVoxelList : public TemplateVoxelList<BitVectorVoxel, VoxelIDType>,
+    public CollidableWithBitVectorVoxelMap, public CollidableWithBitVectorVoxelList, public CollidableWithProbVoxelMap,
+    public CollidableWithTypesBitVectorVoxelList, public CollidableWithTypesProbVoxelMap,
+    public CollidableWithBitcheckBitVectorVoxelList
 {
 public:
 
@@ -130,12 +133,16 @@ public:
 
   virtual MapType getTemplateType() { return this->m_map_type; }
 
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other_, BitVectorVoxel&  meanings_in_collision, float coll_threshold = 1.0, const Vector3ui &offset_ = Vector3ui());
+  //Collision Interface
+  size_t collideWith(const voxelmap::ProbVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWith(const voxelmap::BitVectorVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWith(const voxellist::BitVectorVoxelList* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWithTypes(const voxelmap::ProbVoxelMap* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWithTypes(const voxellist::BitVectorVoxelList* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWithBitcheck(const voxellist::BitVectorVoxelList* map, const u_int8_t margin = 0, const Vector3i &offset = Vector3i());
 
-  virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3ui &offset = Vector3ui());
 
-
-  size_t collideCountingPerMeaning(const GpuVoxelsMapSharedPtr other, std::vector<size_t>&  collisions_per_meaning, const Vector3ui &offset_ = Vector3ui());
+  size_t collideCountingPerMeaning(const GpuVoxelsMapSharedPtr other, std::vector<size_t>&  collisions_per_meaning, const Vector3i &offset_ = Vector3i());
   /**
    * @brief Shifts all swept-volume-IDs by shift_size towards lower IDs.
    * Currently this is limited to a shift size <64
@@ -158,7 +165,7 @@ private:
    * \param matching_voxels_list2 Contains all Voxels from list2 whose position matches a Voxel from list1
    */
   void findMatchingVoxels(const TemplatedBitVectorVoxelList *list1, const TemplatedBitVectorVoxelList *list2,
-                          const u_int8_t margin, const Vector3ui &offset,
+                          const u_int8_t margin, const Vector3i &offset,
                           TemplatedBitVectorVoxelList* matching_voxels_list1, TemplatedBitVectorVoxelList* matching_voxels_list2) const;
 
   thrust::device_vector< BitVectorVoxel > m_dev_colliding_bits_result_list;

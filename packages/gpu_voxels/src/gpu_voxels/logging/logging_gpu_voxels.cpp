@@ -25,5 +25,6 @@
 namespace gpu_voxels {
 
 REGISTER_LOG_STREAM(Gpu_voxels);
+REGISTER_LOG_STREAM(Gpu_Voxels_Map);
 
 }

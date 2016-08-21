@@ -40,7 +40,7 @@ DefaultCollider::DefaultCollider(const float coll_threshold) :
 
 }
 
-DefaultCollider::DefaultCollider(const probability threshold1, const probability threshold2) :
+DefaultCollider::DefaultCollider(const Probability threshold1, const Probability threshold2) :
     m_threshold1(threshold1), m_threshold2(threshold2)
 {
 
@@ -77,10 +77,10 @@ bool DefaultCollider::collide(const BitVoxel<length>& v1, const BitVoxel<length>
   return !v1.bitVector().isZero() && !v2.bitVector().isZero();
 }
 
-probability DefaultCollider::floatToProbability(const float val)
+Probability DefaultCollider::floatToProbability(const float val)
 {
   float tmp = (val * (float(MAX_PROBABILITY) - float(MIN_PROBABILITY))) + MIN_PROBABILITY;
-  return probability(tmp);
+  return Probability(tmp);
 }
 
 } // end of ns

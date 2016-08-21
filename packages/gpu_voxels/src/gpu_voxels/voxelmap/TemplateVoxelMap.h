@@ -115,31 +115,6 @@ public:
     return (const void*) m_dev_data;
   }
 
-  //! gets an offset in pointer arithmetics
-  ptrdiff_t getVoxelPtrOffset(const Vector3ui &coordinates)
-  {
-    return (coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x);
-  }
-
-  //! gets an offset in pointer arithmetics
-  ptrdiff_t getVoxelPtrOffset(uint32_t x, uint32_t y, uint32_t z)
-  {
-    return (z * m_dim.x * m_dim.y + y * m_dim.x + x);
-  }
-
-  //! get pointer to specific voxel on device given the coordinates
-  Voxel* getDeviceVoxelPtr(uint32_t x, uint32_t y, uint32_t z)
-  {
-    return (Voxel*) (intptr_t)(m_dev_data + (z * m_dim.x * m_dim.y + y * m_dim.x + x));
-  }
-
-  //! get pointer to specific voxel on device given the coordinates
-  Voxel* getDeviceVoxelPtr(const Vector3ui &coordinates)
-  {
-    return (Voxel*) (intptr_t)(m_dev_data +
-                     (coordinates.z * m_dim.x * m_dim.y + coordinates.y * m_dim.x + coordinates.x));
-  }
-
   //! get the number of voxels held in the voxelmap
   inline uint32_t getVoxelMapSize() const
   {
@@ -169,10 +144,10 @@ public:
 //  bool writeLog(std::string filename, uint32_t loop_size = 1, bool reset_values = false);
 
   /* ----- mutex locking and unlocking ----- */
-  mutable boost::mutex m_mutex;
-  bool lockMutex();
+//  mutable boost::mutex m_mutex;
+//  bool lockMutex();
 
-  void unlockMutex();
+//  void unlockMutex();
 
   /* --- collision check operations --- */
   /*! Test for collision with other VoxelMap
@@ -201,7 +176,7 @@ public:
   uint32_t collisionCheckWithCounter(TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider());
 
   template< class OtherVoxel, class Collider>
-  uint32_t collisionCheckWithCounterRelativeTransform(TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
+  uint32_t collisionCheckWithCounterRelativeTransform(TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider(), const Vector3i &offset = Vector3i());
 
 //  __host__
 //  bool collisionCheckBoundingBox(uint8_t threshold, VoxelMap* other, uint8_t other_threshold,
@@ -237,7 +212,11 @@ public:
 
 
   // ------ BEGIN Global API functions ------
-  virtual void insertPointCloud(const std::vector<Vector3f> &point_cloud, BitVoxelMeaning voxelmeaning);
+  virtual void insertPointCloud(const std::vector<Vector3f> &point_cloud, const BitVoxelMeaning voxelmeaning);
+
+  virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning);
+
+  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning);
 
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map.
@@ -246,7 +225,7 @@ public:
    */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, BitVoxelMeaning voxel_meaning);
 
-  virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
+  //virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map. Each pointcloud
    * inside the MetaPointCloud will get it's own voxel meaning as given in the voxel_meanings
@@ -257,14 +236,12 @@ public:
    */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings);
 
-  virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0, const Vector3ui &offset = Vector3ui());
+  //virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i()) = 0;
 
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui()) = 0;
-
-  virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3ui &offset = Vector3ui());
+  //virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3i &offset = Vector3i());
 
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
-  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui(), const BitVoxelMeaning* new_meaning = NULL);
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset = Vector3i(), const BitVoxelMeaning* new_meaning = NULL);
 
   virtual std::size_t getMemoryUsage() const
   {

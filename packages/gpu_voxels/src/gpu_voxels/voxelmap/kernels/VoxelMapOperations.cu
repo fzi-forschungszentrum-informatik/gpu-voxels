@@ -171,7 +171,7 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 //                                       uint32_t offset_x, uint32_t offset_y, uint32_t offset_z,
 //                                       uint32_t size_x, Vector3ui* dimensions)
 //{
-////  extern __shared__ bool cache[];//[cMAX_NR_OF_THREADS_PER_BLOCK];			//define Cache size in kernel call
+////  extern __shared__ bool cache[];//[cMAX_THREADS_PER_BLOCK];			//define Cache size in kernel call
 ////  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
 //
 //  //calculate i:

@@ -76,7 +76,7 @@ void KinematicChain::init(const std::vector<std::string> &linknames,
   LOGGING_INFO_C(RobotLog, KinematicChain, "now handling " << m_links.size() << " links." << endl);
 
   // allocate a copy of the pointclouds to store the transformed clouds (host and device)
-  m_transformed_links_meta_cloud = new MetaPointCloud(m_links_meta_cloud);
+  m_transformed_links_meta_cloud = new MetaPointCloud(*m_links_meta_cloud);
 
 }
 

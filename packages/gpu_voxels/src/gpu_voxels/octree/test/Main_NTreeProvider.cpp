@@ -249,7 +249,7 @@ int main(int argc, char **argv)
     return 0;
   }
   printf("num parameter: %lu\n", parameter.size());
-  if(readPcFile(parameter))
+  if(!readPcFile(parameter))
   {
     printf("Error reading pointcloud file!\n");
     return 0;

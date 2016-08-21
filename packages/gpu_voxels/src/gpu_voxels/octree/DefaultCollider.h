@@ -89,7 +89,7 @@ public:
   __host__ __device__ __forceinline__
   bool isOccupied(const Environment::NodeProb& a) const
   {
-    return (a.getOccupancy() != UNKNOWN_OCCUPANCY && a.getOccupancy() >= m_occupancy_threshold);
+    return (a.getOccupancy() != UNKNOWN_PROBABILITY && a.getOccupancy() >= m_occupancy_threshold);
   }
 
   __host__ __device__ __forceinline__
@@ -126,7 +126,7 @@ public:
   __host__ __device__
   static Probability floatToProbability(const float val)
   {
-    float tmp = (val * (float(MAX_OCCUPANCY) - float(MIN_OCCUPANCY))) + MIN_OCCUPANCY;
+    float tmp = (val * (float(MAX_PROBABILITY) - float(MIN_PROBABILITY))) + MIN_PROBABILITY;
     return Probability(tmp);
   }
 

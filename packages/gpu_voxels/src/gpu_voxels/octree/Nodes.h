@@ -42,11 +42,6 @@ namespace gpu_voxels {
 namespace NTree {
 
 /*
- * Type for holding the occupation probability
- */
-typedef int8_t Probability;
-
-/*
  * Type to store the value of EnumNodeStatus
  */
 typedef uint8_t NodeStatus;

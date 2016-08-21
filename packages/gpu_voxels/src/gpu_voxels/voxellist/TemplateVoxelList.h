@@ -89,25 +89,12 @@ public:
     return m_voxel_side_length;
   }
 
-  /* ----- mutex locking and unlocking ----- */
-  mutable boost::mutex m_mutex;
-  void lockSelf(const std::string& function_name) const;
-  void unlockSelf(const std::string& function_name) const;
-
-  template< class OtherVoxel, class OtherVoxelIDType>
-  void lockBoth(const TemplateVoxelList<Voxel, VoxelIDType>* map1, const TemplateVoxelList<OtherVoxel, OtherVoxelIDType>* map2, const std::string& function_name) const;
-
-  template< class OtherVoxel, class OtherVoxelIDType>
-  void unlockBoth(const TemplateVoxelList<Voxel, VoxelIDType>* map1, const TemplateVoxelList<OtherVoxel, OtherVoxelIDType>* map2, const std::string& function_name) const;
-
-  template<class OtherVoxel>
-  void lockBoth(const TemplateVoxelList<Voxel, VoxelIDType>* map1, const voxelmap::TemplateVoxelMap<OtherVoxel>* map2, const std::string& function_name) const;
-
-  template<class OtherVoxel>
-  void unlockBoth(const TemplateVoxelList<Voxel, VoxelIDType>* map1, const voxelmap::TemplateVoxelMap<OtherVoxel>* map2, const std::string& function_name) const;
-
   // ------ BEGIN Global API functions ------
   virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
+
+  virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning);
+
+  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning);
 
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map.
@@ -126,19 +113,11 @@ public:
    */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings);
 
-  virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui());
-
-  virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0, const Vector3ui &offset = Vector3ui());
-
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui()) = 0;
-
-  virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin, const Vector3ui &offset = Vector3ui()) = 0;
-
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
-  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui(), const BitVoxelMeaning* new_meaning = NULL);
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset = Vector3i(), const BitVoxelMeaning* new_meaning = NULL);
 
-  virtual bool subtract(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f());
-  virtual bool subtract(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui());
+  virtual bool subtract(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3f &metric_offset = Vector3f());
+  virtual bool subtract(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3i &voxel_offset = Vector3i());
 
   virtual void shrinkToFit();
 
@@ -170,7 +149,7 @@ public:
    * @param collision_stencil Binary vector storing the collisions. Has to be the size of 'this'
    * @return Number of collisions
    */
-  virtual size_t collideVoxellists(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3ui &offset,
+  virtual size_t collideVoxellists(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3i &offset,
                                    thrust::device_vector<bool>& collision_stencil, bool do_locking = true) const;
 
   /**
@@ -181,7 +160,7 @@ public:
    * @return number of collisions
    */
   template< class OtherVoxel, class Collider>
-  size_t collisionCheckWithCollider(const TemplateVoxelList<OtherVoxel, VoxelIDType>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
+  size_t collisionCheckWithCollider(const TemplateVoxelList<OtherVoxel, VoxelIDType>* other, Collider collider = DefaultCollider(), const Vector3i &offset = Vector3i());
 
   /**
    * @brief collisionCheckWithCollider
@@ -191,7 +170,7 @@ public:
    * @return number of collisions
    */
   template< class OtherVoxel, class Collider>
-  size_t collisionCheckWithCollider(const voxelmap::TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider(), const Vector3ui &offset = Vector3ui());
+  size_t collisionCheckWithCollider(const voxelmap::TemplateVoxelMap<OtherVoxel>* other, Collider collider = DefaultCollider(), const Vector3i &offset = Vector3i());
 
   /**
    * @brief equals compares two voxellists by their elements.
@@ -249,10 +228,10 @@ protected:
 template<class VoxelIDType>
 struct offsetLessOperator
 {
-  VoxelIDType addr_offset;
-  offsetLessOperator(const Vector3ui &ref_map_dim, const Vector3ui &offset)
+  ptrdiff_t addr_offset;
+  offsetLessOperator(const Vector3ui &ref_map_dim, const Vector3i &offset)
   {
-    addr_offset = voxelmap::getVoxelIndex(ref_map_dim, offset);
+    addr_offset = voxelmap::getVoxelIndexSigned(ref_map_dim, offset);
   }
 
   __host__ __device__
@@ -292,12 +271,12 @@ struct applyOffsetOperator : public thrust::unary_function<thrust::tuple<Vector3
 {
   typedef thrust::tuple<Vector3ui, VoxelIDType> coordKeyTuple;
 
-  VoxelIDType addr_offset;
-  Vector3ui coord_offset;
-  applyOffsetOperator(const Vector3ui &ref_map_dim, const Vector3ui &offset)
+  ptrdiff_t addr_offset;
+  Vector3i coord_offset;
+  applyOffsetOperator(const Vector3ui &ref_map_dim, const Vector3i &offset)
   {
     coord_offset = offset;
-    addr_offset = voxelmap::getVoxelIndex(ref_map_dim, offset);
+    addr_offset = voxelmap::getVoxelIndexSigned(ref_map_dim, offset);
   }
 
   __host__ __device__

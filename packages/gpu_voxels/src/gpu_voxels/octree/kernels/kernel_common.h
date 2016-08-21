@@ -623,7 +623,7 @@ __host__ __device__
 __forceinline__ void setOccupied(Environment::InnerNodeProb* n, void* childPtr)
 {
   setOccupied(static_cast<Environment::InnerNode*>(n), childPtr);
-  //n->setOccupancy(MAX_OCCUPANCY);
+  //n->setOccupancy(MAX_PROBABILITY);
 }
 
 __host__ __device__
@@ -631,7 +631,7 @@ __forceinline__ void setOccupied(Environment::LeafNodeProb* n, void* childPtr)
 {
   n->setStatus((n->getStatus() & ~Environment::LeafNode::INVALID_STATUS));
   //setOccupied(static_cast<Environment::LeafNode*>(n), childPtr);
-  n->setOccupancy(MAX_OCCUPANCY);
+  n->setOccupancy(MAX_PROBABILITY);
 }
 
 __host__ __device__
@@ -664,7 +664,8 @@ __forceinline__ void insertNodeLastLevel(Environment::LeafNodeProb* n)
 __host__ __device__ __forceinline__
 Probability updateOccupancy(const Probability old_value, const Probability new_value)
 {
-  return Probability(min(max(int(old_value + new_value), MIN_OCCUPANCY), MAX_OCCUPANCY));
+  // watch out for overflow: cast to int32_t
+  return min(max(int32_t(int32_t(old_value) + int32_t(new_value)), int32_t(MIN_PROBABILITY)), int32_t(MAX_PROBABILITY));
 }
 
 //template<typename Node>
@@ -689,7 +690,7 @@ Probability updateOccupancy(const Probability old_value, const Probability new_v
 __host__ __device__ __forceinline__
 bool isUnknown(Probability const prob)
 {
-  return prob == UNKNOWN_OCCUPANCY;
+  return prob == UNKNOWN_PROBABILITY;
 }
 
 template<typename Node>
@@ -766,8 +767,8 @@ bool isValidParentStatus(void* nodes, const uint32_t node_count, const uint8_t l
                          Environment::InnerNodeProb* parent)
 {
   //printf("level %u\n", level);
-  Probability p_max = UNKNOWN_OCCUPANCY;
-  Probability p_min = MAX_OCCUPANCY;
+  Probability p_max = UNKNOWN_PROBABILITY;
+  Probability p_min = MAX_PROBABILITY;
   NodeStatus check_mask =  ns_LAST_LEVEL | ns_PART;
   NodeStatus array[8];
   bool all_non_part = true;
@@ -862,7 +863,7 @@ void _bottomUpUpdateProb(T1* node, T2* parent_node, volatile uint8_t* shared_mem
   }
 
 //  if (node_index == 0)
-//    shared_mem[parent_node_index] = MIN_OCCUPANCY;
+//    shared_mem[parent_node_index] = MIN_PROBABILITY;
 //  atomicMax(&shared_mem[parent_node_index], node->getOccupancy());
 //  // TODO use/implement non-atomic max function
 //
@@ -983,7 +984,8 @@ void handleRayHit(Environment::NodeProb::RayCastType* a, int32_t x, int32_t y, i
   // A conflict shouldn't happen that often and the resulting data is quite good.
   Environment::NodeProb::RayCastType::Type current = a->value;
   // TODO: Apply advanced sensor model, which considers the distance to the sensor
-  a->value = current + max(FREE_UPDATE_PROBABILITY, MIN_OCCUPANCY - current);
+  // watch out for overflow: cast to int32_t
+  a->value = int32_t(current) + max(int32_t(FREE_UPDATE_PROBABILITY), int32_t(MIN_PROBABILITY) - int32_t(current));
 }
 
 __device__ __forceinline__
@@ -1066,7 +1068,7 @@ void packData(Environment::NodeProb::RayCastType* ptr, const Environment::NodePr
 __host__ __device__
 void getFreeValue(Environment::NodeProb::RayCastType* ptr)
 {
-  ptr->value = MIN_OCCUPANCY;
+  ptr->value = MIN_PROBABILITY;
 }
 
 __host__ __device__

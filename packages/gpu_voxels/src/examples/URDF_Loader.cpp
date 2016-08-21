@@ -38,16 +38,16 @@
 using namespace gpu_voxels;
 namespace bfs = boost::filesystem;
 
-GpuVoxels* gvl;
+GpuVoxelsSharedPtr gvl;
 
 void ctrlchandler(int)
 {
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }
 void killhandler(int)
 {
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }
 
@@ -65,7 +65,8 @@ int main(int argc, char* argv[])
    * of your GPU. Even if an empty Octree is small, a
    * Voxelmap will always require the full memory.
    */
-  gvl = new GpuVoxels(200, 200, 200, 0.01); // ==> 200 Voxels, each one is 10 mm in size so the map represents 2x2x2 meter
+  gvl = GpuVoxels::getInstance();
+  gvl->initialize(200, 200, 200, 0.01);// ==> 200 Voxels, each one is 10 mm in size so the map represents 2x2x2 meter
 
   // Add a map:
   //gvl->addMap(MT_BITVECTOR_OCTREE, "myOctree");

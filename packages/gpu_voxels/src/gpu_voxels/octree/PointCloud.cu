@@ -284,7 +284,7 @@ void transformPointCloud(std::vector<Vector3f>& point_cloud, std::vector<Vector3
   Vector3f offset;
   uint32_t num_points = point_cloud.size();
   map_dimensions = getMapDimensions(point_cloud, offset, scaling);
-  LOGGING_INFO(OctreeLog, "Map dimensions in Voxel: " << map_dimensions.x << " " << map_dimensions.y << " " << map_dimensions.z << endl);
+  LOGGING_INFO(OctreeLog, "Map dimensions in Voxel: " << map_dimensions << endl);
 
   uint3comp* transformed_points = new uint3comp[num_points];
   transformPoints(point_cloud, transformed_points, num_points, offset, scaling);

@@ -14,7 +14,7 @@
 
 
 // This is used for Doxygens index page:
-/*! 
+/*!
  * \mainpage GPU-Voxels
  * \htmlinclude gvl_doxygen_intro.html
  */
@@ -53,6 +53,7 @@
 #include <gpu_voxels/vis_interface/VisPrimitiveArray.h>
 #include <gpu_voxels/octree/VisNTree.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
+#include <gpu_voxels/helpers/PointCloud.h>
 #include <gpu_voxels/octree/Octree.h>
 #include <gpu_voxels/primitive_array/PrimitiveArray.h>
 #include <gpu_voxels/voxellist/VoxelList.h>
@@ -72,6 +73,9 @@
  */
 namespace gpu_voxels {
 
+class GpuVoxels;
+typedef boost::shared_ptr<gpu_voxels::GpuVoxels> GpuVoxelsSharedPtr;
+
 typedef boost::shared_ptr<cudaIpcMemHandle_t> CudaIpcMemHandleSharedPtr;
 typedef std::map<std::string, ManagedMap > ManagedMaps;
 typedef ManagedMaps::iterator ManagedMapsIterator;
@@ -87,20 +91,25 @@ typedef ManagedRobots::iterator ManagedRobotsIterator;
 class GpuVoxels
 {
 public:
+
+  ~GpuVoxels();
+
   /*!
-   * \brief gvl Constructor, that defines the general resolution and size of the represented volume.
-   * This is relevant for the VoxelMap / VoxelList.
-   * The Octree depth will be chosen accordingly.
-   *
+   * \brief getInstance creates a Singleton object of GpuVoxels
+   * in C++11 this method is thread safe. See the C++11 Standard "Chapter 6.7 Declaration Statement"
+   * for more information. On multiprocessor system this method might not be thread safe.
+   * \return pointer to the singleton object
+   */
+  static GpuVoxelsSharedPtr getInstance();
+
+  /*!
+   * \brief initialize
    * \param dim_x The map's x dimension
    * \param dim_y The map's y dimension
    * \param dim_z The map's z dimension
    * \param voxel_side_length Defines the maximum resolution
-   *
    */
-  GpuVoxels(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z, const float voxel_side_length);
-
-  ~GpuVoxels();
+  void initialize(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z, const float voxel_side_length);
 
   /*!
    * \brief addMap Add a new map to GVL.
@@ -193,7 +202,7 @@ public:
    * During parsing all meshses get replaced by pointclouds with the same name.
    * \param robot_name Name of the robot, used as handler
    * \param path_to_urdf_file Path to the URDF to load.
-   * \param use_model_path Search URDF file in path specified in GPU_VOXELS_MODEL_PATHe nvironment variable
+   * \param use_model_path Search URDF file in path specified in GPU_VOXELS_MODEL_PATH environment variable
    * \return true, if robot was added, false otherwise
    */
   bool addRobot(const std::string &robot_name, const std::string &path_to_urdf_file, const bool use_model_path);
@@ -294,19 +303,37 @@ public:
    */
   VisProvider* getVisualization(const std::string &map_name);
 
-  
+
   /**
-   * @brief Gets the dimensions and sidelength of voxel space
-   * 
+   * @brief Gets the dimensions of voxel space
+   *
    * @param dim_x [out] number of voxels in x_dimension
    * @param dim_y [out] number of voxels in y_dimension
    * @param dim_z [out] number of voxels in z_dimension
-   * @param voxel_side_length [out] sidelength of voxels
    * @return void
    */
-  void getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z, float& voxel_side_length);
+  void getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z);
+
+  /**
+   * @brief getVoxelSideLength Gets the sidelength of voxels
+   * @param voxel_side_length [out] sidelength of voxels
+   */
+  void getVoxelSideLength(float& voxel_side_length);
+
+
+protected:
+
+  /*!
+   * \brief gvl Constructor, to define the general resolution and size of the represented volume
+   * it is necessary to call the initialize method.
+   * This is relevant for the VoxelMap / VoxelList.
+   * The Octree depth will be chosen accordingly.
+   */
+  GpuVoxels();
 
 private:
+
+  static boost::weak_ptr<GpuVoxels> masterPtr;
 
   ManagedMaps m_managed_maps;
   ManagedRobots m_managed_robots;

@@ -1,0 +1,47 @@
+<p></p>
+<p>Some words on what you will need to build the library. I don’t give explicit version requirements as they get outdated too fast. For specific problems or questions please consult the <a title="Contact" href="/contact/">mailing-list</a>.</p>
+
+<h3>Hardware</h3>
+<p>As this is called GPU-Voxels, you will of course need a decent graphics card! CUDA <a title="CUDA Compute Capability" href="https://en.wikipedia.org/wiki/CUDA#Supported_GPUs" target="_blank">Compute Capability</a> 2.0 or greater is required. The more GPU memory the better.<br>
+We run the library on various workstations and even on laptops with 64 Bit OS. But we never tested it with 32 Bit! So be careful with that.<br>
+Also we made it compile on the NVIDIA Jetson TK1 (ARM SoC) but as CUDA does not support Shared Memory (so no visualization available) for 32 Bit ARMs we did not investigate that further.</p>
+
+<h3>Required libraries to build GPU-Voxels</h3>
+<p>The software is tested on 64 Bit Ubuntu Linux Trusty (14.04.2 LTS Release: 14.04 ). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:</p>
+<ul>
+<li>CUDA &gt; 5.5</li>
+<li>PCL</li>
+<li>OpenNI</li>
+<li>Boost</li>
+</ul>
+<p>For the visualizer you will also need:</p>
+<ul>
+<li>GLEW (libglew1.10 Version: 1.10.0-3, libglew-dev Version: 1.10.0-3)</li>
+<li>GLM (libglm-dev Version: 0.9.5.1-1)</li>
+<li>OpenGL</li>
+<li>GLUT (freeglut3 Version: 2.8.1-1, freeglut3-dev Version: 2.8.1-1)</li>
+</ul>
+
+<h3>Additional Tools</h3>
+<p>As soon as you want to experiment with your own geometrical models, you will have to “voxelize” them. Models are represented as dense pointclouds in GPU-Voxels. I am using the really nice tool <strong><em>binvox </em></strong>to perform this task on the GPU. You can download it at <a title="Binvox" href="http://www.cs.princeton.edu/~min/binvox/" target="_blank">http://www.cs.princeton.edu/~min/binvox/</a></p>
+<p>Huge thanks to Patrick Min (<a title="Patrick Min" href="http://www.cs.princeton.edu/~min/" target="_blank">http://www.cs.princeton.edu/~min/</a>) for offering the tool for free as a download!</p>
+<p>&nbsp;</p>
+
+
+
+
+
+
+
+
+
+
+<p>==&gt; After installing the libs, continue with <a title="Compiling" href="/documentation/compiling/">Compiling</a>.</p>
+<p></p>
+
+
+
+
+
+
+

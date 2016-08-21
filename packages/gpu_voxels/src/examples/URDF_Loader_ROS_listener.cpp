@@ -42,7 +42,7 @@
 using namespace gpu_voxels;
 namespace bfs = boost::filesystem;
 
-GpuVoxels* gvl;
+GpuVoxelsSharedPtr gvl;
 
 void ctrlchandler(int)
 {
@@ -100,7 +100,8 @@ int main(int argc, char* argv[])
    * of your GPU. Even if an empty Octree is small, a
    * Voxelmap will always require the full memory.
    */
-  gvl = new GpuVoxels(200, 200, 200, 0.001); // ==> 200 Voxels, each one is 1 mm in size so the map represents 20x20x20 centimeter
+  gvl = GpuVoxels::getInstance();
+  gvl->initialize(200, 200, 200, 0.001); // ==> 200 Voxels, each one is 1 mm in size so the map represents 20x20x20 centimeter
 
   // Add a map:
   gvl->addMap(MT_PROBAB_VOXELMAP, "myObjectVoxelmap");
@@ -129,7 +130,7 @@ int main(int argc, char* argv[])
   {
     ros::spinOnce();
 
-    num_colls = gvl->getMap("myHandVoxellist")->collideWithTypes(gvl->getMap("myObjectVoxelmap"), bits_in_collision);
+    num_colls = gvl->getMap("myHandVoxellist")->as<voxellist::BitVectorVoxelList>()->collideWithTypes(gvl->getMap("myObjectVoxelmap")->as<voxelmap::ProbVoxelMap>(), bits_in_collision);
 
     std::cout << "Detected " << num_colls << " collisiosn " << std::endl;
     //std::cout << "with bits \n" << bits_in_collision << std::endl;
@@ -141,6 +142,6 @@ int main(int argc, char* argv[])
     usleep(30000);
   }
 
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }

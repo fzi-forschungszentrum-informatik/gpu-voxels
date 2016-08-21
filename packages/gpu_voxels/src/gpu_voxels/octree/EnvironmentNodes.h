@@ -179,6 +179,13 @@ public:
 
   //TODO remove/move out of Node
   __device__ __host__ __forceinline__
+  bool isUnknown() const
+  {
+    return hasStatus(ns_UNKNOWN);
+  }
+
+  //TODO remove/move out of Node
+  __device__ __host__ __forceinline__
   bool isOccupied() const
   {
     return hasStatus(ns_OCCUPIED);

@@ -28,11 +28,13 @@
 #include <gpu_voxels/voxel/BitVoxel.h>
 #include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
+#include <gpu_voxels/helpers/CollisionInterfaces.h>
 
 namespace gpu_voxels {
 namespace voxelmap {
 
-class ProbVoxelMap: public TemplateVoxelMap<ProbabilisticVoxel>
+class ProbVoxelMap: public TemplateVoxelMap<ProbabilisticVoxel>,
+    public CollidableWithBitVectorVoxelMap, public CollidableWithProbVoxelMap
 {
 public:
   typedef ProbabilisticVoxel Voxel;
@@ -52,10 +54,16 @@ public:
 
   virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
 
+  virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning);
+
+  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning);
+
   virtual MapType getTemplateType() const { return MT_PROBAB_VOXELMAP; }
 
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision,
-                                  float coll_threshold, const Vector3ui &offset);
+  // Collision Interface Methods
+
+  size_t collideWith(const voxelmap::BitVectorVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWith(const voxelmap::ProbVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
 };
 
 } // end of namespace

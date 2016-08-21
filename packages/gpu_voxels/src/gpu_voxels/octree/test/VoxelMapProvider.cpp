@@ -240,8 +240,11 @@ void VoxelMapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const 
 #endif
 
   Sensor sensor;
-  sensor.orientation = gpu_voxels::rotateYPR(temp.z, temp.y, temp.x) * sensor.orientation;
-  sensor.position = m_sensor_position;
+  sensor.pose.setIdentity();
+  sensor.pose = gpu_voxels::rotateYPR(temp.z, temp.y, temp.x) * orientation;
+  sensor.pose.a14 = m_sensor_position.x;
+  sensor.pose.a24 = m_sensor_position.y;
+  sensor.pose.a34 = m_sensor_position.z;
 
 // transform points in world corrdinates
   for (uint32_t i = 0; i < num_points; ++i)

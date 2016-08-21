@@ -38,7 +38,7 @@ IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size, set_
         NTree<branching_factor, level_count, InnerNode, LeafNode>* ntree,
         const VoxelType* voxel_map,
         const gpu_voxels::Vector3ui voxel_map_dim,
-        const gpu_voxels::Vector3ui offset,
+        const gpu_voxels::Vector3i offset,
         const uint32_t min_level)
     :
     Base(),

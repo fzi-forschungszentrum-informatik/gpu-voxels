@@ -33,12 +33,15 @@
 #include <vector>
 #include <map>
 #include <string>
+#include "icl_core_logging/ThreadStream.h"
 
 namespace gpu_voxels {
 
 /*
  * As CUDA does not support STL / Eigen data types or similar
  * here are some structs for more comfortable use
+ *
+ * Adressing within matrices is ROW, COLLUMN
  */
 
 /*! ---------------- Vectors ---------------- */
@@ -114,6 +117,13 @@ struct Vector3ui
     out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
     return out;
   }
+
+  __host__
+  friend icl_core::logging::ThreadStream& operator<<(icl_core::logging::ThreadStream& out, const Vector3ui& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << icl_core::logging::endl;
+    return out;
+  }
 };
 
 
@@ -182,6 +192,13 @@ struct Vector3i
     out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
     return out;
   }
+
+  __host__
+  friend icl_core::logging::ThreadStream& operator<<(icl_core::logging::ThreadStream& out, const Vector3i& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << icl_core::logging::endl;
+    return out;
+  }
 };
 
 
@@ -239,10 +256,70 @@ struct Vector3f
     return (i.x == j.x && i.y == j.y && i.z == j.z);
   }
 
+  __device__ __host__
+  inline bool apprx_equal(const Vector3f& b, double epsilon) const
+  {
+    return (
+    (fabs(x - b.x) < epsilon) &&
+    (fabs(y - b.y) < epsilon) &&
+    (fabs(z - b.z) < epsilon));
+  }
+
+
+  __device__ __host__
+  inline float length() const
+  {
+    return sqrt((x * x) + (y * y) + (z * z));
+  }
+
+
+  /*!
+   * \brief normalize normalizes this vector to unit lenght
+   */
+  __device__ __host__
+  inline void normalize()
+  {
+    x = x / length();
+    y = y / length();
+    z = z / length();
+  }
+
+  /*!
+   * \brief normalized does not affect the vector it is called on but returns a normalized copy of it
+   * which has unit length
+   * \return normalized copy of this vector
+   */
+  __device__ __host__
+  inline Vector3f normalized() const
+  {
+    return Vector3f(x / length(), y / length(), z / length());
+  }
+
+  __device__ __host__
+  inline float dot(const Vector3f &other) const
+  {
+    return x * other.x + y * other.y + z * other.z;
+  }
+
+  __device__ __host__
+  inline Vector3f cross(const Vector3f &other) const
+  {
+    return Vector3f(y * other.z - z * other.y,
+                    z * other.x - x * other.z,
+                    x * other.y - y * other.x);
+  }
+
   __host__
   friend std::ostream& operator<<(std::ostream& out, const Vector3f& vector)
   {
     out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+    return out;
+  }
+
+  __host__
+  friend icl_core::logging::ThreadStream& operator<<(icl_core::logging::ThreadStream& out, const Vector3f& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << icl_core::logging::endl;
     return out;
   }
 };
@@ -289,6 +366,13 @@ struct Vector3d
     out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
     return out;
   }
+
+  __host__
+  friend icl_core::logging::ThreadStream& operator<<(icl_core::logging::ThreadStream& out, const Vector3d& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << icl_core::logging::endl;
+    return out;
+  }
 };
 
 struct Vector4i
@@ -306,6 +390,13 @@ struct Vector4i
   friend std::ostream& operator<<(std::ostream& out, const Vector4i& vector)
   {
     out << "(x, y, z, w) = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+    return out;
+  }
+
+  __host__
+  friend icl_core::logging::ThreadStream& operator<<(icl_core::logging::ThreadStream& out, const Vector4i& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << icl_core::logging::endl;
     return out;
   }
 };
@@ -326,6 +417,13 @@ struct Vector4f
   friend std::ostream& operator<<(std::ostream& out, const Vector4f& vector)
   {
     out << "(x, y, z, w) = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+    return out;
+  }
+
+  __host__
+  friend icl_core::logging::ThreadStream& operator<<(icl_core::logging::ThreadStream& out, const Vector4f& vector)
+  {
+    out << "(x, y, z) = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << icl_core::logging::endl;
     return out;
   }
 };
@@ -454,6 +552,37 @@ struct Matrix4f
   }
 
   __device__ __host__
+  inline bool operator==(const Matrix4f& b) const
+  {
+    return a11 == b.a11 && a12 == b.a12 && a13 == b.a13 && a14 == b.a14 && /**/
+    a21 == b.a21 && a22 == b.a22 && a23 == b.a23 && a24 == b.a24 && /**/
+    a31 == b.a31 && a32 == b.a32 && a33 == b.a33 && a34 == b.a34 && /**/
+    a41 == b.a41 && a42 == b.a42 && a43 == b.a43 && a44 == b.a44;/**/
+  }
+
+  __device__ __host__
+  inline bool apprx_equal(const Matrix4f& b, double epsilon) const
+  {
+    return (
+    (fabs(a11 - b.a11) < epsilon) &&
+    (fabs(a12 - b.a12) < epsilon) &&
+    (fabs(a13 - b.a13) < epsilon) &&
+    (fabs(a14 - b.a14) < epsilon) &&
+    (fabs(a21 - b.a21) < epsilon) &&
+    (fabs(a22 - b.a22) < epsilon) &&
+    (fabs(a23 - b.a23) < epsilon) &&
+    (fabs(a24 - b.a24) < epsilon) &&
+    (fabs(a31 - b.a31) < epsilon) &&
+    (fabs(a32 - b.a32) < epsilon) &&
+    (fabs(a33 - b.a33) < epsilon) &&
+    (fabs(a34 - b.a34) < epsilon) &&
+    (fabs(a41 - b.a41) < epsilon) &&
+    (fabs(a42 - b.a42) < epsilon) &&
+    (fabs(a43 - b.a43) < epsilon) &&
+    (fabs(a44 - b.a44) < epsilon));
+  }
+
+  __device__ __host__
   void print() const
   {
     printf("  %0.7lf  %0.7lf  %0.7lf  %0.7lf\n",   a11, a12, a13, a14);
@@ -473,6 +602,18 @@ struct Matrix4f
         " " << std::setw(10) << matrix.a31 << ", " << std::setw(10) << matrix.a32 << ", " << std::setw(10) << matrix.a33 << ", " << std::setw(10) << matrix.a34 << ",\n"
         " " << std::setw(10) << matrix.a41 << ", " << std::setw(10) << matrix.a42 << ", " << std::setw(10) << matrix.a43 << ", " << std::setw(10) << matrix.a44 << "]"
         << std::endl;
+    return out;
+  }
+
+  __host__
+  friend icl_core::logging::ThreadStream& operator<<(icl_core::logging::ThreadStream& out, const Matrix4f& matrix)
+  {
+    out << "\n" <<
+        "[" << matrix.a11 << ", " << matrix.a12 << ", " << matrix.a13 << ", " << matrix.a14 << ",\n"
+        " " << matrix.a21 << ", " << matrix.a22 << ", " << matrix.a23 << ", " << matrix.a24 << ",\n"
+        " " << matrix.a31 << ", " << matrix.a32 << ", " << matrix.a33 << ", " << matrix.a34 << ",\n"
+        " " << matrix.a41 << ", " << matrix.a42 << ", " << matrix.a43 << ", " << matrix.a44 << "]"
+        << icl_core::logging::endl;
     return out;
   }
 
@@ -544,6 +685,17 @@ __device__ __host__
   return result;
 }
 
+// Special case for adding negative offsets to collisions:
+__device__ __host__
+   inline Vector3ui operator+(const Vector3ui& a, const Vector3i& b)
+{
+  Vector3ui result;
+  result.x = a.x + b.x;
+  result.y = a.y + b.y;
+  result.z = a.z + b.z;
+  return result;
+}
+
 __device__ __host__
    inline Vector3ui operator-(const Vector3ui& a, const Vector3ui& b)
 {
@@ -596,6 +748,26 @@ __device__ __host__
 
 __device__ __host__
    inline Vector3f operator*(const Vector3ui& b, const float& a)
+{
+  Vector3f result;
+  result.x = a * b.x;
+  result.y = a * b.y;
+  result.z = a * b.z;
+  return result;
+}
+
+__device__ __host__
+   inline Vector3f operator*(const float& a, const Vector3i& b)
+{
+  Vector3f result;
+  result.x = a * b.x;
+  result.y = a * b.y;
+  result.z = a * b.z;
+  return result;
+}
+
+__device__ __host__
+   inline Vector3f operator*(const Vector3i& b, const float& a)
 {
   Vector3f result;
   result.x = a * b.x;
@@ -715,6 +887,20 @@ __device__ __host__
   result.x = m.a11 * v.x + m.a12 * v.y + m.a13 * v.z + m.a14 * v.w;
   result.y = m.a21 * v.x + m.a22 * v.y + m.a23 * v.z + m.a24 * v.w;
   result.z = m.a31 * v.x + m.a32 * v.y + m.a33 * v.z + m.a34 * v.w;
+  return result;
+}
+
+
+__device__ __host__
+inline Matrix4f operator-(const Matrix4f& a, const Matrix4f& b)
+{
+  Matrix4f result;
+
+  result.a11 = a.a11 - b.a11; result.a12 = a.a12 - b.a12; result.a13 = a.a13 - b.a13; result.a14 = a.a14 - b.a14;
+  result.a21 = a.a21 - b.a21; result.a22 = a.a22 - b.a22; result.a23 = a.a23 - b.a23; result.a24 = a.a24 - b.a24;
+  result.a31 = a.a31 - b.a31; result.a32 = a.a32 - b.a32; result.a33 = a.a33 - b.a33; result.a34 = a.a34 - b.a34;
+  result.a41 = a.a41 - b.a41; result.a42 = a.a42 - b.a42; result.a43 = a.a43 - b.a43; result.a44 = a.a44 - b.a44;
+
   return result;
 }
 
@@ -905,7 +1091,7 @@ struct OrientedBoxParams
 {
   gpu_voxels::Vector3f dim; //< half the side length
   gpu_voxels::Vector3f center; //< center of the cube
-  gpu_voxels::Vector3f rot; //< rotation of the cube
+  gpu_voxels::Vector3f rot; //< rotation of the cube (Yaw, Pitch, Roll)
 };
 
 } // end of namespace

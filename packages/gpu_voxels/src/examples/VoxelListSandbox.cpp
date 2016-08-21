@@ -20,16 +20,16 @@
 
 using namespace gpu_voxels;
 
-GpuVoxels* gvl;
+GpuVoxelsSharedPtr gvl;
 
 void ctrlchandler(int)
 {
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }
 void killhandler(int)
 {
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }
 
@@ -40,7 +40,8 @@ int main(int argc, char* argv[])
 
   icl_core::logging::initialize(argc, argv);
 
-  gvl = new GpuVoxels(100, 100, 100, 0.1);
+  gvl = GpuVoxels::getInstance();
+  gvl->initialize(100, 100, 100, 0.1);
 
   gvl->addMap(MT_BITVECTOR_VOXELLIST, "myVoxelList");
   gvl->addMap(MT_BITVECTOR_VOXELLIST, "myVoxelList2");
@@ -73,7 +74,7 @@ int main(int argc, char* argv[])
   //std::cout << "Voxellist2 size: " << gvl->getMap("myVoxelList2")->getDimensions().x << " voxels" << std::endl;
 
   BitVectorVoxel collision_types_map;
-  size_t num_colls = gvl->getMap("myVoxelList")->collideWithTypes(gvl->getMap("myProbVoxelMap"), collision_types_map, 1.0f);
+  size_t num_colls = gvl->getMap("myVoxelList")->as<voxellist::BitVectorVoxelList>()->collideWithTypes(gvl->getMap("myProbVoxelMap")->as<voxelmap::ProbVoxelMap>(), collision_types_map, 1.0f);
   std::cout << "Voxellist1 collided with Probab Voxelmap. Bitcheck gives: " << num_colls << std::endl;
   std::cout << collision_types_map << std::endl;
 

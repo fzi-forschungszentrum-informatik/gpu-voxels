@@ -189,7 +189,7 @@ void kernel_preprocessDepthImage(DepthData* d_depth_image, const uint32_t width,
                                  const SensorDataProcessing arguments);
 
 __global__
-void kernel_toVoxels(Vector3f* input_points, size_t num_points, Vector3ui* output_voxels, float voxel_side_length);
+void kernel_toVoxels(const Vector3f *input_points, size_t num_points, Vector3ui* output_voxels, float voxel_side_length);
 }
 }
 

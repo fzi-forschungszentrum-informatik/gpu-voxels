@@ -212,10 +212,7 @@ TemplateVoxelMap<Voxel>::~TemplateVoxelMap()
 template<>
 void TemplateVoxelMap<BitVectorVoxel>::clearMap()
 {
-  while (!lockMutex())
-  {
-    boost::this_thread::yield();
-  }
+  this->lockSelf("TemplateVoxelMap::clearMap");
   // Clear occupancies
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   HANDLE_CUDA_ERROR(
@@ -229,7 +226,7 @@ void TemplateVoxelMap<BitVectorVoxel>::clearMap()
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_dev_collision_check_results, m_collision_check_results, cMAX_NR_OF_BLOCKS * sizeof(bool),
                  cudaMemcpyHostToDevice));
-  unlockMutex();
+  this->unlockSelf("TemplateVoxelMap::clearMap");
 }
 
 /*!
@@ -240,10 +237,7 @@ void TemplateVoxelMap<BitVectorVoxel>::clearMap()
 template<>
 void TemplateVoxelMap<ProbabilisticVoxel>::clearMap()
 {
-  while (!lockMutex())
-  {
-    boost::this_thread::yield();
-  }
+  this->lockSelf("TemplateVoxelMap::clearMap");
   // Clear occupancies
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   kernelClearVoxelMap<<<m_blocks, m_threads>>>(m_dev_data, m_voxelmap_size);
@@ -256,7 +250,7 @@ void TemplateVoxelMap<ProbabilisticVoxel>::clearMap()
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_dev_collision_check_results, m_collision_check_results, cMAX_NR_OF_BLOCKS * sizeof(bool),
                  cudaMemcpyHostToDevice));
-  unlockMutex();
+  this->unlockSelf("TemplateVoxelMap::clearMap");
 }
 
 
@@ -268,12 +262,9 @@ void TemplateVoxelMap<ProbabilisticVoxel>::clearMap()
 template<class Voxel>
 void TemplateVoxelMap<Voxel>::printVoxelMapData()
 {
-  while (!lockMutex())
-  {
-    boost::this_thread::yield();
-  }
+  this->lockSelf("TemplateVoxelMap::printVoxelMapData");
   HANDLE_CUDA_ERROR(cuPrintDeviceArray(m_dev_data, m_voxelmap_size, "VoxelMap dump: "));
-  unlockMutex();
+  this->unlockSelf("TemplateVoxelMap::printVoxelMapData");
 }
 
 //template<class Voxel>
@@ -402,32 +393,7 @@ template<class Voxel>
 template<class OtherVoxel, class Collider>
 bool TemplateVoxelMap<Voxel>::collisionCheck(TemplateVoxelMap<OtherVoxel>* other, Collider collider)
 {
-  bool locked_this = false;
-  bool locked_other = false;
-  uint32_t counter = 0;
-
-  while (!locked_this || !locked_other)
-  {
-    // lock mutexes
-    while (!locked_this)
-    {
-      locked_this = lockMutex();
-      if(!locked_this) boost::this_thread::yield();
-    }
-    while (!locked_other && (counter < 50))
-    {
-      locked_other = other->lockMutex();
-      if(!locked_other) boost::this_thread::yield();
-      counter++;
-    }
-    if (!locked_other)
-    {
-      LOGGING_WARNING_C(VoxelmapLog, TemplateVoxelMap, "Could not lock other map since 50 trials!" << endl);
-      counter = 0;
-      unlockMutex();
-      boost::this_thread::yield();
-    }
-  }
+  this->lockBoth(this, other, "TemplateVoxelMap::collisionCheck");
   //printf("collision check... ");
 
 #ifndef ALTERNATIVE_CHECK
@@ -456,8 +422,7 @@ bool TemplateVoxelMap<Voxel>::collisionCheck(TemplateVoxelMap<OtherVoxel>* other
 //      printf(" ...done in %f ms!\n", m_elapsed_time);
 //      m_measured_data.push_back(m_elapsed_time);
 //      printf("TemplateVoxelMap<Voxel>::collisionCheck finished\n");
-      other->unlockMutex();
-      unlockMutex();
+      this->unlockBoth(this, other, "TemplateVoxelMap::collisionCheck");
       return true;
     }
   }
@@ -473,9 +438,7 @@ bool TemplateVoxelMap<Voxel>::collisionCheck(TemplateVoxelMap<OtherVoxel>* other
 
   // unlock mutexes
 //  printf("unlocking other map's mutex\n");
-  other->unlockMutex();
-//  printf("unlocking this map's mutex\n");
-  unlockMutex();
+  this->unlockBoth(this, other, "TemplateVoxelMap::collisionCheck");
 //  printf("done unlocking\n");
   return false;
 
@@ -500,6 +463,7 @@ bool TemplateVoxelMap<Voxel>::collisionCheck(TemplateVoxelMap<OtherVoxel>* other
 //      HANDLE_CUDA_ERROR(cudaEventElapsedTime(&m_elapsed_time, m_start, m_stop));
 //      printf(" ...done in %f ms!\n", m_elapsed_time);
 //      m_measured_data.push_back(m_elapsed_time);
+      this->unlockBoth(this, other, "TemplateVoxelMap::collisionCheck");
       return true;
     }
   }
@@ -509,6 +473,7 @@ bool TemplateVoxelMap<Voxel>::collisionCheck(TemplateVoxelMap<OtherVoxel>* other
 //  printf(" ...done in %f ms!\n", m_elapsed_time);
 //  m_measured_data.push_back(m_elapsed_time);
   //HANDLE_CUDA_ERROR(cuPrintDeviceArray(m_dev_collision_check_results, cMAX_NR_OF_BLOCKS, " collision array on device "));
+  this->unlockBoth(this, other, "TemplateVoxelMap::collisionCheck");
   return false;
 
 #endif
@@ -680,100 +645,74 @@ template<class OtherVoxel, class Collider>
 uint32_t TemplateVoxelMap<Voxel>::collisionCheckWithCounter(TemplateVoxelMap<OtherVoxel>* other,
                                                             Collider collider)
 {
-  return collisionCheckWithCounterRelativeTransform(other, collider);
+  return collisionCheckWithCounterRelativeTransform(other, collider); //does the locking
 }
 
-template<class Voxel>
-size_t TemplateVoxelMap<Voxel>::collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold, const Vector3ui &offset)
-{
-  size_t collisions = SSIZE_MAX;
-  switch (other->getMapType())
-  {
-    case MT_PROBAB_VOXELMAP:
-    {
-      DefaultCollider collider(coll_threshold);
-      ProbVoxelMap* m = (ProbVoxelMap*) other.get();
-      collisions = collisionCheckWithCounterRelativeTransform(m, collider, offset);
-      break;
-    }
-    case MT_BITVECTOR_VOXELMAP:
-    {
-      DefaultCollider collider(coll_threshold);
-      BitVectorVoxelMap* m = (BitVectorVoxelMap*) other.get();
-      collisions = collisionCheckWithCounterRelativeTransform(m, collider, offset);
-      break;
-    }
-    case MT_BITVECTOR_OCTREE:
-    {
-      // Have to collide the octree with the voxel map the other way round
-      // --> cyclic dependency between libs would be necessary
+//template<class Voxel>
+//size_t TemplateVoxelMap<Voxel>::collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold, const Vector3i &offset)
+//{
+//  size_t collisions = SSIZE_MAX;
+//  switch (other->getMapType())
+//  {
+//    case MT_PROBAB_VOXELMAP:
+//    {
+//      DefaultCollider collider(coll_threshold);
+//      ProbVoxelMap* m = (ProbVoxelMap*) other.get();
+//      collisions = collisionCheckWithCounterRelativeTransform(m, collider, offset);
+//      break;
+//    }
+//    case MT_BITVECTOR_VOXELMAP:
+//    {
+//      DefaultCollider collider(coll_threshold);
+//      BitVectorVoxelMap* m = (BitVectorVoxelMap*) other.get();
+//      collisions = collisionCheckWithCounterRelativeTransform(m, collider, offset);
+//      break;
+//    }
+//    case MT_BITVECTOR_OCTREE:
+//    {
+//      // Have to collide the octree with the voxel map the other way round
+//      // --> cyclic dependency between libs would be necessary
 
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
+//      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
 
-  //      NTree::GvlNTreeDet* m = (NTree::GvlNTreeDet*) other.get();
-  //      GpuVoxelsMap* l = this;
-  //      GpuVoxelsMapSharedPtr tmp(l);
-  //      m->collideWith(tmp, coll_threshold);
-      break;
-    }
-    case MT_BITVECTOR_VOXELLIST:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
-      break;
-    }
-    case MT_PROBAB_VOXELLIST:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
-      break;
-    }
-    default:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-      break;
-    }
-  }
-  return collisions;
-}
+//  //      NTree::GvlNTreeDet* m = (NTree::GvlNTreeDet*) other.get();
+//  //      GpuVoxelsMap* l = this;
+//  //      GpuVoxelsMapSharedPtr tmp(l);
+//  //      m->collideWith(tmp, coll_threshold);
+//      break;
+//    }
+//    case MT_BITVECTOR_VOXELLIST:
+//    {
+//      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
+//      break;
+//    }
+//    case MT_PROBAB_VOXELLIST:
+//    {
+//      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
+//      break;
+//    }
+//    default:
+//    {
+//      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+//      break;
+//    }
+//  }
+//  return collisions;
+//}
 
 
 template<class Voxel>
 template<class OtherVoxel, class Collider>
 uint32_t TemplateVoxelMap<Voxel>::collisionCheckWithCounterRelativeTransform(TemplateVoxelMap<OtherVoxel>* other,
-                                                            Collider collider, const Vector3ui &offset)
+                                                            Collider collider, const Vector3i &offset)
 {
-  bool locked_this = false;
-  bool locked_other = false;
-  uint32_t counter = 0;
-
-  while (!locked_this || !locked_other)
-  {
-    // lock mutexes
-    while (!locked_this)
-    {
-      locked_this = lockMutex();
-      if(!locked_this) boost::this_thread::yield();
-    }
-    while (!locked_other && (counter < 50))
-    {
-      locked_other = other->lockMutex();
-      if(!locked_other) boost::this_thread::yield();
-      counter++;
-    }
-
-    if (!locked_other)
-    {
-      LOGGING_WARNING_C(VoxelmapLog, TemplateVoxelMap, "Could not lock other map since 50 trials!" << endl);
-      counter = 0;
-      unlockMutex();
-      boost::this_thread::yield();
-    }
-  }
+  this->lockBoth(this, other, "TemplateVoxelMap::collisionCheckWithCounterRelativeTransform");
 
   Voxel* dev_data_with_offset = NULL;
-  if(offset != Vector3ui())
+  if(offset != Vector3i())
   {
     // We take the base adress of this voxelmap and add the offset that we want to shift the other map.
-    dev_data_with_offset = m_dev_data + getVoxelPtrOffset(offset);
+    dev_data_with_offset = getVoxelPtrSignedOffset(m_dev_data, m_dim, offset);
   }else{
     dev_data_with_offset = m_dev_data;
   }
@@ -793,63 +732,35 @@ uint32_t TemplateVoxelMap<Voxel>::collisionCheckWithCounterRelativeTransform(Tem
 
   // unlock mutexes
 //  printf("unlocking other map's mutex\n");
-  other->unlockMutex();
-//  printf("unlocking this map's mutex\n");
-  unlockMutex();
+  this->unlockBoth(this, other, "TemplateVoxelMap::collisionCheckWithCounterRelativeTransform");
 //  printf("done unlocking\n");
   return number_of_collisions;
 }
 
-template<class Voxel>
-size_t TemplateVoxelMap<Voxel>::collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold,
-                                                      const uint32_t resolution_level, const Vector3ui &offset)
-{
-  size_t collisions = SSIZE_MAX;
-  switch (other->getMapType())
-  {
-    case MT_BITVECTOR_OCTREE:
-    {
-      LOGGING_ERROR_C(
-          VoxelmapLog, TemplateVoxelMap,
-          GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
-      break;
-    }
-    default:
-    {
-      if (resolution_level != 0)
-        LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
-      else
-        collisions = collideWith(other, coll_threshold, offset);
-      break;
-    }
-  }
-  return collisions;
-}
-
-template<class Voxel>
-size_t TemplateVoxelMap<Voxel>::collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin, const Vector3ui &offset)
-{
-  size_t num_collisions = SSIZE_MAX;
-  switch (other->getMapType())
-  {
-    case MT_BITVECTOR_VOXELMAP:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-      break;
-    }
-    case MT_BITVECTOR_OCTREE:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
-      break;
-    }
-    default:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
-      break;
-    }
-  }
-  return num_collisions;
-}
+//template<class Voxel>
+//size_t TemplateVoxelMap<Voxel>::collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin, const Vector3i &offset)
+//{
+//  size_t num_collisions = SSIZE_MAX;
+//  switch (other->getMapType())
+//  {
+//    case MT_BITVECTOR_VOXELMAP:
+//    {
+//      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+//      break;
+//    }
+//    case MT_BITVECTOR_OCTREE:
+//    {
+//      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
+//      break;
+//    }
+//    default:
+//    {
+//      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
+//      break;
+//    }
+//  }
+//  return num_collisions;
+//}
 
 //void TemplateVoxelMap<Voxel>::copyVoxelVectorToDevice(uint32_t index_list, uint32_t size, uint32_t* dev_voxel_list)
 //{
@@ -926,17 +837,17 @@ size_t TemplateVoxelMap<Voxel>::collideWithBitcheck(const GpuVoxelsMapSharedPtr 
 //}
 /* ======== some functions for self testing ======== */
 
-template<class Voxel>
-bool TemplateVoxelMap<Voxel>::lockMutex()
-{
-  return m_mutex.try_lock();
-}
+//template<class Voxel>
+//bool TemplateVoxelMap<Voxel>::lockMutex()
+//{
+//  return m_mutex.try_lock();
+//}
 
-template<class Voxel>
-void TemplateVoxelMap<Voxel>::unlockMutex()
-{
-  m_mutex.unlock();
-}
+//template<class Voxel>
+//void TemplateVoxelMap<Voxel>::unlockMutex()
+//{
+//  m_mutex.unlock();
+//}
 
 // ------ BEGIN Global API functions ------
 
@@ -948,35 +859,57 @@ template<class Voxel>
 void TemplateVoxelMap<Voxel>::insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning)
 {
 // copy points to the gpu
+  this->lockSelf("TemplateVoxelMap::insertPointCloud");
   Vector3f* d_points;
   HANDLE_CUDA_ERROR(cudaMalloc(&d_points, points.size() * sizeof(Vector3f)));
   HANDLE_CUDA_ERROR(
       cudaMemcpy(d_points, &points[0], points.size() * sizeof(Vector3f), cudaMemcpyHostToDevice));
 
+  insertPointCloud(d_points, points.size(), voxel_meaning);
+
+  HANDLE_CUDA_ERROR(cudaFree(d_points));
+  this->unlockSelf("TemplateVoxelMap::insertPointCloud");
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning)
+{
+  this->lockSelf("TemplateVoxelMap::insertPointCloud");
+
+  insertPointCloud(pointcloud.getConstDevicePointer(), pointcloud.getPointCloudSize(), voxel_meaning);
+
+  this->unlockSelf("TemplateVoxelMap::insertPointCloud");
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning)
+{
   uint32_t num_blocks, threads_per_block;
-  computeLinearLoad(points.size(), &num_blocks, &threads_per_block);
+  computeLinearLoad(size, &num_blocks, &threads_per_block);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   kernelInsertGlobalPointCloud<<<num_blocks, threads_per_block>>>(m_dev_data, m_dim, m_voxel_side_length,
-                                                                  d_points, points.size(), voxel_meaning);
+                                                                  points_d, size, voxel_meaning);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  HANDLE_CUDA_ERROR(cudaFree(d_points));
 }
 
 template<class Voxel>
 void TemplateVoxelMap<Voxel>::insertMetaPointCloud(const MetaPointCloud &meta_point_cloud,
                                                    BitVoxelMeaning voxel_meaning)
 {
+  this->lockSelf("TemplateVoxelMap::insertMetaPointCloud");
   LOGGING_INFO_C(VoxelmapLog, VoxelMap, "Inserting meta_point_cloud" << endl);
   computeLinearLoad(meta_point_cloud.getAccumulatedPointcloudSize(), &m_blocks_sensor_operations,
                            &m_threads_sensor_operations);
   kernelInsertMetaPointCloud<<<m_blocks_sensor_operations, m_threads_sensor_operations>>>(
       m_dev_data, meta_point_cloud.getDeviceConstPointer(), voxel_meaning, m_dim, m_voxel_side_length);
+  this->unlockSelf("TemplateVoxelMap::insertMetaPointCloud");
 }
 
 template<class Voxel>
 void TemplateVoxelMap<Voxel>::insertMetaPointCloud(const MetaPointCloud& meta_point_cloud,
                                                    const std::vector<BitVoxelMeaning>& voxel_meanings)
 {
+  this->lockSelf("TemplateVoxelMap::insertMetaPointCloud");
   assert(meta_point_cloud.getNumberOfPointclouds() == voxel_meanings.size());
 
   LOGGING_INFO_C(VoxelmapLog, VoxelMap, "Inserting meta_point_cloud" << endl);
@@ -993,15 +926,18 @@ void TemplateVoxelMap<Voxel>::insertMetaPointCloud(const MetaPointCloud& meta_po
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   HANDLE_CUDA_ERROR(cudaFree(voxel_meanings_d));
+  this->unlockSelf("TemplateVoxelMap::insertMetaPointCloud");
 }
 
 template<class Voxel>
 bool TemplateVoxelMap<Voxel>::writeToDisk(const std::string path)
 {
+  this->lockSelf("TemplateVoxelMap::writeToDisk");
   std::ofstream out(path.c_str());
   if(!out.is_open())
   {
     LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Write to file " << path << " failed!" << endl);
+    this->unlockSelf("TemplateVoxelMap::writeToDisk");
     return false;
   }
 
@@ -1040,6 +976,7 @@ bool TemplateVoxelMap<Voxel>::writeToDisk(const std::string path)
   delete buffer;
 
   LOGGING_INFO_C(VoxelmapLog, VoxelMap, "... writing to disk is done." << endl);
+  this->unlockSelf("TemplateVoxelMap::writeToDisk");
   return true;
 }
 
@@ -1047,14 +984,17 @@ bool TemplateVoxelMap<Voxel>::writeToDisk(const std::string path)
 template<class Voxel>
 bool TemplateVoxelMap<Voxel>::readFromDisk(const std::string path)
 {
+  this->lockSelf("TemplateVoxelMap::readFromDisk");
   MapType map_type;
   float voxel_side_length;
   uint32_t dim_x, dim_y, dim_z;
+
 
   std::ifstream in(path.c_str());
   if(!in.is_open())
   {
     LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Error in reading file " << path << endl);
+    this->unlockSelf("TemplateVoxelMap::readFromDisk");
     return false;
   }
 
@@ -1079,25 +1019,31 @@ bool TemplateVoxelMap<Voxel>::readFromDisk(const std::string path)
     in >> dim_z;
   }
 
+  Vector3ui dim(dim_x, dim_y, dim_z);
+
   // Check meta data
   if(map_type != this->getTemplateType())
   {
     LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Voxelmap type does not match!" << endl);
+    this->unlockSelf("TemplateVoxelMap::readFromDisk");
     return false;
   }
   if(voxel_side_length != this->m_voxel_side_length)
   {
-    LOGGING_WARNING_C(VoxelmapLog, VoxelMap, "Voxel side lenghts does not match! Continuing though..." << endl);
+    LOGGING_WARNING_C(VoxelmapLog, VoxelMap, "Read from file failed: Read Voxel side lenght (" << voxel_side_length <<
+                      ") does not match current object (" << m_voxel_side_length << ")! Continuing though..." << endl);
   }else{
     if(map_type == MT_BITVECTOR_VOXELMAP)
     {
       //TODO: Check for size of bitvector, as that may change!
     }
   }
-  if((dim_x != m_dim.x) || (dim_y != m_dim.y) || (dim_z != m_dim.z))
+  if(dim != m_dim)
   {
     // after that check we may use the class size variables.
-    LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Voxelmap dimensions do not match!" << endl);
+    LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Read from file failed: Read reference map dimension (" << dim << ") does not match current object (" << m_dim << ")!" << endl);
+
+    this->unlockSelf("TemplateVoxelMap::readFromDisk");
     return false;
   }
 
@@ -1120,6 +1066,7 @@ bool TemplateVoxelMap<Voxel>::readFromDisk(const std::string path)
   in.close();
   delete buffer;
   LOGGING_INFO_C(VoxelmapLog, VoxelMap, "... reading from disk is done." << endl);
+  this->unlockSelf("TemplateVoxelMap::readFromDisk");
   return true;
 }
 
@@ -1131,7 +1078,7 @@ bool TemplateVoxelMap<Voxel>::merge(const GpuVoxelsMapSharedPtr other, const Vec
 }
 
 template<class Voxel>
-bool TemplateVoxelMap<Voxel>::merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset, const BitVoxelMeaning* new_meaning)
+bool TemplateVoxelMap<Voxel>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning* new_meaning)
 {
   LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
   return false;
@@ -1165,10 +1112,7 @@ Vector3f TemplateVoxelMap<Voxel>::getMetricDimensions() const
 template<class Voxel>
 void TemplateVoxelMap<Voxel>::initSensorSettings(const Sensor& sensor)
 {
-  while (!lockMutex())
-  {
-    boost::this_thread::yield();
-  }
+  this->lockSelf("TemplateVoxelMap::initSensorSettings");
   m_sensor = sensor;
 
   if (m_dev_raw_sensor_data)
@@ -1185,16 +1129,13 @@ void TemplateVoxelMap<Voxel>::initSensorSettings(const Sensor& sensor)
   HANDLE_CUDA_ERROR(cudaMemcpy(m_dev_sensor, &m_sensor, sizeof(Sensor), cudaMemcpyHostToDevice));
   m_init_sensor = true;
   computeLinearLoad(m_sensor.data_size, &m_blocks_sensor_operations, &m_threads_sensor_operations);
-  unlockMutex();
+  this->unlockSelf("TemplateVoxelMap::initSensorSettings");
 }
 
 template<class Voxel>
 void TemplateVoxelMap<Voxel>::updateSensorPose(const Sensor& sensor)
 {
-  while (!lockMutex())
-  {
-    boost::this_thread::yield();
-  }
+  this->lockSelf("TemplateVoxelMap::updateSensorPose");
   if (m_init_sensor)
   {
     m_sensor.position = sensor.position;
@@ -1205,12 +1146,13 @@ void TemplateVoxelMap<Voxel>::updateSensorPose(const Sensor& sensor)
   {
     LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Initialize Sensor first!" << endl);
   }
-  unlockMutex();
+  this->unlockSelf("TemplateVoxelMap::updateSensorPose");
 }
 
 template<class Voxel>
 void TemplateVoxelMap<Voxel>::copySensorDataToDevice(const Vector3f* points)
 {
+  this->lockSelf("TemplateVoxelMap::copySensorDataToDevice");
   if (!m_init_sensor)
   {
     LOGGING_ERROR_C(VoxelmapLog, EnvironmentMap, "Call initSensorSettings() first!" << endl);
@@ -1226,11 +1168,13 @@ void TemplateVoxelMap<Voxel>::copySensorDataToDevice(const Vector3f* points)
 //  HANDLE_CUDA_ERROR(cudaEventSynchronize(m_stop));
 //  HANDLE_CUDA_ERROR(cudaEventElapsedTime(&m_elapsed_time, m_start, m_stop));
 //  printf(" ...done in %f ms!\n", m_elapsed_time);
+  this->unlockSelf("TemplateVoxelMap::copySensorDataToDevice");
 }
 
 template<class Voxel>
 void TemplateVoxelMap<Voxel>::transformSensorData()
 {
+  this->lockSelf("TemplateVoxelMap::transformSensorData");
 //  printf("transforming SENSOR data... ");
 //  m_elapsed_time = 0;
 //  HANDLE_CUDA_ERROR(cudaEventRecord(m_start, 0));
@@ -1241,6 +1185,7 @@ void TemplateVoxelMap<Voxel>::transformSensorData()
 //  HANDLE_CUDA_ERROR(cudaEventSynchronize(m_stop));
 //  HANDLE_CUDA_ERROR(cudaEventElapsedTime(&m_elapsed_time, m_start, m_stop));
 //  printf(" ...done in %f ms!\n", m_elapsed_time);
+  this->unlockSelf("TemplateVoxelMap::transformSensorData");
 }
 
 //template<class Voxel>

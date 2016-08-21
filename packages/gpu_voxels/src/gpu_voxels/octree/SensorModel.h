@@ -83,7 +83,8 @@ public:
   {
     Probability occ = first->getOccupancy();
     for (Voxel* i = first + 1; i < last; ++i)
-      occ = MIN(MAX(occ + i->getOccupancy(), MIN_OCCUPANCY), MAX_OCCUPANCY);
+      // watch out for overflow: cast to int32_t
+      occ = MIN(MAX( int32_t(int32_t(occ) + int32_t(i->getOccupancy())), int32_t(MIN_PROBABILITY)), int32_t(MAX_PROBABILITY));
     return occ;
   }
 
@@ -95,7 +96,8 @@ public:
   __device__ __host__ __forceinline__
   Probability estimateVoxelProbability(const voxel_count count) const
   {
-    return MIN(MAX(int32_t(initial_probability + update_probabilty * count), MIN_OCCUPANCY), MAX_OCCUPANCY);
+    // watch out for overflow: cast to int32_t
+    return MIN(MAX( int32_t(int32_t(initial_probability) + int32_t(update_probabilty) * count), int32_t(MIN_PROBABILITY)), int32_t(MAX_PROBABILITY));
   }
 
   /**

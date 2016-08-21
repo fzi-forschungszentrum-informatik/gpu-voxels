@@ -79,13 +79,13 @@ public:
    * @brief operator >> Overloaded ostream operator. Please note that the output bit string is starting from
    * Type 0.
    */
+  template<typename T>
   __host__
-  friend std::ostream& operator<<(std::ostream& os, const BitVoxel& dt)
+  friend T& operator<<(T& os, const BitVoxel& dt)
   {
     os << dt.bitVector();
     return os;
   }
-
 
   /**
    * @brief operator << Overloaded istream operator. Please note that the input bit string should

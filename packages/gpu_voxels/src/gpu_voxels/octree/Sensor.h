@@ -109,16 +109,15 @@ public:
   }
 
   __host__ __device__
-  Sensor(gpu_voxels::Vector3f _position, gpu_voxels::Matrix4f _orientation, uint32_t _data_width, uint32_t _data_height) :
-      position(_position), orientation(_orientation), data_width(_data_width), data_height(_data_height), data_size(
-          _data_width * _data_height)
+  Sensor(gpu_voxels::Matrix4f _pose, uint32_t _data_width, uint32_t _data_height) :
+      pose(_pose), data_width(_data_width), data_height(_data_height)
   {
   }
 
   __host__ __device__
   Sensor(const Sensor& other) :
-      position(other.position), orientation(other.orientation), data_width(other.data_width), data_height(
-          other.data_height), data_size(other.data_size)
+      pose(other.pose), data_width(other.data_width), data_height(
+          other.data_height)
   {
   }
 
@@ -129,11 +128,7 @@ public:
   __forceinline__
   gpu_voxels::Vector3f sensorCoordinatesToWorldCoordinates(const gpu_voxels::Vector3f& point)
   {
-    gpu_voxels::Matrix4f sensor_pose = orientation;
-    sensor_pose.a14 = position.x;
-    sensor_pose.a24 = position.y;
-    sensor_pose.a34 = position.z;
-    return sensor_pose * point;
+    return pose * point;
   }
 
   /*
@@ -202,7 +197,7 @@ public:
                          thrust::device_vector<Voxel> *&d_object_voxel);
 
   __host__
-  void processSensorData(Vector3f* h_points,
+  void processSensorData(const Vector3f *h_points,
                                  thrust::device_vector<Voxel> *&d_free_space_voxel,
                                  thrust::device_vector<Voxel> *&d_object_voxel);
 
@@ -218,11 +213,13 @@ private:
                                  thrust::device_vector<Voxel>& d_object_voxel);
 
 public:
-  gpu_voxels::Vector3f position;
-  gpu_voxels::Matrix4f orientation;
+  //gpu_voxels::Vector3f position;
+  //gpu_voxels::Matrix4f orientation;
+
+  gpu_voxels::Matrix4f pose;
+
   uint32_t data_width;
   uint32_t data_height;
-  uint32_t data_size;
   SensorDataProcessing object_data;
   SensorDataProcessing free_space_data;
 

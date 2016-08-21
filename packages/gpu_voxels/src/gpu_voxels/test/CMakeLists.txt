@@ -14,22 +14,22 @@
 ICMAKER_SET("test_gpu_voxels_core") # IDE_FOLDER ${ICL_CORE_IDE_FOLDER}
 
 ICMAKER_ADD_HEADERS(
-  helpers.h
 )
 
 ICMAKER_ADD_SOURCES(
   testing_main.cpp
-  helpers.cpp
   ../octree/test/ArgumentHandling.cpp
   ../octree/test/Main_Test.cpp
   ../octree/test/Helper.cpp
   )
 ICMAKER_ADD_CUDA_FILES(
+  testing_bitvector.cu
   testing_voxelmap.cu
   testing_voxellist.cu
   testing_octree.cu
   testing_octree_collisions.cu
   testing_cudaMath.cu
+  testing_pointclouds.cu
   ../octree/test/Tests.cu
   ../octree/test/Tests.h
   )
@@ -39,6 +39,7 @@ ICMAKER_INTERNAL_DEPENDENCIES(
   icl_core_config
   icl_core_logging
   gpu_voxels
+  gpu_voxels_voxelmap_tests
   )
 
 IF(Boost_FOUND)

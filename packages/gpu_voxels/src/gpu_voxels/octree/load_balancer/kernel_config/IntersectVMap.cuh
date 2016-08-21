@@ -129,7 +129,7 @@ public:
   {
   public:
     std::size_t* num_collisions;
-    const gpu_voxels::Vector3ui offset;
+    const gpu_voxels::Vector3i offset;
     const VoxelType* voxel_map;
     const gpu_voxels::Vector3ui voxel_map_dim;
     const uint32_t min_level;
@@ -138,7 +138,7 @@ public:
     __host__ __device__
     KernelParameters(const typename Base::AbstractKernelParameters& abstract_params,
                      std::size_t* p_num_collisions,
-                     const gpu_voxels::Vector3ui p_offset,
+                     const gpu_voxels::Vector3i p_offset,
                      const VoxelType* p_voxel_map,
                      const gpu_voxels::Vector3ui p_voxel_map_dim,
                      const uint32_t p_min_level,

@@ -46,7 +46,7 @@ public:
   void setView(Vector3ui start_voxel, Vector3ui end_voxel);
   void setOctreeBufferSwappedToFalse(const uint32_t index);
   bool hasOctreeBufferSwapped(const uint32_t index);
-  void setOctreeOccupancyThreshold(const uint32_t index, uint8_t threshold);
+  void setOctreeOccupancyThreshold(const uint32_t index, Probability threshold);
   bool getSuperVoxelSize(uint32_t & sdim);
   void setSuperVoxelSize(uint32_t sdim);
 private:

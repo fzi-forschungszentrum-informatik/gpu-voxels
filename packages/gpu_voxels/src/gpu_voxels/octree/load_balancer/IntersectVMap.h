@@ -75,7 +75,7 @@ public:
   IntersectVMap(NTree<branching_factor, level_count, InnerNode, LeafNode>* ntree,
                 const VoxelType* voxel_map,
                 const gpu_voxels::Vector3ui voxel_map_dim,
-                const gpu_voxels::Vector3ui offset = gpu_voxels::Vector3ui(0, 0, 0),
+                const gpu_voxels::Vector3i offset = gpu_voxels::Vector3i(0, 0, 0),
                 const uint32_t min_level = 0);
   virtual ~IntersectVMap();
 
@@ -99,7 +99,7 @@ protected:
    */
   BitVector<vft_size>* m_dev_result_voxelTypeFlags;
 
-  const gpu_voxels::Vector3ui m_offset;
+  const gpu_voxels::Vector3i m_offset;
   const VoxelType* m_voxel_map;
   const gpu_voxels::Vector3ui m_voxel_map_dim;
   const uint32_t m_min_level;

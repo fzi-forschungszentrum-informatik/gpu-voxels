@@ -34,16 +34,16 @@
 
 using namespace gpu_voxels;
 
-GpuVoxels* gvl;
+GpuVoxelsSharedPtr gvl;
 
 void ctrlchandler(int)
 {
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }
 void killhandler(int)
 {
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }
 
@@ -61,7 +61,8 @@ int main(int argc, char* argv[])
    * of your GPU. Even if an empty Octree is small, a
    * Voxelmap will always require the full memory.
    */
-  gvl = new GpuVoxels(200, 200, 200, 0.01);
+  gvl = GpuVoxels::getInstance();
+  gvl->initialize(200, 200, 200, 0.01);
 
   // Now we add some maps
   gvl->addMap(MT_PROBAB_VOXELMAP, "myProbabVoxmap");
@@ -91,13 +92,13 @@ int main(int argc, char* argv[])
 
   // We load the model of a coordinate system.
   if (!gvl->insertPointcloudFromFile("myCoordinateSystemMap", "coordinate_system_100.binvox", true,
-                                     eBVM_OCCUPIED, true, Vector3f(0, 0, 0),0.010))
+                                     eBVM_OCCUPIED, true, Vector3f(0, 0, 0),0.5))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
   }
 
   /*
-   * Now we start the main loop, that will animate and the scene.
+   * Now we start the main loop, that will animate the scene.
    */
   float t = 0.0;
   int j = 0;
@@ -119,9 +120,9 @@ int main(int argc, char* argv[])
 
     // generate info on the occuring collisions:
     LOGGING_INFO(
-        Gpu_voxels, "Collsions myProbabVoxmap + myBitmapVoxmap: " << gvl->getMap("myProbabVoxmap")->collideWith(gvl->getMap("myBitmapVoxmap")) << endl <<
-        "Collsions myOctree + myBitmapVoxmap: " << gvl->getMap("myOctree")->collideWith(gvl->getMap("myBitmapVoxmap")) << endl <<
-        "Collsions myOctree + myProbabVoxmap: " << gvl->getMap("myOctree")->collideWith(gvl->getMap("myProbabVoxmap")) << endl);
+        Gpu_voxels, "Collsions myProbabVoxmap + myBitmapVoxmap: " << gvl->getMap("myProbabVoxmap")->as<voxelmap::ProbVoxelMap>()->collideWith(gvl->getMap("myBitmapVoxmap")->as<voxelmap::BitVectorVoxelMap>()) << endl <<
+        "Collsions myOctree + myBitmapVoxmap: " << gvl->getMap("myOctree")->as<NTree::GvlNTreeDet>()->collideWith(gvl->getMap("myBitmapVoxmap")->as<voxelmap::BitVectorVoxelMap>()) << endl <<
+        "Collsions myOctree + myProbabVoxmap: " << gvl->getMap("myOctree")->as<NTree::GvlNTreeDet>()->collideWith(gvl->getMap("myProbabVoxmap")->as<voxelmap::ProbVoxelMap>()) << endl);
 
     // tell the visualier that the maps have changed
     gvl->visualizeMap("myProbabVoxmap");

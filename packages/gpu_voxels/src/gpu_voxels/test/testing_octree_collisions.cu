@@ -22,10 +22,11 @@
 #include <gpu_voxels/octree/NTree.h>
 #include <gpu_voxels/octree/GvlNTree.h>
 #include <gpu_voxels/voxellist/BitVoxelList.h>
-#include "helpers.h"
+#include <gpu_voxels/helpers/GeometryGeneration.h>
 
 using namespace gpu_voxels;
 using namespace NTree;
+using namespace geometry_generation;
 
 BOOST_AUTO_TEST_SUITE(octree_collisions)
 
@@ -46,7 +47,7 @@ BOOST_AUTO_TEST_CASE(octree_colliding_new_morton_voxellist)
 
   size_t num_colls;
 
-  num_colls = my_octree->intersect_morton<true, false, BitVectorVoxel>(*my_voxellist);
+  num_colls = my_octree->intersect_morton<true, false, false, BitVectorVoxel>(*my_voxellist);
 
   std::cout << "Num colls: " << num_colls << std::endl;
 
@@ -73,7 +74,7 @@ BOOST_AUTO_TEST_CASE(octree_colliding_regular_voxellist)
 
   size_t num_colls;
 
-  num_colls = my_octree->intersect_sparse<true, false, BitVectorVoxel>(*my_voxellist);
+  num_colls = my_octree->intersect_sparse<true, false, false, BitVectorVoxel>(*my_voxellist);
 
   std::cout << "Num colls: " << num_colls << std::endl;
 

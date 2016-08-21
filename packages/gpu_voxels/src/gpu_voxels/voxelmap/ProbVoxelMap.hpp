@@ -55,12 +55,7 @@ void ProbVoxelMap::insertSensorData(const Vector3f* points, const bool enable_ra
                                     const bool cut_real_robot, const BitVoxelMeaning voxel_meaning,
                                     BitVoxel<length>* robot_map)
 {
-  //  printf("trying to get lock\n");
-  while (!lockMutex())
-  {
-    //    printf("did not get lock\n");
-    boost::this_thread::yield();
-  }
+  this->lockSelf("ProbVoxelMap::insertSensorData");
   //  printf("got lock ----------------------------------------------------\n");
   //  if (enable_raycasting)
   //  {
@@ -104,7 +99,7 @@ void ProbVoxelMap::insertSensorData(const Vector3f* points, const bool enable_ra
 //  printf("update counter: %u\n", m_update_counter);
 
 //  printf("releasing lock ----------------------------------------------------\n");
-  unlockMutex();
+  this->unlockSelf("ProbVoxelMap::insertSensorData");
 }
 
 bool ProbVoxelMap::insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test)
@@ -115,51 +110,49 @@ bool ProbVoxelMap::insertRobotConfiguration(const MetaPointCloud *robot_links, b
 
 void ProbVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
 {
-  if(voxel_meaning != 0)
-     LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_0 << endl);
+  if(voxel_meaning != eBVM_OCCUPIED)
+     LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
   else
     this->clearMap();
 }
 
 void ProbVoxelMap::insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning)
 {
-  if(voxel_meaning != 0)
-    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_0 << endl);
+  if(voxel_meaning != eBVM_OCCUPIED)
+    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
   else
     this->Base::insertPointCloud(points, voxel_meaning);
 }
 
-size_t ProbVoxelMap::collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision,
-                                      float coll_threshold, const Vector3ui &offset)
+void ProbVoxelMap::insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning)
 {
-  size_t num_collisions = SSIZE_MAX;
-  switch (other->getMapType())
-  {
-    case MT_BITVECTOR_VOXELMAP:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-      //SVCollider collider(coll_threshold);
-      //BitVectorVoxelMap* m = (BitVectorVoxelMap*) other.get();
-      //num_collisions = this->collisionCheckBitvector(m, collider, meanings_in_collision.bitVector());
-      break;
-    }
-    case MT_BITVECTOR_VOXELLIST:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
-      break;
-    }
-    case MT_BITVECTOR_OCTREE:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " " << GPU_VOXELS_MAP_SWAP_FOR_COLLIDE << endl);
-      break;
-    }
-    default:
-    {
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-      break;
-    }
-  }
-  return num_collisions;
+  if(voxel_meaning != eBVM_OCCUPIED)
+    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
+  else
+    this->Base::insertPointCloud(pointcloud, voxel_meaning);
+}
+
+void ProbVoxelMap::insertPointCloud(const Vector3f *points_d, uint32_t size, const BitVoxelMeaning voxel_meaning)
+{
+  if(voxel_meaning != eBVM_OCCUPIED)
+    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
+  else
+    this->Base::insertPointCloud(points_d, size, voxel_meaning);
+}
+
+//Collsion Interface Implementations
+
+size_t ProbVoxelMap::collideWith(const BitVectorVoxelMap *map, float coll_threshold, const Vector3i &offset)
+{
+  DefaultCollider collider(coll_threshold);
+  return collisionCheckWithCounterRelativeTransform((TemplateVoxelMap*)map, collider, offset); //does the locking
+
+}
+
+size_t ProbVoxelMap::collideWith(const ProbVoxelMap *map, float coll_threshold, const Vector3i &offset)
+{
+  DefaultCollider collider(coll_threshold);
+  return collisionCheckWithCounterRelativeTransform((TemplateVoxelMap*)map, collider, offset); //does the locking
 }
 
 } // end of namespace

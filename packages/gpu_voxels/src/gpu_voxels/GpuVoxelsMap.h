@@ -29,12 +29,15 @@
 
 #include <cstdio>
 #include <vector>
+#include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/concept/assert.hpp>
+#include <boost/type_traits/is_convertible.hpp>
 #include <stdint.h> // for fixed size datatypes
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/helpers/PointcloudFileHandler.h>
-
+#include <gpu_voxels/logging/logging_gpu_voxels.h>
 #include <gpu_voxels/helpers/common_defines.h>
 
 namespace gpu_voxels {
@@ -44,12 +47,61 @@ typedef boost::shared_ptr<GpuVoxelsMap> GpuVoxelsMapSharedPtr;
 
 class GpuVoxelsMap
 {
+private:
+
+  //to ensure these methods can't be called
+  GpuVoxelsMap(const GpuVoxelsMap&);
+  const GpuVoxelsMap& operator=(const GpuVoxelsMap&);
+
+
 public:
   //! Constructor
   GpuVoxelsMap();
 
   //! Destructor
   virtual ~GpuVoxelsMap();
+
+  /*!
+   *
+   */
+  template<class T>
+  const T* as() const
+  {
+    BOOST_CONCEPT_ASSERT((boost::is_convertible<T*, GpuVoxelsMap*>));
+
+    return static_cast<const T*>(this);
+  }
+
+  /*!
+   *
+   */
+  template<class T>
+  T* as()
+  {
+    BOOST_CONCEPT_ASSERT((boost::is_convertible<T*, GpuVoxelsMap*>));
+
+    return static_cast<T*>(this);
+  }
+
+  /*!
+   *
+   */
+  template<class T>
+  bool is()
+  {
+    return dynamic_cast<T*>(this);
+  }
+
+  //mutex locking and unlocking
+  mutable boost::mutex m_mutex;
+  void lockSelf(const std::string& function_name) const;
+  void unlockSelf(const std::string& function_name) const;
+
+  void lockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, const std::string& function_name) const;
+
+  void unlockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, const std::string& function_name) const;
+
+
 
   /*!
    * \brief getMapType returns the type of the map
@@ -61,7 +113,9 @@ public:
    * \brief insertPointCloud Inserts a pointcloud with global coordinates
    * \param point_cloud The pointcloud to insert
    */
-  virtual void insertPointCloud(const std::vector<Vector3f> &point_cloud, BitVoxelMeaning voxel_meaning) = 0;
+  virtual void insertPointCloud(const std::vector<Vector3f> &point_cloud, const BitVoxelMeaning voxel_meaning) = 0;
+
+  virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning) = 0;
 
   virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test) = 0;
 
@@ -88,18 +142,7 @@ public:
    * \param coll_threshold The threshold when a collision is counted. Only valid for probabilistic maps.
    * \return The severity of the collision, namely the number of voxels that lie in collision
    */
-  virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui()) = 0;
-
-  /*!
-   * \brief collideWithResolution This does a collision check with 'other'.
-   * Only available with Octree Maps.
-   * \param other The map to do a collision check with.
-   * \param coll_threshold The threshold when a collision is counted. Only valid for probabilistic maps.
-   * \param resolution_level The resolution used for collision checking. resolution_level = 0 delivers the highest accuracy whereas each increase haves the resolution.
-   * \param offset The offset in cell coordinates
-   * \return The severity of the collision, namely the number of voxels that lie in collision
-   */
-  virtual size_t collideWithResolution(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const uint32_t resolution_level = 0, const Vector3ui &offset = Vector3ui()) = 0;
+  //virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3i &offset = Vector3i()) = 0;
 
   /*!
    * \brief collideWithTypes This does a collision check with 'other' and delivers the voxel meanings that are in collision.
@@ -111,7 +154,7 @@ public:
    * \param offset The offset in cell coordinates
    * \return The severity of the collision, namely the number of voxels that lie in collision
    */
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision, float coll_threshold = 1.0, const Vector3ui &offset = Vector3ui()) = 0;
+  //virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i()) = 0;
 
   /*!
    * \brief collideWithBitcheck This does a collision check with 'other' but voxels only collide, if the same bits are set in both.
@@ -122,7 +165,7 @@ public:
    * \param offset The offset in cell coordinates
    * \return The severity of the collision, namely the number of voxels that lie in collision
    */
-  virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3ui &offset = Vector3ui()) = 0;
+  //virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3i &offset = Vector3i()) = 0;
 
   /*!
    * \brief insertPointcloudFromFile inserts a pointcloud from a file into the map
@@ -153,7 +196,7 @@ public:
    * \param new_meaning If not NULL, the meaning of the copied Voxels is set to this meaning.
    * \return true if succeeded, false otherwise
    */
-  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui(), const BitVoxelMeaning* new_meaning = NULL) = 0;
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset = Vector3i(), const BitVoxelMeaning* new_meaning = NULL) = 0;
 
   // Maintanance functions
   /*!

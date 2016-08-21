@@ -32,73 +32,112 @@ namespace gpu_voxels {
 namespace voxelmap {
 
 /* ------------------ Temporary Sensor Model ------------ */
-static const probability cSENSOR_MODEL_FREE = -10;
-static const probability cSENSOR_MODEL_OCCUPIED = 72;
+static const Probability cSENSOR_MODEL_FREE = -10;
+static const Probability cSENSOR_MODEL_OCCUPIED = 72;
 
-const uint32_t cMAX_NR_OF_THREADS_PER_BLOCK = 1024;
 
 /* ------------------ DEVICE FUNCTIONS ------------------ */
 
 // VoxelMap addressing
-//! Maps discrete voxel coordinates to a voxel address
-__device__      __forceinline__
-uint32_t getVoxelIndex(const Vector3ui &dimensions, const uint32_t x,
-                                                  const uint32_t y, const uint32_t z)
+//! Maps 3D voxel coordinates to linear voxel index
+__device__ __host__     __forceinline__
+uint32_t getVoxelIndexUnsigned(const Vector3ui &dimensions,
+                       const uint32_t x, const uint32_t y, const uint32_t z)
 {
-  return (z * dimensions.x * dimensions.y + y * dimensions.x + x);
+  return z * dimensions.x * dimensions.y + y * dimensions.x + x;
 }
 
-//! Maps discrete voxel coordinates to a voxel adress
+//! Maps 3D voxel coordinates to linear voxel index
 __host__ __device__      __forceinline__
-uint32_t getVoxelIndex(const Vector3ui &dimensions, const Vector3ui &coords)
+uint32_t getVoxelIndexUnsigned(const Vector3ui &dimensions, const Vector3ui &coords)
 {
-  return (coords.z * dimensions.x * dimensions.y + coords.y * dimensions.x + coords.x);
+  return coords.z * dimensions.x * dimensions.y + coords.y * dimensions.x + coords.x;
+}
+
+//! Maps 3D voxel coordinates to linear voxel index
+__device__ __host__     __forceinline__
+int32_t getVoxelIndexSigned(const Vector3ui &dimensions,
+                            const int32_t x, const int32_t y, const int32_t z)
+{
+  return z * (int32_t)dimensions.x * (int32_t)dimensions.y + y * (int32_t)dimensions.x + x;
+}
+
+//! Maps 3D voxel coordinates to linear voxel index
+__host__ __device__      __forceinline__
+int32_t getVoxelIndexSigned(const Vector3ui &dimensions, const Vector3i &offset)
+{
+  // cast the values to prevent underflow
+  return offset.z * (int32_t)dimensions.x * (int32_t)dimensions.y + offset.y * (int32_t)dimensions.x + offset.x;
 }
 
 template<class Voxel>
-__device__      __forceinline__
+__device__ __host__     __forceinline__
 Voxel* getVoxelPtr(const Voxel* voxelmap, const Vector3ui &dimensions,
                    const uint32_t x, const uint32_t y, const uint32_t z)
 {
-  return (Voxel*) (voxelmap + getVoxelIndex(dimensions, x, y, z));
+  return (Voxel*) (voxelmap + getVoxelIndexUnsigned(dimensions, x, y, z));
+}
+
+template<class Voxel>
+__device__ __host__     __forceinline__
+Voxel* getVoxelPtr(const Voxel* voxelmap, const Vector3ui &dimensions,
+                   const Vector3ui &voxel_coords)
+{
+  return (Voxel*) (voxelmap + getVoxelIndexUnsigned(dimensions, voxel_coords));
+}
+
+template<class Voxel>
+__device__ __host__     __forceinline__
+Voxel* getVoxelPtrSignedOffset(const Voxel* voxelmap, const Vector3ui &dimensions,
+                   const int32_t x, const int32_t y, const int32_t z)
+{
+  return (Voxel*) (voxelmap + getVoxelIndexSigned(dimensions, x, y, z));
+}
+
+template<class Voxel>
+__device__ __host__     __forceinline__
+Voxel* getVoxelPtrSignedOffset(const Voxel* voxelmap, const Vector3ui &dimensions,
+                   const Vector3i &voxel_offset)
+{
+  return (Voxel*) (voxelmap + getVoxelIndexSigned(dimensions, voxel_offset));
 }
 
 //! Maps a voxel address to discrete voxel coordinates
 template<class Voxel>
-__device__ __forceinline__
+__device__ __host__     __forceinline__
 Vector3ui mapToVoxels(const Voxel* voxelmap, const Vector3ui &dimensions,
                       const Voxel* voxel)
 {
-  Vector3ui integer_coordinates;
+  Vector3ui uint_coords;
   int voxel_index = voxel - voxelmap;
-  integer_coordinates.z = voxel_index / (dimensions.x * dimensions.y);
-  integer_coordinates.y = (voxel_index -= integer_coordinates.z * (dimensions.x * dimensions.y)) / dimensions.x;
-  integer_coordinates.x = (voxel_index -= integer_coordinates.y * dimensions.x);
-  return integer_coordinates;
+  uint_coords.z = voxel_index / (dimensions.x * dimensions.y);
+  uint_coords.y = (voxel_index -= uint_coords.z * (dimensions.x * dimensions.y)) / dimensions.x;
+  uint_coords.x = (voxel_index -= uint_coords.y * dimensions.x);
+  return uint_coords;
 }
 
 //! Partitioning of continuous data into voxels. Maps float coordinates to dicrete voxel coordinates.
 __device__ __host__     __forceinline__
 Vector3ui mapToVoxels(const float voxel_side_length, const Vector3f &coordinates)
 {
-  Vector3ui integer_coordinates;
-  integer_coordinates.x = static_cast<uint32_t>(floor(coordinates.x / voxel_side_length));
-  integer_coordinates.y = static_cast<uint32_t>(floor(coordinates.y / voxel_side_length));
-  integer_coordinates.z = static_cast<uint32_t>(floor(coordinates.z / voxel_side_length));
+  Vector3ui uint_coords;
+  uint_coords.x = static_cast<uint32_t>(floor(coordinates.x / voxel_side_length));
+  uint_coords.y = static_cast<uint32_t>(floor(coordinates.y / voxel_side_length));
+  uint_coords.z = static_cast<uint32_t>(floor(coordinates.z / voxel_side_length));
 
-  // printf("coordinates.x = %f -> integer_coordinates.x = %u \n", coordinates.x, integer_coordinates.x);
-  return integer_coordinates;
+  // printf("coordinates.x = %f -> uint_coords.x = %u \n", coordinates.x, uint_coords.x);
+  return uint_coords;
 }
 
 template<class Voxel>
-__device__      __forceinline__
+__device__ __host__     __forceinline__
 Voxel* getHighestVoxelPtr(const Voxel* base_addr, const Vector3ui &dimensions)
 {
   return getVoxelPtr(base_addr, dimensions, dimensions.x -1, dimensions.y -1, dimensions.z -1);
 }
 
 //! Returns the center of a voxel as float coordinates. Mainly for boost test purposes!
-__device__      __forceinline__
+__device__ __host__     __forceinline__
 Vector3f getVoxelCenter(float voxel_side_length, const Vector3ui &voxel_coords)
 {
 
@@ -308,12 +347,6 @@ void kernelCollideVoxelMapsBitvector(BitVoxel<length>* voxelmap, const uint32_t 
                                      BitVoxel<length>* other_map, Collider collider,
                                      BitVector<length>* results, uint16_t* num_collisions, const uint16_t sv_offset);
 
-////! Function that tests 3d -> 1d mapping of voxel map storage
-template<class Voxel>
-__global__
-void kernelAddressingTest(const Voxel* voxelmap_base_address, const Vector3ui dimensions, const float voxel_side_length,
-                          const Vector3f *testpoints, const size_t testpoints_size, bool* success);
-
 
 /*! Collide two voxel maps with storing collision info (for debugging only)
  * Voxels are considered occupied for values
@@ -334,7 +367,7 @@ void kernelCollideVoxelMapsDebug(Voxel* voxelmap, const uint32_t voxelmap_size, 
 template<class Voxel>
 __global__
 void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui map_dim, const float voxel_side_length,
-                                  Vector3f* points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning);
+                                  const Vector3f* points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning);
 
 
 template<class Voxel>

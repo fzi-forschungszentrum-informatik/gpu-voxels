@@ -34,11 +34,12 @@ template class BitVoxelList<BIT_VECTOR_LENGTH, OctreeVoxelID>;
 // ############################### TemplateVoxelList ######################################
 // Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects
 template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::equals(const TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>&) const;
-template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::subtract(const GpuVoxelsMapSharedPtr, const Vector3f&);
+template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::subtract(const TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>*, const Vector3f&);
+//template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::subtract(const TemplateVoxelList<ProbabilisticVoxel, MapVoxelID>*, const Vector3f&);
 
-//template size_t TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::collideCountingPerMeaning(const GpuVoxelsMapSharedPtr, std::vector<size_t>&, const Vector3ui&);
+//template size_t TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::collideCountingPerMeaning(const GpuVoxelsMapSharedPtr, std::vector<size_t>&, const Vector3i&);
 
-//virtual bool subtract(const GpuVoxelsMapSharedPtr other, const Vector3ui &voxel_offset = Vector3ui());
+//virtual bool subtract(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset = Vector3i());
 
 // ############################### ProbVoxelMap (inherits from TemplateVoxelMap) ######################################
 // Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects

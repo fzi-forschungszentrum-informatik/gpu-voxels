@@ -49,26 +49,27 @@ ProbabilisticVoxel::~ProbabilisticVoxel()
 }
 
 __host__ __device__
-probability ProbabilisticVoxel::updateOccupancy(const probability occupancy)
+Probability ProbabilisticVoxel::updateOccupancy(const Probability occupancy)
 {
-  m_occupancy = probability(MIN(MAX(int32_t(m_occupancy + occupancy), int32_t(MIN_PROBABILITY)), int32_t(MAX_PROBABILITY)));
+  // watch out for overflow: cast to int32_t
+  m_occupancy = MIN(MAX( int32_t(int32_t(m_occupancy) + int32_t(occupancy)), int32_t(MIN_PROBABILITY)), int32_t(MAX_PROBABILITY));
   return m_occupancy;
 }
 
 __host__ __device__
-probability& ProbabilisticVoxel::occupancy()
-{
-  return m_occupancy;
-}
-
-__host__ __device__
-const probability& ProbabilisticVoxel::occupancy() const
+Probability& ProbabilisticVoxel::occupancy()
 {
   return m_occupancy;
 }
 
 __host__ __device__
-probability ProbabilisticVoxel::getOccupancy() const
+const Probability& ProbabilisticVoxel::occupancy() const
+{
+  return m_occupancy;
+}
+
+__host__ __device__
+Probability ProbabilisticVoxel::getOccupancy() const
 {
   return m_occupancy;
 }

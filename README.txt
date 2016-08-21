@@ -9,12 +9,13 @@ and post to gpu-voxels@listserv.fzi.de
 The library is developed and maintained by:
 Andreas Hermann
 
-Contributors are:
+Contributors are (in temporal order):
 Sebastian Klemm
 Florian Drews
 Matthias Wagner
 Felix Mauch
 Christian Jülg
+Herbert Pietrzyk
 
 
 We would be grateful if scientific publications resulting from projects that make use of GPU-Voxels would cite our overview paper:
@@ -26,12 +27,27 @@ in Intelligent Robots and Systems (IROS 2014, Chicago, September 2014)
 The research leading to the results has received funding from the German Federal Ministry of Education and Research (BMBF) under grant agreement no. 01IM12006C (ISABEL).
 
 
-COMPILATION:
+BUILDING:
 
-mkdir build
-cd build
-cmake ..
-make
+Install dependencies:
+ Core: 
+    CUDA > 5.5, 
+    PCL,
+    OpenNI,
+    Boost
+ Visualizer: 
+    GLEW (libglew, libglew-dev)
+    GLM (libglm-dev)
+    OpenGL
+    GLUT (freeglut3, freeglut3-dev)
+ Examples:
+    Some examples require ROS (Robot Operation System) for parsing Robot Descriptions (URDF) and to interface 3D cameras
+
+Compiling:
+ mkdir build
+ cd build
+ cmake ..
+ make
 
 ==> This will also generate example programs and a visualization tool to see some live demos.
 

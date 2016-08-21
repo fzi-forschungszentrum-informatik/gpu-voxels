@@ -42,11 +42,11 @@ static const std::size_t BIT_VECTOR_LENGTH = 256;
  */
 enum BitVoxelMeaning
 {
-  eBVM_OCCUPIED           = 0,
-  eBVM_COLLISION          = 1,
-  eBVM_FREE               = 8,
-  eBVM_UNKNOWN            = 9,
-  eBVM_SWEPT_VOLUME_START = 10,
+  eBVM_FREE               = 0,
+  eBVM_OCCUPIED           = 1,
+  eBVM_COLLISION          = 2,
+  eBVM_UNKNOWN            = 3,
+  eBVM_SWEPT_VOLUME_START = 4,
   eBVM_SWEPT_VOLUME_END   = 254,
   eBVM_UNDEFINED          = 255
 };
@@ -65,7 +65,7 @@ enum MapType {
 
 static const std::string GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED = "THIS TYPE OF DATA STRUCTURE IS NOT YET IMPLEMENTED!";
 static const std::string GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED = "THIS OPERATION IS NOT SUPPORTED BY THE DATA STRUCTURE!";
-static const std::string GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_0 = "THIS DATA STRUCTURE ONLY SUPPORTS BITVOXEL MEANING 0!";
+static const std::string GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED = "THIS DATA STRUCTURE ONLY SUPPORTS BITVOXEL MEANING eBVM_OCCUPIED!";
 static const std::string GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED = "THIS OPERATION IS NOT YET SUPPORTED BY THE DATA STRUCTURE!";
 static const std::string GPU_VOXELS_MAP_SWAP_FOR_COLLIDE = "TRY TO SWAP BOTH DATA STRUCTURES TO COLLIDE.";
 static const std::string GPU_VOXELS_MAP_OFFSET_ON_WRONG_DATA_STRUCTURE = "OFFSET ADDITION ONLY POSSIBLE WHEN COLLIDING WITH VOXELMAP/VOXELLIST";
@@ -88,6 +88,15 @@ typedef BitVoxel<BIT_VECTOR_LENGTH> BitVectorVoxel;
 
 typedef uint32_t MapVoxelID;    // 32 Bits are enough in Maps, as GPU RAM restricts map size
 typedef uint64_t OctreeVoxelID; // Doesn't have to be in a 32 bit range, since the modeled space on Octrees can be a multitude of the maps
+
+
+/**
+ * @brief Type for holding occupation probability
+ */
+typedef int8_t Probability;
+static const Probability UNKNOWN_PROBABILITY = Probability(-128);
+static const Probability MIN_PROBABILITY = Probability(-127);
+static const Probability MAX_PROBABILITY = Probability(127);
 
 
 // ---------------- VoxelMap ----------------------

@@ -54,7 +54,7 @@ inline Vector3ui indexToXYZ(const uint32_t index, const Vector3ui dim)
 
 __global__ void fill_vbo_without_precounting(ProbabilisticVoxel* voxelMap, Vector3ui dim_voxel_map,
                                              Vector3ui dim_super_voxel, Vector3ui start_voxel,
-                                             Vector3ui end_voxel, uint8_t occupancy_threshold, float4* vbo,
+                                             Vector3ui end_voxel, Probability occupancy_threshold, float4* vbo,
                                              uint32_t* vbo_offsets, uint32_t* vbo_limits,
                                              uint32_t* write_index, uint8_t*, uint8_t* prefixes);
 

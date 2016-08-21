@@ -165,18 +165,9 @@ void translate(thrust::host_vector<gpu_voxels::Vector3ui>& points,
 void rotate(thrust::host_vector<gpu_voxels::Vector3ui>& points, float angle_degree,
             gpu_voxels::Vector3f translation)
 {
-
-  gpu_voxels::Matrix4f rotation_z;
   float angle_radian = angle_degree / 180.0f * M_PI;
-  rotation_z.a11 = std::cos(angle_radian);
-  rotation_z.a12 = -std::sin(angle_radian);
-  rotation_z.a13 = 0;
-  rotation_z.a21 = std::sin(angle_radian);
-  rotation_z.a22 = std::cos(angle_radian);
-  rotation_z.a23 = 0;
-  rotation_z.a31 = 0;
-  rotation_z.a32 = 0;
-  rotation_z.a33 = 1;
+
+  gpu_voxels::Matrix4f rotation_z = yaw(angle_radian);
 
   for (uint32_t i = 0; i < points.size(); ++i)
   {
@@ -517,25 +508,25 @@ bool insertTest(OctreeVoxelID num_points, OctreeVoxelID num_inserts, bool set_fr
 //o->print();
 
 // insert voxel
-  thrust::host_vector<Voxel> h_insertVoxel = randomVoxel(num_inserts, NUM_VOXEL, MAX_OCCUPANCY);
+  thrust::host_vector<Voxel> h_insertVoxel = randomVoxel(num_inserts, NUM_VOXEL, MAX_PROBABILITY);
 
 //  gpu_voxels::Vector3ui t_vec(0, 10, 0);
-//  h_insertVoxel[0] = Voxel(morton_code60(t_vec), t_vec, MAX_OCCUPANCY);
+//  h_insertVoxel[0] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
 //  t_vec = gpu_voxels::Vector3ui(0, 10, 1);
-//  h_insertVoxel[1] = Voxel(morton_code60(t_vec), t_vec, MAX_OCCUPANCY);
+//  h_insertVoxel[1] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
 //  t_vec = gpu_voxels::Vector3ui(1, 10, 0);
-//  h_insertVoxel[2] = Voxel(morton_code60(t_vec), t_vec, MAX_OCCUPANCY);
+//  h_insertVoxel[2] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
 //  t_vec = gpu_voxels::Vector3ui(1, 10, 1);
-//  h_insertVoxel[3] = Voxel(morton_code60(t_vec), t_vec, MAX_OCCUPANCY);
+//  h_insertVoxel[3] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
 //  t_vec = gpu_voxels::Vector3ui(2, 10, 0);
-//  h_insertVoxel[4] = Voxel(morton_code60(t_vec), t_vec, MAX_OCCUPANCY);
+//  h_insertVoxel[4] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
 //  t_vec = gpu_voxels::Vector3ui(2, 10, 1);
-//  h_insertVoxel[5] = Voxel(morton_code60(t_vec), t_vec, MAX_OCCUPANCY);
+//  h_insertVoxel[5] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
 //  t_vec = gpu_voxels::Vector3ui(0, 10, 2);
-//  h_insertVoxel[6] = Voxel(morton_code60(t_vec), t_vec, MAX_OCCUPANCY);
+//  h_insertVoxel[6] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
 //  t_vec = gpu_voxels::Vector3ui(1, 10, 2);
-//  h_insertVoxel[7] = Voxel(morton_code60(t_vec), t_vec, MAX_OCCUPANCY);
-//thrust::host_vector<Voxel> h_insertVoxel = randomVoxel(num_inserts, NUM_VOXEL, MAX_OCCUPANCY); //linearVoxel(num_inserts, num_points, MAX_OCCUPANCY); // //
+//  h_insertVoxel[7] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
+//thrust::host_vector<Voxel> h_insertVoxel = randomVoxel(num_inserts, NUM_VOXEL, MAX_PROBABILITY); //linearVoxel(num_inserts, num_points, MAX_PROBABILITY); // //
 
   time1 = getCPUTime();
   thrust::sort(h_insertVoxel.begin(), h_insertVoxel.end()); // TODO: its slow, since its a comparation based sort and not a radix sort; Try to use radix sort instead; e.g. sort_key_value()

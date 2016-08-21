@@ -110,7 +110,7 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
 }
 
 __host__
-void Sensor::processSensorData(Vector3f* h_points,
+void Sensor::processSensorData(const Vector3f* h_points,
                                thrust::device_vector<Voxel> *&d_free_space_voxel,
                                thrust::device_vector<Voxel> *&d_object_voxel)
 {

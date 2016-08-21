@@ -29,14 +29,6 @@
 namespace gpu_voxels {
 
 /**
- * @brief Type for holding the occupation probability
- */
-typedef int8_t probability;
-static const probability UNKNOWN_PROBABILITY = probability(-128);
-static const probability MIN_PROBABILITY = probability(-127);
-static const probability MAX_PROBABILITY = probability(127);
-
-/**
  * @brief Probabilistic voxel type with probability in log-odd representation
  */
 class ProbabilisticVoxel: public AbstractVoxel
@@ -57,28 +49,28 @@ public:
    * @return Returns the updated occupancy.
    */
   __host__   __device__
-  probability updateOccupancy(const probability occupancy);
+  Probability updateOccupancy(const Probability occupancy);
 
   /**
    * @brief occupancy Write reference.
    * @return
    */
   __host__   __device__
-  probability& occupancy();
+  Probability& occupancy();
 
   /**
    * @brief occupancy Read-only reference.
    * @return
    */
   __host__   __device__
-   const probability& occupancy() const;
+   const Probability& occupancy() const;
 
   /**
    * @brief getOccupancy Read-only access per copy
    * @return
    */
   __host__   __device__
-  probability getOccupancy() const;
+  Probability getOccupancy() const;
 
   __host__   __device__
   void insert(const uint32_t voxel_meaning);
@@ -98,8 +90,9 @@ public:
   };
 
 
+  template<typename T>
   __host__
-  friend std::ostream& operator<<(std::ostream& os, const ProbabilisticVoxel& dt)
+  friend T& operator<<(T& os, const ProbabilisticVoxel& dt)
   {
     os << dt.getOccupancy();
     return os;
@@ -108,14 +101,14 @@ public:
   __host__
   friend std::istream& operator>>(std::istream& in, ProbabilisticVoxel& dt)
   {
-    probability tmp;
+    Probability tmp;
     in >> tmp;
     dt.occupancy() = tmp;
     return in;
   }
 
 protected:
-  probability m_occupancy;
+  Probability m_occupancy;
 };
 
 } // end of ns

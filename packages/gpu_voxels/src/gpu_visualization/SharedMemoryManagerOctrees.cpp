@@ -116,6 +116,7 @@ void SharedMemoryManagerOctrees::setOctreeBufferSwappedToFalse(const uint32_t in
     *swapped.first = false;
   }
 }
+
 bool SharedMemoryManagerOctrees::hasOctreeBufferSwapped(const uint32_t index)
 {
   std::string swapped_buffer_name = shm_variable_name_octree_buffer_swapped
@@ -132,12 +133,14 @@ bool SharedMemoryManagerOctrees::hasOctreeBufferSwapped(const uint32_t index)
     return false;
   }
 }
-void SharedMemoryManagerOctrees::setOctreeOccupancyThreshold(const uint32_t index, uint8_t threshold)
+
+void SharedMemoryManagerOctrees::setOctreeOccupancyThreshold(const uint32_t index, Probability threshold)
 {
   std::string threshold_buffer_name = shm_variable_name_occupancy_threshold
       + boost::lexical_cast<std::string>(index);
-  shmm->getMemSegment().find_or_construct<uint8_t>(threshold_buffer_name.c_str())(threshold);
+  shmm->getMemSegment().find_or_construct<Probability>(threshold_buffer_name.c_str())(threshold);
 }
+
 bool SharedMemoryManagerOctrees::getSuperVoxelSize(uint32_t & sdim)
 {
   std::pair<uint32_t*, std::size_t> res_s = shmm->getMemSegment().find<uint32_t>(shm_variable_name_super_voxel_size.c_str());
@@ -149,6 +152,7 @@ bool SharedMemoryManagerOctrees::getSuperVoxelSize(uint32_t & sdim)
   return false;
 
 }
+
 void SharedMemoryManagerOctrees::setSuperVoxelSize(uint32_t sdim)
 {
   std::pair<uint32_t*, std::size_t> res_s = shmm->getMemSegment().find<uint32_t>(shm_variable_name_super_voxel_size.c_str());
@@ -157,6 +161,7 @@ void SharedMemoryManagerOctrees::setSuperVoxelSize(uint32_t sdim)
     *(res_s.first) = (uint32_t) (std::log(sdim) / std::log(2)) + 1;
   }
 }
+
 void SharedMemoryManagerOctrees::setView(Vector3ui start_voxel, Vector3ui end_voxel)
 {
   shmm->getMemSegment().find_or_construct<Vector3ui>(shm_variable_name_view_start_voxel.c_str())(start_voxel);

@@ -14,15 +14,17 @@
 
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 #include <gpu_voxels/voxelmap/VoxelMap.h>
+#include <gpu_voxels/voxelmap/Tests.h>
 #include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/voxel/SVCollider.hpp>
 #include <gpu_voxels/voxel/BitVoxel.hpp>
-#include "helpers.h"
+#include <gpu_voxels/helpers/GeometryGeneration.h>
 
 #include <boost/test/unit_test.hpp>
 
 using namespace gpu_voxels;
-using namespace gpu_voxels::voxelmap;
+using namespace voxelmap;
+using namespace geometry_generation;
 
 BOOST_AUTO_TEST_SUITE(voxelmap)
 
@@ -34,10 +36,36 @@ BOOST_AUTO_TEST_CASE(addresScheme)
   float voxel_side_length = 1.f;
   bool success = true;
 
-  BitVectorVoxelMap map(dim.x, dim.y, dim.z, voxel_side_length, MT_BITVECTOR_VOXELMAP);
-  map.triggerAddressingTest(dim, voxel_side_length, nr_of_tests, &success);
+  test::triggerAddressingTest<BitVectorVoxel>(dim, voxel_side_length, nr_of_tests, &success);
 
   BOOST_CHECK_MESSAGE(success, "FloatCoords to Voxel == Voxel to FloatCoords");
+}
+
+
+BOOST_AUTO_TEST_CASE(offset)
+{
+  // (offset.z * (int32_t)dimensions.x * (int32_t)dimensions.y + offset.y * (int32_t)dimensions.x + offset.x);
+
+  Vector3ui dim(15, 16, 17);
+  Vector3i  offset(0, -2, 0);
+  ptrdiff_t ptr_offset = getVoxelIndexSigned(dim, offset);
+  ptrdiff_t ground_truth = -30;
+  BOOST_CHECK_MESSAGE( ptr_offset == ground_truth, "Negative Offset -30 correct.");
+
+  offset = Vector3i(1, -2, -3);
+  ptr_offset = getVoxelIndexSigned(dim, offset);
+  ground_truth = -749;
+  BOOST_CHECK_MESSAGE( ptr_offset == ground_truth, "Negative Offset -749 correct.");
+
+  offset = Vector3i(3, -2, -1);
+  ptr_offset = getVoxelIndexSigned(dim, offset);
+  ground_truth = -267;
+  BOOST_CHECK_MESSAGE( ptr_offset == ground_truth, "Negative Offset -267 correct.");
+
+  offset = Vector3i(-1, -2, 3);
+  ptr_offset = getVoxelIndexSigned(dim, offset);
+  ground_truth = 689;
+  BOOST_CHECK_MESSAGE( ptr_offset == ground_truth, "Positive Offset 689 correct.");
 }
 
 
@@ -47,16 +75,40 @@ BOOST_AUTO_TEST_CASE(collision)
   Vector3ui dim(89, 123, 74);
   float side_length = 1.f;
   ProbVoxelMap map_1(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP);
-  GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP));
+  ProbVoxelMap map_2(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP);
 
   std::vector<Vector3f> this_testpoints;
 
   createEquidistantPointsInBox(nr_tests, dim, side_length, this_testpoints);
 
   map_1.insertPointCloud(this_testpoints, eBVM_OCCUPIED);
-  map_2->insertPointCloud(this_testpoints, eBVM_OCCUPIED);
+  map_2.insertPointCloud(this_testpoints, eBVM_OCCUPIED);
 
-  BOOST_CHECK_MESSAGE(map_1.collideWith(map_2, 0.1) == nr_tests, "All collisions detected.");
+  BOOST_CHECK_MESSAGE(map_1.collideWith(&map_2, 0.1) == nr_tests, "All collisions detected.");
+}
+
+//! Create two 3x3x3 boxes that overlap by 8 voxels.
+//! Then collide with and without offset.
+BOOST_AUTO_TEST_CASE(collision_with_offset)
+{
+  Vector3ui dim(89, 123, 74);
+  float side_length = 1.f;
+  ProbVoxelMap map_1(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP);
+  ProbVoxelMap map_2(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP);
+
+  std::vector<Vector3f> this_testpoints1;
+  std::vector<Vector3f> this_testpoints2;
+
+  this_testpoints1 = createBoxOfPoints( Vector3f(2.1, 2.1, 2.1), Vector3f(4.1, 4.1, 4.1), 0.5);
+  this_testpoints2 = createBoxOfPoints( Vector3f(3.1, 3.1, 3.1), Vector3f(5.1, 5.1, 5.1), 0.5);
+
+  map_1.insertPointCloud(this_testpoints1, eBVM_OCCUPIED);
+  map_2.insertPointCloud(this_testpoints2, eBVM_OCCUPIED);
+
+  BOOST_CHECK_MESSAGE(map_1.collideWith(&map_2, 0.1) == 8, "All collisions without offset detected.");
+  BOOST_CHECK_MESSAGE(map_1.collideWith(&map_2, 0.1, Vector3i(-1,0,-1)) == 18, "All collisions with negative offset detected.");
+  BOOST_CHECK_MESSAGE(map_2.collideWith(&map_1, 0.1, Vector3i(1,0,1)) == 18, "All collisions with positive offset detected.");
+
 }
 
 BOOST_AUTO_TEST_CASE(no_collision)
@@ -69,17 +121,17 @@ BOOST_AUTO_TEST_CASE(no_collision)
   std::vector<Vector3f> other_testpoints;
 
   ProbVoxelMap map_1(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP);
-  GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP));
+  ProbVoxelMap map_2(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP);
 
   // clear the map, insert non overlapping point pattern in both maps,
   // check for NO collision
   createNonOverlapping3dCheckerboard(nr_tests, dim, side_length, this_testpoints, other_testpoints);
 
   map_1.insertPointCloud(this_testpoints, eBVM_OCCUPIED);
-  map_2->insertPointCloud(other_testpoints, eBVM_OCCUPIED);
+  map_2.insertPointCloud(other_testpoints, eBVM_OCCUPIED);
 
   // there shouldn't be a collision in this test!
-  BOOST_CHECK_MESSAGE(map_1.collideWith(map_2, 0.1) == 0, "No collisions detected.");
+  BOOST_CHECK_MESSAGE(map_1.collideWith(&map_2, 0.1) == 0, "No collisions detected.");
 }
 
 /**
@@ -214,26 +266,32 @@ BOOST_AUTO_TEST_CASE(bitvoxelmap_bitshift)
 BOOST_AUTO_TEST_CASE(iostream_bitvoxel)
 {
   BitVectorVoxel my_voxel;
-  my_voxel.insert(eBVM_COLLISION);
-  my_voxel.insert(eBVM_SWEPT_VOLUME_START);
 
-  std::string collision_and_sv_start = "0100000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+  my_voxel.insert(eBVM_FREE);
+  my_voxel.insert(eBVM_COLLISION);
+  my_voxel.insert(eBVM_UNKNOWN);
+  my_voxel.insert(eBVM_SWEPT_VOLUME_START);
+  my_voxel.insert(BitVoxelMeaning(111));
+  my_voxel.insert(eBVM_SWEPT_VOLUME_END);
+  my_voxel.insert(eBVM_UNDEFINED);
+
+  std::string ground_truth = "1011100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011";
 
   std::stringstream ss;
   ss << my_voxel;
 
-  BOOST_CHECK_MESSAGE(ss.str() == collision_and_sv_start, "Outstream");
+  BOOST_CHECK_MESSAGE(ss.str() == ground_truth, "Outstream");
 
 
   BitVectorVoxel my_voxel2;
-  ss.str(collision_and_sv_start);
+  ss.str(ground_truth);
   ss >> my_voxel2;
 
   ss.str(std::string());
   ss << my_voxel2;
 
 
-  BOOST_CHECK_MESSAGE(ss.str() == collision_and_sv_start, "Instream");
+  BOOST_CHECK_MESSAGE(ss.str() == ground_truth, "Instream");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

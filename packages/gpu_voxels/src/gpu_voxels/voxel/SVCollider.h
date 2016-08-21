@@ -31,7 +31,7 @@ public:
   SVCollider(const float coll_threshold, const size_t window_size = 0);
 
   __host__ __device__
-  SVCollider(const probability threshold1, const probability threshold2, const size_t window_size = 0);
+  SVCollider(const Probability threshold1, const Probability threshold2, const size_t window_size = 0);
 
   __host__ __device__
   bool collide(const ProbabilisticVoxel& v1, const ProbabilisticVoxel& v2) const;
@@ -57,10 +57,10 @@ public:
 
 protected:
   __host__ __device__
-  static probability floatToProbability(const float val);
+  static Probability floatToProbability(const float val);
 
 protected:
-  probability m_threshold1, m_threshold2;
+  Probability m_threshold1, m_threshold2;
   size_t m_type_range;
 };
 

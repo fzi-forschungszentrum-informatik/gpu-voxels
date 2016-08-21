@@ -1,0 +1,21 @@
+<p></p><p>Yay, it compiled. Whats next?!</p>
+
+<h3>Example Programs</h3>
+<p>After compiling you should end with some example programs within the <strong><em>build/bin</em></strong> directory.<br>
+All programs require the environment variable <strong><em>GPU_VOXELS_MODEL_PATH</em></strong> be set to the folder, that contains the example files (<strong><em>gpu_voxels/models</em></strong>)</p>
+<ul>
+<li><strong><em>robot_vs_environment</em></strong> – High Level API example</li>
+<li><strong><em>swept_volume_vs_environment</em></strong> – Kinect collision Detection against a Sweep</li>
+<li><strong>sandbox</strong> – Shows the usage of the primitive_array Data type</li>
+<li><strong><em> octree_provider</em></strong> – Command line interface to the main functions of GPU-Voxels. To collide live Kinect data with a virtual Robot model, execute this:
+<pre>./bin/octree_provider -shm 0 -m kinect_live -resTree 20 -resFree 20 -resOcc 20 -mem 1024 -fps 30 -c -shm 1 -m load_pc -f ../packages/gpu_voxels/models/robot4cmRes.pcd -resTree 20 -resFree 20 -resOcc 20 -x 20 -y 180 -z -10</pre>
+</li>
+</ul>
+<p></p>
+
+
+
+
+
+
+

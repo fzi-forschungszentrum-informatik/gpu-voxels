@@ -42,8 +42,8 @@ class DataContext
 public:
 
   DataContext() :
-      m_map_name(""),m_draw_context(true), m_vbo(), m_vbo_draw_able(false), m_cur_vbo_size(1), m_max_vbo_size(0), m_cuda_ressources(), m_occupancy_threshold(
-          0), m_translation_offset(0.f), m_total_num_voxels(0), m_num_voxels_per_type()
+      m_map_name(""),m_draw_context(true), m_vbo(), m_vbo_draw_able(false), m_cur_vbo_size(1), m_max_vbo_size(0),
+      m_cuda_ressources(), m_occupancy_threshold(0), m_translation_offset(0.f), m_total_num_voxels(0), m_num_voxels_per_type()
   {
 
     m_threads_per_block = dim3(10, 10, 10);
@@ -52,36 +52,42 @@ public:
     m_default_prim = NULL;
 
     //insert some default colors
+    // The ordering has to be the same as for BitVoxelMeaning enum
+    // defined in gpu_voxels/helpers/common_defines.h
     colorPair p;
-    p.first = p.second = glm::vec4(0.f, 1.f, 0.f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 1 green*/
-    p.first = p.second = glm::vec4(1.f, 0.f, 0.f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 0 red*/
     p.first = p.second = glm::vec4(1.f, 1.f, 0.f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 2 yellow*/
-    p.first = p.second = glm::vec4(1.f, 0.f, 1.f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 3 magenta*/
-    p.first = p.second = glm::vec4(0.f, 1.f, 1.f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 4 cyan*/
-    p.first = p.second = glm::vec4(0.f, .5f, 0.f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 5 dark green*/
-    p.first = p.second = glm::vec4(0.5f, 0.f, 0.5f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 6 dark magenta*/
-    p.first = p.second = glm::vec4(0.2f, 0.2f, 1.f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 7 */
-    p.first = p.second = glm::vec4(0.f, .2f, .8f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 8 */
-    p.first = p.second = glm::vec4(.8f, 0.f, .2f, 1.f);
-    m_colors.push_back(p);/*color for voxel type 9 e*/
-    p.first = p.second = glm::vec4(1.f, 1.f, 0.f, 1.f); // yellow
-    m_colors.push_back(p);/*color for voxel type 10*/
+    m_colors.push_back(p);/*color for voxel type eBVM_FREE yellow*/
 
-    // swept volume colors
-    for(size_t i = eBVM_SWEPT_VOLUME_START + 1; i < MAX_DRAW_TYPES; ++i)
+    p.first = p.second = glm::vec4(0.f, 1.f, 0.f, 1.f);
+    m_colors.push_back(p);/*color for voxel type eBVM_OCCUPIED green*/
+
+    p.first = p.second = glm::vec4(1.f, 0.f, 0.f, 1.f);
+    m_colors.push_back(p);/*color for voxel type eBVM_COLLISION red*/
+
+    p.first = p.second = glm::vec4(1.f, 0.f, 1.f, 1.f);
+    m_colors.push_back(p);/*color for voxel type eBVM_UNKNOWN magenta*/
+
+
+    // swept volume colors blend altering fashion from yellow to blue,
+    // and from
+    float increment = 1.0 / float(eBVM_SWEPT_VOLUME_END - eBVM_SWEPT_VOLUME_START);
+    float change = 0.0;
+    size_t step = 0;
+    for(size_t i = eBVM_SWEPT_VOLUME_START; i <= eBVM_SWEPT_VOLUME_END; ++i)
     {
-      p.first = p.second = glm::vec4(1.f, 0.f, 1.f, 1.f); //magenta
+      change = step * increment;
+      if(step%2)
+      {
+        p.first = p.second = glm::vec4(1.f - change, 1.f, 0.f + change, 1.f); // yellow to light green
+      }else{
+        p.first = p.second = glm::vec4(1.f - change, 0.f, 0.f + change, 1.f); // red to blue
+      }
+      ++step;
       m_colors.push_back(p);
     }
+
+    p.first = p.second = glm::vec4(0.f, 1.f, 1.f, 1.f);
+    m_colors.push_back(p);/*color for voxel type eBVM_UNDEFINED(255) cyan*/
 
     m_num_voxels_per_type.resize(MAX_DRAW_TYPES);
     m_d_num_voxels_per_type = m_num_voxels_per_type;
@@ -176,7 +182,7 @@ public:
   Primitive* m_default_prim;
 
   // the minimum occupancy probability for the context
-  uint8_t m_occupancy_threshold;
+  Probability m_occupancy_threshold;
 
   // an offset for the data structure
   glm::vec3 m_translation_offset;

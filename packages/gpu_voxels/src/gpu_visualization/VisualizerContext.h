@@ -76,6 +76,9 @@ struct VisualizerContext
     m_draw_types = thrust::host_vector<uint8_t>(MAX_DRAW_TYPES, 0);
     m_draw_types[eBVM_OCCUPIED] = (uint8_t) 1;
     m_draw_types[eBVM_COLLISION] = (uint8_t) 1;
+
+    thrust::fill(m_draw_types.begin()+static_cast<uint>(eBVM_SWEPT_VOLUME_START),
+                 m_draw_types.begin()+static_cast<uint>(eBVM_SWEPT_VOLUME_END), 1);
   }
 
   ~VisualizerContext()

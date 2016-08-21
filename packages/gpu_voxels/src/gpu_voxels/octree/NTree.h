@@ -153,51 +153,57 @@ public:
    * @brief intersect_sparse Intersect NTree and VoxelMap by checking every occupied voxel of the VoxelMap in the NTree. Performs good for a sparsely occupied VoxelMap.
    * @tparam set_collision_flag Boolean whether to compute set the collision flag of the NTree
    * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting BitVector
+   * @tparam compute_collsWithUnknown Boolean whether to process intersections with unknown cells as collisions
    * @tparam VoxelType The type of the voxel of the given voxelmap.
    * @tparam use_execution_context Use the execution context of voxel_map.
    * @param voxel_map VoxelMap to collide with
    * @param h_result_voxel The resulting reduced voxel if compute_voxelTypeFlags=true
    * @param min_level Min level used for traversal
    * @param offset Offset that gets added to the voxelmap coordinates
+   * @param num_colls_with_unknown_cells Returns the number of collisions with 'unknown' cells. Requires \code compute_collsWithUnknown \endcode to be true.
    * @return Returns the number of collisions
    */
-  template<bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+  template<bool set_collision_flag, bool compute_voxelTypeFlags, bool compute_collsWithUnknown, typename VoxelType>
   voxel_count intersect_sparse(gpu_voxels::voxelmap::TemplateVoxelMap<VoxelType>& voxel_map,
                                VoxelType* h_result_voxel = NULL, const uint32_t min_level = 0,
-                               gpu_voxels::Vector3ui offset = gpu_voxels::Vector3ui(0, 0, 0));
+                               gpu_voxels::Vector3i offset = gpu_voxels::Vector3i(0, 0, 0), voxel_count* num_colls_with_unknown_cells = NULL);
 
   /**
    * @brief intersect_sparse Intersect NTree and VoxelList by checking every voxel of the VoxelList in the NTree.
    * @tparam set_collision_flag Boolean whether to compute set the collision flag of the NTree
    * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting BitVector
+   * @tparam compute_collsWithUnknown Boolean whether to process intersections with unknown cells as collisions
    * @tparam VoxelType The type of the voxel of the given voxellist.
    * @tparam use_execution_context Use the execution context of voxel_map.
    * @param voxel_map voxellist to collide with
    * @param h_result_voxel The resulting reduced voxel if compute_voxelTypeFlags=true
    * @param min_level Min level used for traversal
    * @param offset Offset that gets added to the voxellist coordinates
+   * @param num_colls_with_unknown_cells Returns the number of collisions with 'unknown' cells. Requires \code compute_collsWithUnknown \endcode to be true.
    * @return Returns the number of collisions
    */
-  template<bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+  template<bool set_collision_flag, bool compute_voxelTypeFlags, bool compute_collsWithUnknown, typename VoxelType>
   voxel_count intersect_sparse(gpu_voxels::voxellist::TemplateVoxelList<VoxelType, MapVoxelID>& voxel_map,
                                BitVectorVoxel* h_result_voxel = NULL, const uint32_t min_level = 0,
-                               gpu_voxels::Vector3ui offset = gpu_voxels::Vector3ui(0, 0, 0));
+                               gpu_voxels::Vector3i offset = gpu_voxels::Vector3i(0, 0, 0), voxel_count* num_colls_with_unknown_cells = NULL);
 
   /**
    * @brief intersect_morton Intersect NTree and MortonVoxelList by checking every voxel of the MortonVoxelList in the NTree.
    * @tparam set_collision_flag Boolean whether to compute set the collision flag of the NTree
    * @tparam compute_voxelTypeFlags Boolean whether to compute the intersecting BitVector
+   * @tparam compute_collsWithUnknown Boolean whether to process intersections with unknown cells as collisions
    * @tparam VoxelType The type of the voxel of the given voxellist.
    * @tparam use_execution_context Use the execution context of voxel_map.
    * @param voxel_map voxellist to collide with
    * @param h_result_voxel The resulting reduced voxel if compute_voxelTypeFlags=true
    * @param min_level Min level used for traversal
    * @param offset Offset that gets added to the voxellist coordinates
+   * @param num_colls_with_unknown_cells Returns the number of collisions with 'unknown' cells. Requires \code compute_collsWithUnknown \endcode to be true.
    * @return Returns the number of collisions
    */
-  template<bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+  template<bool set_collision_flag, bool compute_voxelTypeFlags, bool compute_collsWithUnknown, typename VoxelType>
   voxel_count intersect_morton(gpu_voxels::voxellist::TemplateVoxelList<VoxelType, OctreeVoxelID>& voxel_list,
-                               BitVectorVoxel* h_result_voxel = NULL, const uint32_t min_level = 0);
+                               BitVectorVoxel* h_result_voxel = NULL, const uint32_t min_level = 0, voxel_count* num_colls_with_unknown_cells = NULL);
 
   /**
    * @brief intersect_load_balance Intersect NTree and VoxelMap by traversing the NTree with load balance and look-up occupied voxel in the VoxelMap.
@@ -214,7 +220,7 @@ public:
    */
   template<int vft_size, bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
   voxel_count intersect_load_balance(gpu_voxels::voxelmap::ProbVoxelMap& voxel_map,
-                                     gpu_voxels::Vector3ui offset = gpu_voxels::Vector3ui(0, 0, 0),
+                                     gpu_voxels::Vector3i offset = gpu_voxels::Vector3i(0, 0, 0),
                                      const uint32_t min_level = 0,
                                      BitVector<vft_size>* h_result_voxelTypeFlags = NULL);
 
@@ -263,6 +269,8 @@ public:
    * Returns true for valid.
    */
   bool checkTree();
+
+  uint32_t extractCubes(std::vector<Vector3f> &points, uint8_t* d_status_selection = NULL, uint32_t min_level = 0);
 
   uint32_t extractCubes(thrust::device_vector<Cube> *&d_cubes, uint8_t* d_status_selection = NULL,
                         uint32_t min_level = 0);
@@ -451,28 +459,12 @@ public:
       m_mapping_lookup = mapping_lookup;
     }
 
-    __host__ __device__
-    Vector3ui swap_corrdoinates_for_visualizer(Vector3ui input)
-    {
-      Vector3ui out;
-//      out.x = input.y;
-//      out.y = input.x;
-//      out.z = input.z;
-
-      out.x = input.x;
-      out.y = input.y;
-      out.z = input.z;
-      return out;
-    }
-
     __host__ __device__ __forceinline__
     Cube nodeDataToCube(Environment::NodeData& x)
     {
       Cube c;
       inv_morton_code60(x.m_voxel_id, c.m_position);
       c.m_position = c.m_position - Vector3ui(VISUALIZER_SHIFT_X, VISUALIZER_SHIFT_Y, VISUALIZER_SHIFT_Z);
-      c.m_position = swap_corrdoinates_for_visualizer(c.m_position); // TODO: get rid of this
-
       c.m_side_length = getVoxelSideLength<branching_factor>(x.m_level);
       c.m_type_vector.setBit(statusToBitVoxelMeaning(m_mapping_lookup, x.m_basic_data.m_status));
       //      if (c.m_type != gpu_voxels::eBVM_OCCUPIED && c.m_type != gpu_voxels::eVT_SWEPT_VOLUME_END && c.m_type != gpu_voxels::eVT_UNDEFINED)
@@ -486,10 +478,9 @@ public:
       Cube c;
       inv_morton_code60(x.m_voxel_id, c.m_position);
       c.m_position = c.m_position - Vector3ui(VISUALIZER_SHIFT_X, VISUALIZER_SHIFT_Y, VISUALIZER_SHIFT_Z);
-      c.m_position = swap_corrdoinates_for_visualizer(c.m_position); // TODO: get rid of this
       c.m_side_length = getVoxelSideLength<branching_factor>(x.m_level);
       NodeStatus status = x.m_basic_data.m_status & ns_COLLISION;
-      if (x.m_basic_data.m_occupancy == UNKNOWN_OCCUPANCY)
+      if (x.m_basic_data.m_occupancy == UNKNOWN_PROBABILITY)
         status |= ns_UNKNOWN;
       else if (x.m_basic_data.m_occupancy >= THRESHOLD_OCCUPANCY)
         status |= ns_OCCUPIED;

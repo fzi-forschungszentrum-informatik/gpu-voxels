@@ -16,13 +16,14 @@
 #include <gpu_voxels/voxelmap/VoxelMap.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
+#include <gpu_voxels/helpers/GeometryGeneration.h>
 
 #include <boost/test/unit_test.hpp>
-#include "helpers.h"
 
 using namespace gpu_voxels;
 using namespace voxellist;
 using namespace voxelmap;
+using namespace geometry_generation;
 
 BOOST_AUTO_TEST_SUITE(voxellists)
 
@@ -56,7 +57,7 @@ BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap)
   GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP));
   map_2->insertMetaPointCloud(boxes, eBVM_OCCUPIED);
 
-  size_t num_colls = list->collideWith(map_2, 1.0);
+  size_t num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0);
   BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
 
 }
@@ -87,7 +88,7 @@ BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap_shifting)
 
   for(float shift = 0.0; shift < 4.0; shift += 0.5)
   {
-    num_colls = list->collideWith(map_2, 1.0, Vector3ui(shift, 0,0));
+    num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0, Vector3ui(shift, 0,0));
     if(shift < 1.0)
       BOOST_CHECK_MESSAGE(num_colls == 27, "Number of Collisions == 27");
     else if(shift < 2.0)
@@ -186,7 +187,7 @@ BOOST_AUTO_TEST_CASE(bitvoxellist_bitshift_collision)
     BitVectorVoxel types_voxel;
     size_t window_size = 1;
 
-    num_collisions = map_1.collideWithBitcheck(map_2, window_size);
+    num_collisions = map_1.collideWithBitcheck(map_2->as<voxellist::BitVectorVoxelList>(), window_size);
 
     if (shift_size <= shift_start)
     {
@@ -274,8 +275,8 @@ BOOST_AUTO_TEST_CASE(bitvoxellist_subtract)
 {
   // Generate two boxes that each occupie 27 Voxel.
   // They overlap each other by 8 Voxels. Subtract them. ==> 19 Voxels should remain in the list.
-  GpuVoxelsMapSharedPtr list1(new BitVectorVoxelList(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST));
-  GpuVoxelsMapSharedPtr list2(new BitVectorVoxelList(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST));
+  BitVectorVoxelList list1(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+  BitVectorVoxelList list2(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
 
   Vector3f b1_min(1.1,1.1,1.1);
   Vector3f b1_max(3.9,3.9,3.9);
@@ -286,14 +287,13 @@ BOOST_AUTO_TEST_CASE(bitvoxellist_subtract)
   std::vector<Vector3f> box_cloud1 = createBoxOfPoints(b1_min, b1_max, delta);
   std::vector<Vector3f> box_cloud2 = createBoxOfPoints(b2_min, b2_max, delta);
 
-  list1->insertPointCloud(box_cloud1, BitVoxelMeaning(11));
-  list2->insertPointCloud(box_cloud2, BitVoxelMeaning(12));
+  list1.insertPointCloud(box_cloud1, BitVoxelMeaning(11));
+  list2.insertPointCloud(box_cloud2, BitVoxelMeaning(12));
 
-  BitVectorVoxelList* lst1_base_ptr = dynamic_cast<BitVectorVoxelList*>(list1.get());
-  lst1_base_ptr->subtract(list2, Vector3f());
+  list1.subtract(&list2, Vector3f());
 
   thrust::device_vector<Cube>* d_cubes = NULL;
-  lst1_base_ptr->extractCubes(&d_cubes);
+  list1.extractCubes(&d_cubes);
   thrust::host_vector<Cube> h_cubes = *d_cubes;
 
   BOOST_CHECK_MESSAGE(h_cubes.size() == 19, "Number of cubes after subtract == 19");

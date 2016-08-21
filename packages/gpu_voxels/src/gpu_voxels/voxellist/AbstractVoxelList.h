@@ -31,6 +31,8 @@ public:
   virtual float getVoxelSideLength() const = 0;
 
   virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning) = 0;
+  virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning) = 0;
+  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning) = 0;
 
   //! get the number of bytes that is required for the voxelmap
   virtual size_t getMemoryUsage() const = 0;

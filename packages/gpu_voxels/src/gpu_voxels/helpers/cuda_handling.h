@@ -37,8 +37,11 @@ namespace gpu_voxels {
 
 /* Implementation of frequently needed CUDA functions */
 
-#define HANDLE_CUDA_ERROR(error)        cuHandleError(error, __FILE__, __LINE__)
+#define CHECK_CUDA_ERROR()        cuCheckForError(__FILE__, __LINE__)
+//! Shortcut to check for an active cuda error
+bool cuCheckForError(const char* file, int line);
 
+#define HANDLE_CUDA_ERROR(error)        cuHandleError(error, __FILE__, __LINE__)
 //! Shortcut useful for error handling
 bool cuHandleError(cudaError_t cuda_error, const char* file, int line);
 
@@ -47,6 +50,9 @@ bool cuGetNrOfDevices(int* nr_of_devices);
 
 //! Gives information on available CUDA devices
 bool cuGetDeviceInfo(cudaDeviceProp* device_properties, int nr_of_devices);
+
+//! Checks if Compute Capability 2.5 or greater is available. WARNING: This sets caching behaviour!
+bool cuTestAndInitDevice();
 
 //! Prints Memory info and usage
 void cuPrintDeviceMemoryInfo();

@@ -32,6 +32,98 @@ GpuVoxelsMap::~GpuVoxelsMap()
 {
 }
 
+void GpuVoxelsMap::lockSelf(const std::string& function_name) const
+{
+#ifdef DBG_LOCKING
+  LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, "!!!!!!!!!!!!!!!!!!! " << function_name << ": Tries to lock 'self' !!!!!!!!!!!!!!!!!!!" << endl);
+#endif
+  bool locked_this = false;
+  uint32_t counter = 0;
+
+  while (!locked_this)
+  {
+    locked_this = m_mutex.try_lock();
+    if(!locked_this)
+    {
+      counter++;
+      if(counter > 50)
+      {
+        LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock self since 50 trials!" << endl);
+        counter = 0;
+      }
+      boost::this_thread::yield();
+    }
+  }
+#ifdef DBG_LOCKING
+  LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, "!!!!!!!!!!!!!!!!!!! " << function_name << ": Locked 'self' !!!!!!!!!!!!!!!!!!!" << endl);
+#endif
+}
+
+void GpuVoxelsMap::unlockSelf(const std::string& function_name) const
+{
+#ifdef DBG_LOCKING
+  LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, "!!!!!!!!!!!!!!!!!!! " << function_name << ": Unlocks 'self' !!!!!!!!!!!!!!!!!!!" << endl);
+#endif
+  m_mutex.unlock();
+}
+
+void GpuVoxelsMap::unlockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, const std::string& function_name) const
+{
+#ifdef DBG_LOCKING
+  LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, "!!!!!!!!!!!!!!!!!!! " << function_name << ": Unlocks 'both' !!!!!!!!!!!!!!!!!!!" << endl);
+#endif
+
+  map1->m_mutex.unlock();
+  map2->m_mutex.unlock();
+
+}
+
+void GpuVoxelsMap::lockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, const std::string& function_name) const
+{
+#ifdef DBG_LOCKING
+  LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, "!!!!!!!!!!!!!!!!!!! " << function_name << ": Tries to lock 'both' !!!!!!!!!!!!!!!!!!!" << endl);
+#endif
+  bool locked_map1 = false;
+  bool locked_map2 = false;
+  uint32_t m1_counter = 0;
+  uint32_t m2_counter = 0;
+
+  while (!locked_map1 || !locked_map2)
+  {
+    // lock mutexes
+    while (!locked_map1)
+    {
+      locked_map1 = map1->m_mutex.try_lock();
+      m1_counter++;
+      if(!locked_map1)
+      {
+        if(m1_counter >= 50)
+        {
+          LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock map1 map since 50 trials!" << endl);
+          m1_counter = 0;
+        }
+        boost::this_thread::yield();
+      }
+    }
+    while (!locked_map2 && (m2_counter < 50))
+    {
+      locked_map2 = map2->m_mutex.try_lock();
+      if(!locked_map2) boost::this_thread::yield();
+      m2_counter++;
+    }
+    if (!locked_map2)
+    {
+      LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock map2 map since 50 trials!" << endl);
+      m2_counter = 0;
+      map1->m_mutex.unlock();
+      boost::this_thread::yield();
+    }
+  }
+#ifdef DBG_LOCKING
+  LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, "!!!!!!!!!!!!!!!!!!! " << function_name << ": Locked 'both' !!!!!!!!!!!!!!!!!!!" << endl);
+#endif
+}
+
 bool GpuVoxelsMap::insertPointcloudFromFile(const std::string path, const bool use_model_path, const BitVoxelMeaning voxel_meaning,
                                             const bool shift_to_zero, const Vector3f &offset_XYZ, const float scaling)
 {

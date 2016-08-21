@@ -67,3 +67,48 @@ ICMAKER_INSTALL_HEADERS(gpu_voxels/voxelmap)
 ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/voxelmap/kernels
   kernels/VoxelMapOperations.h
 )
+
+
+#------------- gpu_voxels_voxelmap_tests libaray -----------------------
+ICMAKER_SET("gpu_voxels_voxelmap_tests" IDE_FOLDER ${GPU_VOXELS_IDE_FOLDER})
+
+ICMAKER_ADD_HEADERS(
+  Tests.h
+  )
+
+ICMAKER_ADD_SOURCES(
+  Dummy.cpp
+  )
+
+ICMAKER_ADD_CUDA_FILES(
+  kernels/VoxelMapTests.h
+  kernels/VoxelMapTests.hpp
+  kernels/VoxelMapTests.cu
+  Tests.hpp
+  Tests.cu
+  )
+
+ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_)
+ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
+
+ICMAKER_INTERNAL_DEPENDENCIES(
+  icl_core
+  icl_core_config
+  icl_core_logging
+  gpu_voxels_logging
+  gpu_voxels_helpers
+  gpu_voxels_core
+  gpu_voxels_voxel
+  )
+
+ICMAKER_EXTERNAL_DEPENDENCIES(
+  CUDA
+  )
+
+ICMAKER_BUILD_LIBRARY()
+ICMAKER_INSTALL_HEADERS(gpu_voxels/voxelmap)
+# Include files here that are needed when the package is installed.
+ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/voxelmap/kernels
+  kernels/VoxelMapTests.h
+)

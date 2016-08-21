@@ -91,7 +91,7 @@ __global__
 
 void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, Voxel* this_voxel_list, uint32_t this_list_size,
                                const OtherVoxel* other_map, Vector3ui other_map_dim, Collider collider,
-                               Vector3ui offset, uint16_t* results);
+                               Vector3i offset, uint16_t* results);
 
 
 /**
@@ -109,7 +109,7 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, Voxel* this_voxel
 __global__
 void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
                                const ProbabilisticVoxel* other_map, Vector3ui other_map_dim, float col_threshold,
-                               Vector3ui offset, uint16_t* coll_counter_results, BitVectorVoxel* results);
+                               Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* results);
 
 
 
@@ -174,7 +174,7 @@ __global__
 
 void kernelCollideWithVoxelMap(const OctreeVoxelID* this_id_list, Voxel* this_voxel_list, uint32_t this_list_size,
                                const OtherVoxel* other_map, Vector3ui other_map_dim, Collider collider,
-                               Vector3ui offset, uint16_t* results);
+                               Vector3i offset, uint16_t* results);
 
 
 /**
@@ -192,7 +192,7 @@ void kernelCollideWithVoxelMap(const OctreeVoxelID* this_id_list, Voxel* this_vo
 __global__
 void kernelCollideWithVoxelMap(const OctreeVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
                                const ProbabilisticVoxel* other_map, Vector3ui other_map_dim, float col_threshold,
-                               Vector3ui offset, uint16_t* coll_counter_results, BitVectorVoxel* results);
+                               Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* results);
 
 
 

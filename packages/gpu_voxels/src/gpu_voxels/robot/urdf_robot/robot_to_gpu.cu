@@ -54,7 +54,7 @@ RobotToGPU::RobotToGPU(const std::string &_path, const bool &use_model_path) :
   Robot::load(*model_interface_shrd_ptr, true, true, use_model_path);
 
   // allocate a copy of the pointcloud, which will hold the transformed version
-  m_link_pointclouds_transformed = new MetaPointCloud( Robot::getLinkPointclouds());
+  m_link_pointclouds_transformed = new MetaPointCloud(*Robot::getLinkPointclouds());
 
 }
 

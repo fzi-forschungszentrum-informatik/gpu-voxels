@@ -38,7 +38,7 @@ public:
   DefaultCollider(const float coll_threshold);
 
   __host__ __device__
-  DefaultCollider(const probability threshold1, const probability threshold2);
+  DefaultCollider(const Probability threshold1, const Probability threshold2);
 
   __host__ __device__
   bool collide(const ProbabilisticVoxel& v1, const ProbabilisticVoxel& v2) const;
@@ -60,10 +60,10 @@ public:
 
 protected:
   __host__ __device__
-  static probability floatToProbability(const float val);
+  static Probability floatToProbability(const float val);
 
 protected:
-  probability m_threshold1, m_threshold2;
+  Probability m_threshold1, m_threshold2;
 };
 
 } // end of ns

@@ -77,7 +77,7 @@ __global__
 void kernelCollideVoxelMaps(Voxel* voxelmap, const uint32_t voxelmap_size, OtherVoxel* other_map,
                             Collider collider, bool* results)
 {
-  __shared__ bool cache[cMAX_NR_OF_THREADS_PER_BLOCK];
+  __shared__ bool cache[cMAX_THREADS_PER_BLOCK];
   uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
   uint32_t cache_index = threadIdx.x;
   cache[cache_index] = false;
@@ -129,7 +129,7 @@ void kernelCollideVoxelMapsDebug(Voxel* voxelmap, const uint32_t voxelmap_size, 
                                  Collider collider, uint16_t* results)
 {
 //#define DISABLE_STORING_OF_COLLISIONS
-  __shared__ uint16_t cache[cMAX_NR_OF_THREADS_PER_BLOCK];
+  __shared__ uint16_t cache[cMAX_THREADS_PER_BLOCK];
   uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
   uint32_t cache_index = threadIdx.x;
   cache[cache_index] = 0;
@@ -186,8 +186,8 @@ void kernelCollideVoxelMapsBitvector(BitVoxel<length>* voxelmap, const uint32_t 
                                      BitVoxel<length>* other_map, Collider collider,
                                      BitVector<length>* results, uint16_t* num_collisions, const uint16_t sv_offset)
 {
-  extern __shared__ BitVector<length> cache[]; //[cMAX_NR_OF_THREADS_PER_BLOCK];
-  __shared__ uint16_t cache_num[cMAX_NR_OF_THREADS_PER_BLOCK];
+  extern __shared__ BitVector<length> cache[]; //[cMAX_THREADS_PER_BLOCK];
+  __shared__ uint16_t cache_num[cMAX_THREADS_PER_BLOCK];
   uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
   uint32_t cache_index = threadIdx.x;
   cache[cache_index] = BitVector<length>();
@@ -237,17 +237,16 @@ void kernelCollideVoxelMapsBitvector(BitVoxel<length>* voxelmap, const uint32_t 
 template<class Voxel>
 __global__
 void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui dimensions, const float voxel_side_length,
-                                  Vector3f* points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning)
+                                  const Vector3f *points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning)
 {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizePoints; i += blockDim.x * gridDim.x)
   {
-    const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length, points[i]);
+    const Vector3ui uint_coords = mapToVoxels(voxel_side_length, points[i]);
     //check if point is in the range of the voxel map
-    if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
-        && (integer_coordinates.z < dimensions.z))
+    if ((uint_coords.x < dimensions.x) && (uint_coords.y < dimensions.y)
+        && (uint_coords.z < dimensions.z))
     {
-      Voxel* voxel = &voxelmap[getVoxelIndex(dimensions, integer_coordinates.x, integer_coordinates.y,
-                                             integer_coordinates.z)];
+      Voxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions, uint_coords)];
       voxel->insert(voxel_meaning);
     }
     else
@@ -266,7 +265,7 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < meta_point_cloud->accumulated_cloud_size;
       i += blockDim.x * gridDim.x)
   {
-    const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length,
+    const Vector3ui uint_coords = mapToVoxels(voxel_side_length,
                                                       meta_point_cloud->clouds_base_addresses[0][i]);
 
 //        printf("Point @(%f,%f,%f)\n",
@@ -275,11 +274,10 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
 //               meta_point_cloud->clouds_base_addresses[0][i].z);
 
     //check if point is in the range of the voxel map
-    if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
-        && (integer_coordinates.z < dimensions.z))
+    if ((uint_coords.x < dimensions.x) && (uint_coords.y < dimensions.y)
+        && (uint_coords.z < dimensions.z))
     {
-      Voxel* voxel = &voxelmap[getVoxelIndex(dimensions, integer_coordinates.x, integer_coordinates.y,
-                                             integer_coordinates.z)];
+      Voxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions, uint_coords)];
       voxel->insert(voxel_meaning);
 
 //        printf("Inserted Point @(%u,%u,%u) into the voxel map \n",
@@ -317,7 +315,7 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
     }
 
 
-    const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length,
+    const Vector3ui uint_coords = mapToVoxels(voxel_side_length,
                                                       meta_point_cloud->clouds_base_addresses[0][i]);
 
 //        printf("Point @(%f,%f,%f)\n",
@@ -326,11 +324,10 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
 //               meta_point_cloud->clouds_base_addresses[0][i].z);
 
     //check if point is in the range of the voxel map
-    if ((integer_coordinates.x < dimensions.x) && (integer_coordinates.y < dimensions.y)
-        && (integer_coordinates.z < dimensions.z))
+    if ((uint_coords.x < dimensions.x) && (uint_coords.y < dimensions.y)
+        && (uint_coords.z < dimensions.z))
     {
-      Voxel* voxel = &voxelmap[getVoxelIndex(dimensions, integer_coordinates.x, integer_coordinates.y,
-                                             integer_coordinates.z)];
+      Voxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions, uint_coords)];
       voxel->insert(voxel_meanings[sub_cloud]);
 
 //        printf("Inserted Point @(%u,%u,%u) with meaning %u into the voxel map \n",
@@ -467,31 +464,6 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
           //            increaseOccupancy(voxel, cSENSOR_MODEL_OCCUPIED); // todo: replace with "occupied" of sensor model
         }
       }
-    }
-  }
-}
-
-template<class Voxel>
-__global__
-void kernelAddressingTest(const Voxel* voxelmap_base_address, const Vector3ui dimensions, const float voxel_side_length,
-                          const Vector3f *testpoints, const size_t testpoints_size, bool* success)
-{
-  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < testpoints_size; i += gridDim.x * blockDim.x)
-  {
-    Vector3ui test_ccords = mapToVoxels(voxel_side_length, testpoints[i]);
-    Voxel* testvoxel = getVoxelPtr(voxelmap_base_address, dimensions, test_ccords.x, test_ccords.y, test_ccords.z);
-    Vector3ui int_coords = mapToVoxels(voxelmap_base_address, dimensions, testvoxel);
-    Vector3f center = getVoxelCenter(voxel_side_length, int_coords);
-
-  //  printf("TestCoord    (%f,%f,%f)\n",testpoints[i].x, testpoints[i].y, testpoints[i].z);
-  //  printf("TestIntCoord (%d,%d,%d)\n",int_coords.x, int_coords.y, int_coords.z);
-  //  printf("ReturnCoord  (%f,%f,%f)\n",center.x, center.y, center.z);
-
-    if ((abs(center.x - testpoints[i].x) > voxel_side_length / 2.0) ||
-        (abs(center.y - testpoints[i].y) > voxel_side_length / 2.0) ||
-        (abs(center.z - testpoints[i].z) > voxel_side_length / 2.0))
-    {
-      *success = false;
     }
   }
 }

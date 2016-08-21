@@ -283,11 +283,12 @@ void NTreeProvider::init(Provider_Parameter& parameter)
     boost::function<void(const sensor_msgs::PointCloud2::ConstPtr& msg)> f_cb = boost::bind(
         &NTreeProvider::ros_point_cloud_front, this, _1);
     m_subscriber_front = new ros::Subscriber(m_node_handle->subscribe("/robot/point_cloud_front", 1, f_cb));
+    ROS_INFO("Ready to receive /robot/point_cloud_front\n");
 
     boost::function<void(const sensor_msgs::PointCloud2::ConstPtr& msg)> f_cb2 = boost::bind(
         &NTreeProvider::ros_point_cloud_back, this, _1);
     m_subscriber_back = new ros::Subscriber(m_node_handle->subscribe("/robot/point_cloud_back", 1, f_cb2));
-    ROS_INFO("Ready to receive ros_point_cloud_back\n");
+    ROS_INFO("Ready to receive /robot/point_cloud_back\n");
 
     m_spinner = new ros::AsyncSpinner(4);
     m_spinner->start();
@@ -328,10 +329,13 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
 
   m_sensor.data_width = width;
   m_sensor.data_height = height;
-  m_sensor.data_size = m_sensor.data_width * m_sensor.data_height;
 
-  m_sensor.orientation = gpu_voxels::rotateYPR(temp.z, temp.y, temp.x) * orientation;
-  m_sensor.position = m_sensor_position;
+  m_sensor.pose.setIdentity();
+  m_sensor.pose = gpu_voxels::rotateYPR(temp.z, temp.y, temp.x) * orientation;
+  m_sensor.pose.a14 = m_sensor_position.x;
+  m_sensor.pose.a24 = m_sensor_position.y;
+  m_sensor.pose.a34 = m_sensor_position.z;
+
   const uint32_t ntree_resolution = m_ntree->m_resolution;
 
   // processSensorData() will allcate space for d_free_space_voxel and d_object_voxel if they are NULL
@@ -341,9 +345,9 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
 
   // convert sensor origin in discrete coordinates of the NTree
   gpu_voxels::Vector3ui sensor_origin = gpu_voxels::Vector3ui(
-      uint32_t(m_sensor.position.x * 1000.0f / ntree_resolution),
-      uint32_t(m_sensor.position.y * 1000.0f / ntree_resolution),
-      uint32_t(m_sensor.position.z * 1000.0f / ntree_resolution));
+      uint32_t(m_sensor_position.x * 1000.0f / ntree_resolution),
+      uint32_t(m_sensor_position.y * 1000.0f / ntree_resolution),
+      uint32_t(m_sensor_position.z * 1000.0f / ntree_resolution));
 
   m_ntree->insertVoxel(*d_free_space_voxel, *d_object_voxel, sensor_origin, m_parameter->resolution_free,
                        m_parameter->resolution_occupied);
@@ -443,11 +447,11 @@ void NTreeProvider::collide_wo_locking()
           if (m_parameter->save_collisions)
           {
             printf("Collide with collisions\n");
-            num_collisions = m_ntree->intersect_sparse<true, false, ProbabilisticVoxel>(
+            num_collisions = m_ntree->intersect_sparse<true, false, false, ProbabilisticVoxel>(
                 *_voxelmap, NULL, m_min_level, voxelmap_offset);
           }
           else
-            num_collisions = m_ntree->intersect_sparse<false, false, ProbabilisticVoxel>(
+            num_collisions = m_ntree->intersect_sparse<false, false, false, ProbabilisticVoxel>(
                 *_voxelmap, NULL, m_min_level, voxelmap_offset);
         }
       }
@@ -545,27 +549,30 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
 
     m_sensor.data_width = msg->width;
     m_sensor.data_height = msg->height;
-    m_sensor.data_size = m_sensor.data_width * m_sensor.data_height;
 
     // copy roation matrix
-    m_sensor.orientation = gpu_voxels::Matrix4f();
+    m_sensor.pose.setIdentity();
+
     tf::Matrix3x3 m(transform.getRotation());
-    m_sensor.orientation.a11 = m[0].getX();
-    m_sensor.orientation.a12 = m[0].getY();
-    m_sensor.orientation.a13 = m[0].getZ();
-    m_sensor.orientation.a21 = m[1].getX();
-    m_sensor.orientation.a22 = m[1].getY();
-    m_sensor.orientation.a23 = m[1].getZ();
-    m_sensor.orientation.a31 = m[2].getX();
-    m_sensor.orientation.a32 = m[2].getY();
-    m_sensor.orientation.a33 = m[2].getZ();
+    m_sensor.pose.a11 = m[0].getX();
+    m_sensor.pose.a12 = m[0].getY();
+    m_sensor.pose.a13 = m[0].getZ();
+    m_sensor.pose.a21 = m[1].getX();
+    m_sensor.pose.a22 = m[1].getY();
+    m_sensor.pose.a23 = m[1].getZ();
+    m_sensor.pose.a31 = m[2].getX();
+    m_sensor.pose.a32 = m[2].getY();
+    m_sensor.pose.a33 = m[2].getZ();
 
     tf::Vector3 tmp = transform.getOrigin();
 //    m_sensor.position = m_sensor_position
 //        + gpu_voxels::Vector3f(tmp.getX() - 122, tmp.getY() + 82, tmp.getZ());
     Vector3f shift_origin = Vector3f(0, 0, 0);
-    m_sensor.position = m_sensor_position
-        + gpu_voxels::Vector3f(tmp.getX() - shift_origin.x, tmp.getY() - shift_origin.y, tmp.getZ() - shift_origin.z);
+    Vector3f sensor_position = m_sensor_position + gpu_voxels::Vector3f(tmp.getX() - shift_origin.x, tmp.getY() - shift_origin.y, tmp.getZ() - shift_origin.z);
+
+    m_sensor.pose.a14 = sensor_position.x;
+    m_sensor.pose.a24 = sensor_position.y;
+    m_sensor.pose.a34 = sensor_position.z;
 
     // processSensorData() will allcate space for d_free_space_voxel and d_object_voxel if they are NULL
     m_sensor.processSensorData(points, d_free_space_voxel2, d_object_voxel2);
@@ -574,9 +581,9 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
     // convert sensor origin in discrete coordinates of the NTree
     const uint32_t ntree_resolution = m_ntree->m_resolution;
     gpu_voxels::Vector3ui sensor_origin = gpu_voxels::Vector3ui(
-        uint32_t(m_sensor.position.x * 1000.0f / ntree_resolution),
-        uint32_t(m_sensor.position.y * 1000.0f / ntree_resolution),
-        uint32_t(m_sensor.position.z * 1000.0f / ntree_resolution));
+        uint32_t(sensor_position.x * 1000.0f / ntree_resolution),
+        uint32_t(sensor_position.y * 1000.0f / ntree_resolution),
+        uint32_t(sensor_position.z * 1000.0f / ntree_resolution));
 
     m_ntree->insertVoxel(*d_free_space_voxel2, *d_object_voxel2, sensor_origin, m_parameter->resolution_free,
                          m_parameter->resolution_occupied);

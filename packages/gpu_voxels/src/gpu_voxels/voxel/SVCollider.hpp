@@ -35,7 +35,7 @@ SVCollider::SVCollider(const float coll_threshold, const size_t window_size) :
 
 }
 
-SVCollider::SVCollider(const probability threshold1, const probability threshold2, const size_t window_size) :
+SVCollider::SVCollider(const Probability threshold1, const Probability threshold2, const size_t window_size) :
     m_threshold1(threshold1), m_threshold2(threshold2),
     m_type_range(window_size)
 {
@@ -85,10 +85,10 @@ bool SVCollider::collide(const BitVoxel<length>& v1, const BitVoxel<length>& v2,
   return bitMarginCollisionCheck<length>(v1.bitVector(), v2.bitVector(), collisions, m_type_range, sv_offset);
 }
 
-probability SVCollider::floatToProbability(const float val)
+Probability SVCollider::floatToProbability(const float val)
 {
   float tmp = (val * (float(MAX_PROBABILITY) - float(MIN_PROBABILITY))) + MIN_PROBABILITY;
-  return probability(tmp);
+  return Probability(tmp);
 }
 
 } // end of ns

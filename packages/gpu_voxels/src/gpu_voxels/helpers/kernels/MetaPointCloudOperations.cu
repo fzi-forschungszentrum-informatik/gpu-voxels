@@ -1,7 +1,17 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This program is free software licensed under the CDDL
+// (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
+// You can find a copy of this license in LICENSE.txt in the top
+// directory of the source code.
+//
+// © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
+//
 // -- END LICENSE BLOCK ------------------------------------------------
+
 
 //----------------------------------------------------------------------
 /*!\file
@@ -64,59 +74,20 @@ void kernelDebugMetaPointCloud(MetaPointCloudStruct* meta_point_clouds_struct)
 }
 
 
-
 __global__
-void kernelTransformSubCloud(uint8_t subcloud_to_transform, const Matrix4f* transformation_,
-                          const MetaPointCloudStruct *input_cloud, MetaPointCloudStruct *transformed_cloud)
+void kernelTransformCloud(const Matrix4f *transformation, const Vector3f *startAddress, Vector3f *transformedAddress, uint32_t numberOfPoints)
 {
   // copying the transformation matrix to local memory might be faster than accessing it from the global memory
-  Matrix4f transformation;
-  transformation = *transformation_;
+  Matrix4f transform;
+  transform = *transformation;
 
   uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
-//  if (i==1) printf("transform (%u): (%f, %f, %f, %f)\n", sizeof(transformation), transformation.a11, transformation.a12, transformation.a13, transformation.a14);
-
-  // if more than max_nr_of_blocks points are in ptcloud we need a loop
-  while (i < input_cloud->cloud_sizes[subcloud_to_transform])
+  while(i < numberOfPoints)
   {
-
-//    applyTransform(transformation, input_cloud[subcloud_to_transform][i], transformed_cloud[subcloud_to_transform][i]);
-    transformed_cloud->clouds_base_addresses[subcloud_to_transform][i] = transformation * input_cloud->clouds_base_addresses[subcloud_to_transform][i];
-//    if (i==1)
-//      printf("transforming (%f, %f, %f) --> (%f, %f, %f)\n",
-//             input_cloud->clouds_base_addresses[subcloud_to_transform][i].x,
-//             input_cloud->clouds_base_addresses[subcloud_to_transform][i].y,
-//             input_cloud->clouds_base_addresses[subcloud_to_transform][i].z,
-//             transformed_cloud->clouds_base_addresses[subcloud_to_transform][i].x,
-//             transformed_cloud->clouds_base_addresses[subcloud_to_transform][i].y,
-//             transformed_cloud->clouds_base_addresses[subcloud_to_transform][i].z);
-
-    // increment by number of all threads that are running
+    transformedAddress[i] = transform * startAddress[i];
     i += blockDim.x * gridDim.x;
   }
 }
-
-__global__
-void kernelTransformCloud(const Matrix4f* transformation_, const MetaPointCloudStruct *input_cloud, MetaPointCloudStruct *transformed_cloud)
-{
-  // copying the transformation matrix to local memory might be faster than accessing it from the global memory
-  Matrix4f transformation;
-  transformation = *transformation_;
-
-  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-
-//  if (i==1) printf("transform (%u): (%f, %f, %f, %f)\n", sizeof(transformation), transformation.a11, transformation.a12, transformation.a13, transformation.a14);
-
-  // if more than max_nr_of_blocks points are in ptcloud we need a loop
-  while (i < input_cloud->accumulated_cloud_size)
-  {
-    transformed_cloud->clouds_base_addresses[0][i] = transformation * input_cloud->clouds_base_addresses[0][i];
-
-    // increment by number of all threads that are running
-    i += blockDim.x * gridDim.x;
-  }
-}
-
 
 } // end of namespace gpu_voxels

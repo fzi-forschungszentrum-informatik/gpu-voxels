@@ -380,11 +380,12 @@ __global__ void kernel_intersect(InnerNode* root, Vector3ui* voxel, OctreeVoxelI
 // WATCH OUT: This macro will read and write the following variables:
 // int level, tmp_level;
 // InnerNode* node, tmp_node;
-// LeafNode* leaf;
-// bool collision, isLeaf;
 // voxel_count* shared_num_collisions;
+// UPDATE_FLAGS must be a complete function
 
 #define TRAVES_MACRO(NODEID, UPDATE_FLAGS, LEVEL) \
+    bool collision, collision_w_unknown, isLeaf; \
+    LeafNode* leaf = NULL; \
     level = tmp_level; \
     node = tmp_node; \
     for (; level > LEVEL && node->hasStatus(ns_PART); --level) \
@@ -394,6 +395,8 @@ __global__ void kernel_intersect(InnerNode* root, Vector3ui* voxel, OctreeVoxelI
         leaf = &((LeafNode*) node->getChildPtr())[getZOrderNodeId<branching_factor>(NODEID, 0)]; \
         collision = leaf->isOccupied(); \
         isLeaf = true; \
+        if(compute_collsWithUnknown) \
+          collision_w_unknown = leaf->isUnknown(); \
       } \
       else \
       { \
@@ -401,6 +404,8 @@ __global__ void kernel_intersect(InnerNode* root, Vector3ui* voxel, OctreeVoxelI
           node = &((InnerNode*) node->getChildPtr())[getZOrderNodeId<branching_factor>(NODEID, level)]; \
         collision = node->isOccupied(); \
         isLeaf = false; \
+        if(compute_collsWithUnknown) \
+          collision_w_unknown = node->isUnknown(); \
       } \
       if (collision) \
       { \
@@ -414,6 +419,10 @@ __global__ void kernel_intersect(InnerNode* root, Vector3ui* voxel, OctreeVoxelI
         } \
         if (compute_voxelTypeFlags) \
             UPDATE_FLAGS; \
+      } \
+      if (collision_w_unknown) \
+      { \
+        ++shared_num_collisions_w_unknown[threadIdx.x]; \
       }
 
 template<class Voxel>
@@ -442,16 +451,23 @@ void reduceVoxels(Voxel& flags, const int thread_id, const int num_threads, Voxe
  * WARNING: THIS KERNEL IS NOT COMPLETE (it ignores the voxel flags)!
  */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode,
-    bool set_collision_flag, typename VoxelFlags, bool compute_voxelTypeFlags>
+    bool set_collision_flag, typename VoxelFlags, bool compute_voxelTypeFlags, bool compute_collsWithUnknown>
 __global__
 void kernel_intersect(InnerNode* root, OctreeVoxelID* voxel, VoxelFlags* voxelFlags, voxel_count num_voxel,
                       voxel_count* num_collisions, VoxelFlags* result_voxelFlags)
 {
   __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
+  __shared__ voxel_count shared_num_collisions_w_unknown[NUM_THREADS_PER_BLOCK];
   const uint32_t STEPS = 2;
   VoxelFlags my_voxel_flags;
 
   shared_num_collisions[threadIdx.x] = 0;
+
+  if(compute_collsWithUnknown)
+  {
+    shared_num_collisions_w_unknown[threadIdx.x] = 0;
+  }
+
   for (voxel_count i = STEPS * (blockIdx.x * blockDim.x + threadIdx.x); i < num_voxel;
       i += STEPS * (gridDim.x * blockDim.x))
   {
@@ -466,8 +482,6 @@ void kernel_intersect(InnerNode* root, OctreeVoxelID* voxel, VoxelFlags* voxelFl
 
     int tmp_level = level;
     InnerNode* tmp_node = node;
-    LeafNode* leaf = NULL;
-    bool collision, isLeaf;
 
     TRAVES_MACRO(nodeID0, my_voxel_flags |= voxelFlags[i], 0)
 
@@ -526,16 +540,22 @@ void kernel_intersect(InnerNode* root, OctreeVoxelID* voxel, VoxelFlags* voxelFl
  * in the Octree. Then check for collisions and colliding meanings.
  */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode,
-    bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+    bool set_collision_flag, bool compute_voxelTypeFlags, bool compute_collsWithUnknown, typename VoxelType>
 __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, uint32_t voxelmap_size,
-                                          gpu_voxels::Vector3ui dimensions, voxel_count* num_collisions,
+                                          gpu_voxels::Vector3ui dimensions, voxel_count* num_collisions, voxel_count* num_collisions_w_unknown,
                                           VoxelType* d_result_voxels, const uint32_t min_level,
-                                          const Vector3ui voxelmap_offset = Vector3ui(0))
+                                          const Vector3i voxelmap_offset = Vector3i(0))
 {
   __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
+  __shared__ voxel_count shared_num_collisions_w_unknown[NUM_THREADS_PER_BLOCK];
   SharedVoxel<VoxelType> shared;
   VoxelType* shared_voxels = shared.getPointer();
   VoxelType my_voxel_flags;
+
+  if(compute_collsWithUnknown)
+  {
+    shared_num_collisions_w_unknown[threadIdx.x] = 0;
+  }
 
   shared_num_collisions[threadIdx.x] = 0;
   for (voxel_count i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
@@ -548,8 +568,6 @@ __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, ui
       int level = level_count - 2;
       int tmp_level = level;
       InnerNode* tmp_node = node;
-      LeafNode* leaf = NULL;
-      bool collision, isLeaf;
 
       TRAVES_MACRO(nodeID, my_voxel_flags = VoxelType::reduce(my_voxel_flags, *my_voxel), min_level)
     }
@@ -561,11 +579,17 @@ __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, ui
   if (compute_voxelTypeFlags)
     reduceVoxels(my_voxel_flags, threadIdx.x, blockDim.x, shared_voxels);
 
+  if(compute_collsWithUnknown)
+    REDUCE(shared_num_collisions_w_unknown, threadIdx.x, blockDim.x, +)
+
   if (threadIdx.x == 0)
   {
     num_collisions[blockIdx.x] = shared_num_collisions[0];
     if (compute_voxelTypeFlags)
       d_result_voxels[blockIdx.x] = my_voxel_flags;
+
+    if(compute_collsWithUnknown)
+      num_collisions_w_unknown[blockIdx.x] = shared_num_collisions_w_unknown[0];
   }
 }
 
@@ -576,13 +600,20 @@ __global__ void kernel_intersect_VoxelMap(InnerNode* root, VoxelType* voxels, ui
  * This kernel can compute the meanings of the collidng voxels from the list.
  */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode,
-    bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+    bool set_collision_flag, bool compute_voxelTypeFlags, bool compute_collsWithUnknown, typename VoxelType>
 __global__ void kernel_intersect_VoxelList(InnerNode* root, const Vector3ui* voxel_coords, VoxelType* voxels, uint32_t voxellist_size,
-                                          voxel_count* num_collisions,
+                                          voxel_count* num_collisions, voxel_count* num_collisions_w_unknown,
                                           BitVectorVoxel* d_result_voxels, const uint32_t min_level,
-                                          const Vector3ui voxelmap_offset = Vector3ui(0))
+                                          const Vector3i voxelmap_offset = Vector3i(0))
 {
   __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
+  __shared__ voxel_count shared_num_collisions_w_unknown[NUM_THREADS_PER_BLOCK];
+
+  if(compute_collsWithUnknown)
+  {
+    shared_num_collisions_w_unknown[threadIdx.x] = 0;
+  }
+
   SharedVoxel<BitVectorVoxel> shared;
   BitVectorVoxel* shared_voxels = shared.getPointer();
   BitVectorVoxel my_voxel_flags;
@@ -598,8 +629,6 @@ __global__ void kernel_intersect_VoxelList(InnerNode* root, const Vector3ui* vox
       int level = level_count - 2;
       int tmp_level = level;
       InnerNode* tmp_node = node;
-      LeafNode* leaf = NULL;
-      bool collision, isLeaf;
 
       TRAVES_MACRO(nodeID, my_voxel_flags = BitVectorVoxel::reduce(my_voxel_flags, *(my_voxel)), min_level)
     }
@@ -611,11 +640,18 @@ __global__ void kernel_intersect_VoxelList(InnerNode* root, const Vector3ui* vox
   if (compute_voxelTypeFlags)
     reduceVoxels(my_voxel_flags, threadIdx.x, blockDim.x, shared_voxels);
 
+  if(compute_collsWithUnknown)
+    REDUCE(shared_num_collisions_w_unknown, threadIdx.x, blockDim.x, +)
+
+
   if (threadIdx.x == 0)
   {
     num_collisions[blockIdx.x] = shared_num_collisions[0];
     if (compute_voxelTypeFlags)
       d_result_voxels[blockIdx.x] = my_voxel_flags;
+
+    if(compute_collsWithUnknown)
+      num_collisions_w_unknown[blockIdx.x] = shared_num_collisions_w_unknown[0];
   }
 }
 
@@ -627,15 +663,22 @@ __global__ void kernel_intersect_VoxelList(InnerNode* root, const Vector3ui* vox
  * This kernel can compute the meanings of the collidng voxels from the list.
  */
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode,
-    bool set_collision_flag, bool compute_voxelTypeFlags, typename VoxelType>
+    bool set_collision_flag, bool compute_voxelTypeFlags, bool compute_collsWithUnknown, typename VoxelType>
 __global__ void kernel_intersect_MortonVoxelList(InnerNode* root, const OctreeVoxelID* voxel_ids, VoxelType* voxels, uint32_t voxellist_size,
-                                          voxel_count* num_collisions,
-                                          BitVectorVoxel* d_result_voxels, const uint32_t min_level)
+                                                 voxel_count* num_collisions, voxel_count* num_collisions_w_unknown,
+                                                 BitVectorVoxel* d_result_voxels, const uint32_t min_level)
 {
   __shared__ voxel_count shared_num_collisions[NUM_THREADS_PER_BLOCK];
+  __shared__ voxel_count shared_num_collisions_w_unknown[NUM_THREADS_PER_BLOCK];
+
   SharedVoxel<BitVectorVoxel> shared;
   BitVectorVoxel* shared_voxels = shared.getPointer();
   BitVectorVoxel my_voxel_flags;
+
+  if(compute_collsWithUnknown)
+  {
+    shared_num_collisions_w_unknown[threadIdx.x] = 0;
+  }
 
   shared_num_collisions[threadIdx.x] = 0;
   for (voxel_count i = blockIdx.x * blockDim.x + threadIdx.x; i < voxellist_size; i += gridDim.x * blockDim.x)
@@ -648,8 +691,6 @@ __global__ void kernel_intersect_MortonVoxelList(InnerNode* root, const OctreeVo
       int level = level_count - 2;
       int tmp_level = level;
       InnerNode* tmp_node = node;
-      LeafNode* leaf = NULL;
-      bool collision, isLeaf;
 
       TRAVES_MACRO(nodeID, my_voxel_flags = BitVectorVoxel::reduce(my_voxel_flags, *(my_voxel)), min_level)
     }
@@ -661,11 +702,17 @@ __global__ void kernel_intersect_MortonVoxelList(InnerNode* root, const OctreeVo
   if (compute_voxelTypeFlags)
     reduceVoxels(my_voxel_flags, threadIdx.x, blockDim.x, shared_voxels);
 
+  if(compute_collsWithUnknown)
+    REDUCE(shared_num_collisions_w_unknown, threadIdx.x, blockDim.x, +)
+
   if (threadIdx.x == 0)
   {
     num_collisions[blockIdx.x] = shared_num_collisions[0];
     if (compute_voxelTypeFlags)
       d_result_voxels[blockIdx.x] = my_voxel_flags;
+
+    if(compute_collsWithUnknown)
+      num_collisions_w_unknown[blockIdx.x] = shared_num_collisions_w_unknown[0];
   }
 }
 

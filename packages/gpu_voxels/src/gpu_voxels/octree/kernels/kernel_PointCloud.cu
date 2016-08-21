@@ -168,7 +168,7 @@ void kernel_toMortonCode(Vector3ui* inputVoxel, voxel_count numVoxel, OctreeVoxe
 }
 
 __global__
-void kernel_toVoxels(Vector3f* input_points, size_t num_points, Vector3ui* output_voxels, float voxel_side_length)
+void kernel_toVoxels(const Vector3f* input_points, size_t num_points, Vector3ui* output_voxels, float voxel_side_length)
 {
   const voxel_count id = blockIdx.x * blockDim.x + threadIdx.x;
   const voxel_count numThreads = gridDim.x * blockDim.x;

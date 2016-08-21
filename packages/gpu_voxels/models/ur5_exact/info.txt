@@ -1,0 +1,2 @@
+The UR5 models were voxelized with 4mm grid size.
+Models are solid.

@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/common_defines.h>
+#include <gpu_voxels/logging/logging_gpu_voxels_helpers.h>
 
 namespace gpu_voxels {
 

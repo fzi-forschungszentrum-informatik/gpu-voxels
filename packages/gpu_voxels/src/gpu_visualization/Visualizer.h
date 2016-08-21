@@ -120,10 +120,49 @@ public:
   void renderFunction(void);
   void idleFunction(void) const;
   void cleanupFunction(void);
+  //documentation of GPU_Voxels uses this
+  /**
+  * <ul>
+  * <li>h: Prints help.</li>
+  * <li>a: move slice axis negative</li>
+  * <li>b: print number of Voxels drawn.</li>
+  * <li>c: Toggles between orbit and free-flight camera.</li>
+  * <li>d: Toggles drawing of the grid.</li>
+  * <li>e: Toggle through drawing modes for triangles </li>
+  * <li>g: Toggles draw whole map. This disables the clipping of the field of view.</li>
+  * <li>i: Toggles the OpenGL depth function for the collision type to draw colliding Voxles over all other Voxels. GL_ALWAYS should be used to get an overview (produces artifacts).</li>
+  * <li>k: Toggles use of camera target point from shared memory (Currently not implemented).</li>
+  * <li>l or x: Toggles lighting on/off.</li>
+  * <li>m: Prints total VBO size in GPU memory.</li>
+  * <li>n: Prints device memory info.</li>
+  * <li>o: Overwrite providers possibility to trigger visibility of swept volumes: The provider may select, which Swept-Volumes are visible. This option overwrites the behaviour.</li>
+  * <li>p: Print camera position. Output can directly be pasted into an XML Configfile.</li>
+  * <li>q: move slice axis positive</li>
+  * <li>r: Reset camera to default position.</li>
+  * <li>s: Draw all swept volume types on/off (All SweptVol types will be deactivated after switching off.)</li>
+  * <li>t: rotate slice axis</li>
+  * <li>v: Prints view info.</li>
+  * <li>+/-: Increase/decrease the light intensity. Can be multiplied with SHIFT / CTRL.</li>
+  * <li>CRTL: Hold down for high movement speed.</li>
+  * <li>SHIFT: Hold down for medium movement speed.</li>
+  * <li>0-9: Toggles the drawing of the different Voxel-types. Pressing ALT, you can set a decimal prefix (10, 20, 30 ...)</li>
+  * <li>,/.: previous/next keyboard mode: Voxelmap > Voxellist > Octree > Primitivearrays >
+  * <li>F1-F11 Toggle drawing according to the keyboard mode.</li>
+  * </ul>
+  */
   void keyboardFunction(unsigned char, int32_t, int32_t);
   void keyboardSpecialFunction(int32_t key, int32_t x, int32_t y);
   void mouseMotionFunction(int32_t xpos, int32_t ypos);
   void mousePassiveMotionFunction(int32_t xpos, int32_t ypos);
+  /**
+  * <ul>
+  * <li>RIGHT_BUTTON: Prints x,y,z coordinates of the clicked voxel on console.</li>
+  * <li>LEFT_BUTTON: Enables mouse movement.</li>
+  * <li>ALT + CTRL + LEFT_BUTTON: Enables focus point movement in X-Y-Plane for Orbit mode.</li>
+  * <li>ALT + CTRL + MOUSE_WHEEL: Move Camera closer of further away from focus point.</li>
+  * <li>MOUSE_WHEEL: Increase/ decrease super voxel size. This influences rendering performance.</li>
+  * </ul>
+  */
   void mouseClickFunction(int32_t button, int32_t state, int32_t x, int32_t y);
 
   //Data handling functions
@@ -224,6 +263,7 @@ private:
   void flipDrawVoxelmap(uint32_t index);
   void flipDrawOctree(uint32_t index);
   void flipDrawVoxellist(uint32_t index);
+  void flipDrawPrimitiveArray(uint32_t index);
   void flipDrawType(BitVoxelMeaning type);
   void flipDrawSweptVolume();
   void flipExternalVisibilityTrigger();
@@ -243,6 +283,14 @@ private:
 
   void rotate_slice_axis();
   void move_slice_axis(int offset);
+
+
+  //keyboard helper
+  void keyboardFlipVisibility(glm::int8_t index);
+  void nextKeyboardMode();
+  void lastKeyboardMode();
+  std::string keyboardModetoString(int8_t index);
+  void keyboardDrawTriangles();
 /////////////////////////////////////////member variables//////////////////////////////////////////
   // the current context of the visualizer
   VisualizerContext* m_cur_context;
@@ -302,6 +350,9 @@ private:
   Primitive* m_default_prim;
 
   std::vector<Primitive*> m_primitives;
+
+  int8_t m_keyboardmode;
+  u_int8_t m_trianglemode;
 
   //benchmark variables
   uint32_t m_cur_fps;

@@ -27,6 +27,7 @@
 namespace gpu_voxels {
 
 DECLARE_LOG_STREAM(Gpu_voxels);
+DECLARE_LOG_STREAM(Gpu_Voxels_Map);
 
 using icl_core::logging::endl;
 }

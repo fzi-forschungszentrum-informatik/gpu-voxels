@@ -37,4 +37,4 @@ using icl_core::logging::endl;
 }
 }
 
-#endif /* LOGGING_VISUALIZATION_H_ */
+#endif /* LOGGING_CLASSIFICATION_H_ */

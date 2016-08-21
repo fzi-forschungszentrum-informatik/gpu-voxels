@@ -22,13 +22,21 @@
 //----------------------------------------------------------------------
 #include "GpuVoxels.h"
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
+#include <gpu_voxels/helpers/GeometryGeneration.h>
 
 namespace gpu_voxels {
 
-GpuVoxels::GpuVoxels(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z,
-                     const float voxel_side_length) :
-    m_dim_x(dim_x), m_dim_y(dim_y), m_dim_z(dim_z), m_voxel_side_length(voxel_side_length)
+GpuVoxels::GpuVoxels()
+  :m_dim_x(0)
+  ,m_dim_y(0)
+  ,m_dim_z(0)
+  ,m_voxel_side_length(0)
 {
+  // Check for valid GPU:
+  if(!cuTestAndInitDevice())
+  {
+    exit(123);
+  }
 }
 
 GpuVoxels::~GpuVoxels()
@@ -37,6 +45,34 @@ GpuVoxels::~GpuVoxels()
   m_managed_maps.clear();
   m_managed_robots.clear();
   m_managed_primitive_arrays.clear();
+}
+
+void GpuVoxels::initialize(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z, const float voxel_side_length)
+{
+  if(m_dim_x == 0 || m_dim_y == 0|| m_dim_z == 0 || m_voxel_side_length == 0)
+  {
+    m_dim_x = dim_x;
+    m_dim_y = dim_y;
+    m_dim_z = dim_z;
+    m_voxel_side_length = voxel_side_length;
+  }
+  else
+  {
+    LOGGING_WARNING(Gpu_voxels, "Do not try to initialize GpuVoxels multiple times. Parameters remain unchanged." << endl);
+  }
+}
+
+boost::weak_ptr<GpuVoxels> GpuVoxels::masterPtr = boost::weak_ptr<GpuVoxels>();
+
+GpuVoxelsSharedPtr GpuVoxels::getInstance()
+{
+  boost::shared_ptr<GpuVoxels> temp = gpu_voxels::GpuVoxels::masterPtr.lock();
+  if(!temp)
+  {
+    temp.reset(new GpuVoxels());
+    gpu_voxels::GpuVoxels::masterPtr = temp;
+  }
+  return temp;
 }
 
 bool GpuVoxels::addPrimitives(const primitive_array::PrimitiveType prim_type, const std::string &array_name)
@@ -184,6 +220,8 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
     m_managed_maps.insert(named_map_pair);
   }
 
+  // sanity checking, that nothing went wrong:
+  CHECK_CUDA_ERROR();
   return true;
 }
 
@@ -366,25 +404,10 @@ bool GpuVoxels::insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &cor
   }
 
   float delta = m_voxel_side_length / points_per_voxel;
-  std::vector<Vector3f> box_cloud;
 
-  for(float x_dim = corner_min.x; x_dim <= corner_max.x; x_dim += delta)
-  {
-    for(float y_dim = corner_min.y; y_dim <= corner_max.y; y_dim += delta)
-    {
-      for(float z_dim = corner_min.z; z_dim <= corner_max.z; z_dim += delta)
-      {
-        Vector3f point(x_dim, y_dim, z_dim);
-        box_cloud.push_back(point);
-      }
-    }
-  }
-  std::vector<std::vector<Vector3f> > box_clouds;
-  box_clouds.push_back(box_cloud);
-  MetaPointCloud boxes(box_clouds);
-  boxes.syncToDevice();
+  PointCloud box_cloud(geometry_generation::createBoxOfPoints(corner_min, corner_max, delta));
 
-  map_it->second.map_shared_ptr->insertMetaPointCloud(boxes, voxel_meaning);
+  map_it->second.map_shared_ptr->insertPointCloud(box_cloud, voxel_meaning);
 
   return true;
 }
@@ -446,11 +469,15 @@ VisProvider* GpuVoxels::getVisualization(const std::string &map_name)
   return it->second.vis_provider_shared_ptr.get();
 }
 
-void GpuVoxels::getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z, float& voxel_side_length)
+void GpuVoxels::getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z)
 {
   dim_x = m_dim_x;
   dim_y = m_dim_y;
   dim_z = m_dim_z;
+}
+
+void GpuVoxels::getVoxelSideLength(float& voxel_side_length)
+{
   voxel_side_length = m_voxel_side_length;
 }
 

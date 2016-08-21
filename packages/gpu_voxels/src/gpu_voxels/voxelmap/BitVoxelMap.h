@@ -27,13 +27,15 @@
 #include <gpu_voxels/voxel/BitVoxel.h>
 #include <gpu_voxels/voxel/ProbabilisticVoxel.h>
 #include <gpu_voxels/voxelmap/ProbVoxelMap.h>
+#include <gpu_voxels/helpers/CollisionInterfaces.h>
 #include <cstddef>
 
 namespace gpu_voxels {
 namespace voxelmap {
 
 template<std::size_t length>
-class BitVoxelMap: public TemplateVoxelMap<BitVoxel<length> >
+class BitVoxelMap: public TemplateVoxelMap<BitVoxel<length> >,
+    public CollidableWithBitVectorVoxelMap, public CollidableWithProbVoxelMap, public CollidableWithTypesBitVectorVoxelMap
 {
 public:
   typedef BitVoxel<length> Voxel;
@@ -74,8 +76,10 @@ public:
 
   virtual MapType getTemplateType() const { return MT_BITVECTOR_VOXELMAP; }
 
-  virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision,
-                                  float coll_threshold, const Vector3ui &offset);
+  // Collision Interface
+  size_t collideWith(const voxelmap::BitVectorVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWith(const voxelmap::ProbVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWithTypes(const voxelmap::BitVectorVoxelMap* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
 
 protected:
   virtual void clearVoxelMapRemoteLock(const uint32_t bit_index);

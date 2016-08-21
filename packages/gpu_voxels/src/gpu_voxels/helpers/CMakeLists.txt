@@ -26,11 +26,13 @@ ICMAKER_ADD_HEADERS(
   FileReaderInterface.h
   PcdFileReader.h
   XyzFileReader.h
+  PointCloud.h
   MetaPointCloud.h
   BitVector.h
   CompileIssues.h
   MathHelpers.h
   GeometryGeneration.h
+  CollisionInterfaces.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -51,11 +53,15 @@ ICMAKER_ADD_CUDA_FILES(
   cuda_handling.cu
   CudaMath.h
   CudaMath.cu
+  PointCloud.h
+  PointCloud.cu
   kernels/PointCloudOperations.h
   kernels/PointCloudOperations.cu
   MetaPointCloud.cu
   kernels/MetaPointCloudOperations.h
   kernels/MetaPointCloudOperations.cu
+  kernels/HelperOperations.h
+  kernels/HelperOperations.cu
   BitVector.h
   )
 
@@ -74,11 +80,27 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
 ICMAKER_EXTERNAL_DEPENDENCIES(EXPORT
   CUDA
   PCL
-  )
+)
 
 ICMAKER_DEPENDENCIES( OPTIONAL
   OpenNI
+)
+
+IF(ROS_FOUND)
+  ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_TF_SUPPORT_)
+  ICMAKER_ADD_SOURCES(
+    tfHelper.cpp
   )
+  ICMAKER_ADD_HEADERS(
+    tfHelper.h
+  )
+  ICMAKER_EXTERNAL_DEPENDENCIES(EXPORT
+    ROS
+  )
+
+
+ENDIF(ROS_FOUND)
+
 
 IF(OpenNI_FOUND)
   ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_KINECT_SUPPORT_)
@@ -96,5 +118,6 @@ ICMAKER_INSTALL_HEADERS(gpu_voxels/helpers)
 # Include files here that are needed when the package is installed.
 ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/helpers/kernels
   kernels/PointCloudOperations.h
+  kernels/HelperOperations.h
   kernels/MetaPointCloudOperations.h
 )

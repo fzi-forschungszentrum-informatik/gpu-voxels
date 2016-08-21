@@ -33,6 +33,7 @@ FIND_PACKAGE(PCL)
 
 # Dependencies for ROS interconnect
 FIND_PACKAGE(ROS)
+FIND_PACKAGE(pcl_ros)
 
 # Dependencies for Kinect support
 FIND_PACKAGE(OpenNi)
@@ -95,23 +96,49 @@ MESSAGE(STATUS "-------------------- END of GPU Voxels configuration -----------
 MESSAGE(STATUS "--------------------------------------------------------------------------")
 
 
-
+###############################################################################
 # Enable position independent code
+# Change these lines to increase performance if your GPU's compute capability is higher
+# GPU-Voxels requires GPU CUDA capabilities >= 2.0
+
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+SET(ICMAKER_CUDA_CPPDEFINES "-gencode=arch=compute_20,code=compute_20")
 
-# require GPU CUDA capabilities >= 2.0
-SET(ICMAKER_CUDA_CPPDEFINES -arch=sm_20)
+IF( (CMAKE_BUILD_TYPE STREQUAL "Debug") OR (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo") )
+ MESSAGE(WARNING "Building with THRUST_DEBUG option!")
+ SET(ICMAKER_CUDA_CPPDEFINES "-gencode=arch=compute_20,code=compute_20 -DTHRUST_DEBUG")
+ENDIF()
 
 
-# --- Package management ---
+###############################################################################
+# Remove vtk definitions (Macro copied from PCL)
+# This is used for CUDA targets, because nvcc does not like VTK 6+ definitions
+# style.
+macro(REMOVE_VTK_DEFINITIONS)
+    get_directory_property(_dir_defs DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+    set(_vtk_definitions)
+    foreach(_item ${_dir_defs})
+        if(_item MATCHES "vtk*")
+            list(APPEND _vtk_definitions -D${_item})
+        endif()
+    endforeach()
+    remove_definitions(${_vtk_definitions})
+endmacro(REMOVE_VTK_DEFINITIONS)
+
+
+###############################################################################
+# ICL Package management
 ICMAKER_REGISTER_PACKAGE(gpu_voxels)
 
+REMOVE_VTK_DEFINITIONS()
 ADD_SUBDIRECTORY(src/gpu_voxels)
 ADD_SUBDIRECTORY(src/gpu_visualization)
+ADD_SUBDIRECTORY(src/gpu_classification)
 
 ICMAKER_CONFIGURE_PACKAGE()
 
-# --- Additional stuff ---
+###############################################################################
+# Build examples
 ADD_SUBDIRECTORY(src/examples)
 
 IF(BUILD_TESTS)

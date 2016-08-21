@@ -40,11 +40,13 @@ Visualizer::Visualizer()
   m_shm_manager_voxellists = NULL;
   m_shm_manager_primitive_arrays = NULL;
   m_shm_manager_visualizer = NULL;
-  m_window_title = "visualizer";
+  m_window_title = "GPU-Voxels Visualizer";
   m_use_external_draw_type_triggers = false;
   m_draw_swept_volumes = true;
   m_move_focus_enabled = false;
   m_move_focus_vertical_enabled = false;
+  m_keyboardmode = 0;
+  m_trianglemode = 0;
 }
 
 Visualizer::~Visualizer()
@@ -1159,132 +1161,136 @@ void Visualizer::drawPrimitivesFromSharedMem()
   {
     for(size_t prim_array_num = 0; prim_array_num < m_cur_context->m_prim_arrays.size(); prim_array_num++)
     {
-      PrimitiveArrayContext* con = m_cur_context->m_prim_arrays[prim_array_num];
-      // only read the buffer again if it has changed
-      if(m_shm_manager_primitive_arrays->hasPrimitiveBufferChanged(prim_array_num))
+      if(m_cur_context->m_prim_arrays[prim_array_num]->m_draw_context)
       {
-        glm::vec4* dev_ptr_positions;
-        primitive_array::PrimitiveType tmp_prim_type = primitive_array::primitive_INITIAL_VALUE;
-        if (m_shm_manager_primitive_arrays->getPrimitivePositions(prim_array_num, (Vector4f**)&dev_ptr_positions, con->m_total_num_voxels,
-                                                            tmp_prim_type))
+        PrimitiveArrayContext* con = m_cur_context->m_prim_arrays[prim_array_num];
+        // only read the buffer again if it has changed
+        if(m_shm_manager_primitive_arrays->hasPrimitiveBufferChanged(prim_array_num))
         {
-          if(con->m_cur_vbo_size != con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR)
+          glm::vec4* dev_ptr_positions;
+          primitive_array::PrimitiveType tmp_prim_type = primitive_array::primitive_INITIAL_VALUE;
+          if (m_shm_manager_primitive_arrays->getPrimitivePositions(prim_array_num, (Vector4f**)&dev_ptr_positions, con->m_total_num_voxels,
+                                                              tmp_prim_type))
           {
-            con->m_cur_vbo_size = con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR;
-            // generate new buffer after deleting the old one.
-            glDeleteBuffers(1, &(con->m_vbo));
-            glGenBuffers(1, &(con->m_vbo));
-            glBindBuffer(GL_ARRAY_BUFFER, con->m_vbo);
-            glBufferData(GL_ARRAY_BUFFER, con->m_cur_vbo_size, 0, GL_STATIC_DRAW);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            if(con->m_cur_vbo_size != con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR)
+            {
+              con->m_cur_vbo_size = con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR;
+              // generate new buffer after deleting the old one.
+              glDeleteBuffers(1, &(con->m_vbo));
+              glGenBuffers(1, &(con->m_vbo));
+              glBindBuffer(GL_ARRAY_BUFFER, con->m_vbo);
+              glBufferData(GL_ARRAY_BUFFER, con->m_cur_vbo_size, 0, GL_STATIC_DRAW);
+              glBindBuffer(GL_ARRAY_BUFFER, 0);
+            }
+            // copy the data from the list into the OpenGL buffer
+            struct cudaGraphicsResource* cuda_res;
+            HANDLE_CUDA_ERROR(
+                cudaGraphicsGLRegisterBuffer(&cuda_res, con->m_vbo,
+                                             cudaGraphicsRegisterFlagsWriteDiscard));
+            glm::vec4 *vbo_ptr;
+            size_t num_bytes;
+            HANDLE_CUDA_ERROR(cudaGraphicsMapResources(1, &(cuda_res), 0));
+            HANDLE_CUDA_ERROR(cudaGraphicsResourceGetMappedPointer((void ** )&vbo_ptr, &num_bytes, cuda_res));
+
+            cudaMemcpy(vbo_ptr, dev_ptr_positions, con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR,
+                       cudaMemcpyDeviceToDevice);
+
+            cudaIpcCloseMemHandle(dev_ptr_positions);
+            HANDLE_CUDA_ERROR(cudaGraphicsUnmapResources(1, &cuda_res, 0));
+            HANDLE_CUDA_ERROR(cudaGraphicsUnregisterResource(cuda_res));
+            // update the changed variable in the shared memory
+            m_shm_manager_primitive_arrays->setPrimitiveBufferChangedToFalse(prim_array_num);
+
+            // generate the corresponding default primitive type if it was not set before
+            if(con->m_prim_type != tmp_prim_type)
+            {
+              con->m_prim_type = tmp_prim_type;
+              if (con->m_prim_type == primitive_array::primitive_Sphere)
+              {
+                Sphere* sphere;
+                m_interpreter->getDefaultSphere(sphere);
+                con->m_default_prim = sphere;
+                con->m_default_prim->create(m_cur_context->m_lighting);
+              }
+              else if (con->m_prim_type == primitive_array::primitive_Cuboid)
+              {
+                Cuboid* cuboid;
+                m_interpreter->getDefaultCuboid(cuboid);
+                con->m_default_prim = cuboid;
+                con->m_default_prim->create(m_cur_context->m_lighting);
+              }
+              else
+              {
+                LOGGING_WARNING_C(Visualization, Visualizer,
+                                  "Primitive type not supported yet ... add it here." << endl);
+              }
+            }
+          }else{
+            // if it was not possible to load data from shared memory
+            LOGGING_ERROR_C(Visualization, Visualizer,
+                              "It was not possible to load primitive data from shared memory." << endl);
+            return;
           }
-          // copy the data from the list into the OpenGL buffer
-          struct cudaGraphicsResource* cuda_res;
-          HANDLE_CUDA_ERROR(
-              cudaGraphicsGLRegisterBuffer(&cuda_res, con->m_vbo,
-                                           cudaGraphicsRegisterFlagsWriteDiscard));
-          glm::vec4 *vbo_ptr;
-          size_t num_bytes;
-          HANDLE_CUDA_ERROR(cudaGraphicsMapResources(1, &(cuda_res), 0));
-          HANDLE_CUDA_ERROR(cudaGraphicsResourceGetMappedPointer((void ** )&vbo_ptr, &num_bytes, cuda_res));
+        }
+        if (con->m_default_prim != NULL)
+        {
+          GLuint color_id;
+          mat4 V = m_cur_context->m_camera->getViewMatrix();
+          mat4 VP = m_cur_context->m_camera->getProjectionMatrix() * V;
+          if (m_cur_context->m_lighting)
+          { // set up the correct variables for the shader with lighting
+            glUseProgram(m_lighting_programID);
+            mat4 V_inv_trans = glm::transpose(glm::inverse(V));
+            vec3 lightpos_world = m_cur_context->m_camera->getCameraPosition()
+                + vec3(1.f) * m_cur_context->m_camera->getCameraRight();
+            vec3 light_intensity = vec3(m_cur_context->m_light_intensity);
 
-          cudaMemcpy(vbo_ptr, dev_ptr_positions, con->m_total_num_voxels * SIZE_OF_TRANSLATION_VECTOR,
-                     cudaMemcpyDeviceToDevice);
+            glUniformMatrix4fv(m_light_vpID, 1, GL_FALSE, value_ptr(VP));
+            glUniformMatrix4fv(m_light_vID, 1, GL_FALSE, value_ptr(V));
+            glUniformMatrix4fv(m_light_v_inv_transID, 1, GL_FALSE, value_ptr(V_inv_trans));
 
-          cudaIpcCloseMemHandle(dev_ptr_positions);
-          HANDLE_CUDA_ERROR(cudaGraphicsUnmapResources(1, &cuda_res, 0));
-          HANDLE_CUDA_ERROR(cudaGraphicsUnregisterResource(cuda_res));
-          // update the changed variable in the shared memory
-          m_shm_manager_primitive_arrays->setPrimitiveBufferChangedToFalse(prim_array_num);
+            glUniform3fv(m_light_lightposID, 1, glm::value_ptr(lightpos_world));
+            glUniform3fv(m_light_light_intensity, 1, glm::value_ptr(light_intensity));
+            glUniform1i(m_light_interpolationID, GL_FALSE);
 
-          // generate the corresponding default primitive type if it was not set before
-          if(con->m_prim_type != tmp_prim_type)
+            color_id = m_light_startColorID;
+          }
+          else
           {
-            con->m_prim_type = tmp_prim_type;
-            if (con->m_prim_type == primitive_array::primitive_Sphere)
-            {
-              Sphere* sphere;
-              m_interpreter->getDefaultSphere(sphere);
-              con->m_default_prim = sphere;
-              con->m_default_prim->create(m_cur_context->m_lighting);
-            }
-            else if (con->m_prim_type == primitive_array::primitive_Cuboid)
-            {
-              Cuboid* cuboid;
-              m_interpreter->getDefaultCuboid(cuboid);
-              con->m_default_prim = cuboid;
-              con->m_default_prim->create(m_cur_context->m_lighting);
-            }
-            else
-            {
-              LOGGING_WARNING_C(Visualization, Visualizer,
-                                "Primitive type not supported yet ... add it here." << endl);
-            }
+            // set up the correct variables for the shader without lighting
+            glUseProgram(m_programID);
+            glUniformMatrix4fv(m_vpID, 1, GL_FALSE, value_ptr(VP));
+            glUniform1i(m_interpolationID, GL_FALSE);
+            color_id = m_startColorID;
           }
-        }else{
-          // if it was not possible to load data from shared memory
-          LOGGING_ERROR_C(Visualization, Visualizer,
-                            "It was not possible to load primitive data from shared memory." << endl);
-          return;
-        }
-      }
-      if (con->m_default_prim != NULL)
-      {
-        GLuint color_id;
-        mat4 V = m_cur_context->m_camera->getViewMatrix();
-        mat4 VP = m_cur_context->m_camera->getProjectionMatrix() * V;
-        if (m_cur_context->m_lighting)
-        { // set up the correct variables for the shader with lighting
-          glUseProgram(m_lighting_programID);
-          mat4 V_inv_trans = glm::transpose(glm::inverse(V));
-          vec3 lightpos_world = m_cur_context->m_camera->getCameraPosition()
-              + vec3(1.f) * m_cur_context->m_camera->getCameraRight();
-          vec3 light_intensity = vec3(m_cur_context->m_light_intensity);
+          ExitOnGLError("ERROR! Couldn't load variables to shader for the primitives from shared mem.");
+          glBindBuffer(GL_ARRAY_BUFFER, con->m_vbo);
+          glEnableVertexAttribArray(2);
+          glVertexAttribDivisor(2, 1);
+          glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*) 0);
 
-          glUniformMatrix4fv(m_light_vpID, 1, GL_FALSE, value_ptr(VP));
-          glUniformMatrix4fv(m_light_vID, 1, GL_FALSE, value_ptr(V));
-          glUniformMatrix4fv(m_light_v_inv_transID, 1, GL_FALSE, value_ptr(V_inv_trans));
+          if (m_cur_context->m_draw_filled_triangles)
+          {
+            glUniform4fv(color_id, 1, glm::value_ptr(con->m_default_prim->getColor()));
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            con->m_default_prim->draw(con->m_total_num_voxels, m_cur_context->m_lighting);
+          }
+          ExitOnGLError("ERROR! Couldn't draw the filled triangles of the primitives.");
+          if (m_cur_context->m_draw_edges_of_triangels)
+          {
+            glPolygonOffset(-1.f, -1.f);
+            glEnable(GL_POLYGON_OFFSET_LINE);
+            glm::vec4 c = con->m_default_prim->getColor() * 0.5f;
+            glUniform4fv(color_id, 1, glm::value_ptr(c));
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            con->m_default_prim->draw(con->m_total_num_voxels, m_cur_context->m_lighting);
+            glDisable(GL_POLYGON_OFFSET_LINE);
+          }
+          ExitOnGLError("ERROR! Couldn't draw the edges of the primitives.");
 
-          glUniform3fv(m_light_lightposID, 1, glm::value_ptr(lightpos_world));
-          glUniform3fv(m_light_light_intensity, 1, glm::value_ptr(light_intensity));
-          glUniform1i(m_light_interpolationID, GL_FALSE);
+        }
 
-          color_id = m_light_startColorID;
-        }
-        else
-        {
-          // set up the correct variables for the shader without lighting
-          glUseProgram(m_programID);
-          glUniformMatrix4fv(m_vpID, 1, GL_FALSE, value_ptr(VP));
-          glUniform1i(m_interpolationID, GL_FALSE);
-          color_id = m_startColorID;
-        }
-        ExitOnGLError("ERROR! Couldn't load variables to shader for the primitives from shared mem.");
-        glBindBuffer(GL_ARRAY_BUFFER, con->m_vbo);
-        glEnableVertexAttribArray(2);
-        glVertexAttribDivisor(2, 1);
-        glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*) 0);
-
-        if (m_cur_context->m_draw_filled_triangles)
-        {
-          glUniform4fv(color_id, 1, glm::value_ptr(con->m_default_prim->getColor()));
-          glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-          con->m_default_prim->draw(con->m_total_num_voxels, m_cur_context->m_lighting);
-        }
-        ExitOnGLError("ERROR! Couldn't draw the filled triangles of the primitives.");
-        if (m_cur_context->m_draw_edges_of_triangels)
-        {
-          glPolygonOffset(-1.f, -1.f);
-          glEnable(GL_POLYGON_OFFSET_LINE);
-          glm::vec4 c = con->m_default_prim->getColor() * 0.5f;
-          glUniform4fv(color_id, 1, glm::value_ptr(c));
-          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-          con->m_default_prim->draw(con->m_total_num_voxels, m_cur_context->m_lighting);
-          glDisable(GL_POLYGON_OFFSET_LINE);
-        }
-        ExitOnGLError("ERROR! Couldn't draw the edges of the primitives.");
-
-      }
+      } // end of draw context
     } // end for each prim array
   } // endif (m_shm_manager_primitive_arrays != NULL)
   // reset used stuff...
@@ -1558,8 +1564,10 @@ void Visualizer::timerFunction(int32_t value, void (*callback)(int32_t))
   if (0 != value)
   {
     std::stringstream s;
-    s << m_window_title << ": " << m_frameCount * 4 << " Frames Per Second @ " << getWidth() << " x "
-        << getHeight() << " Super Voxel Size: " << m_cur_context->m_dim_svoxel.x;
+    s << m_window_title << ": " << m_frameCount * 4 << " Frames Per Second @ "
+      << getWidth() << " x " << getHeight()
+      << " Super Voxel Size: " << m_cur_context->m_dim_svoxel.x
+      << " Keyboard Mode: " << keyboardModetoString(m_keyboardmode);
     glutSetWindowTitle(s.str().c_str());
 
     m_cur_fps = m_frameCount;
@@ -1625,6 +1633,9 @@ void Visualizer::move_slice_axis(int offset) {
 
 void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
 {
+  static int8_t decimal_prefix(0);
+  static int8_t decimal_key(0);
+
   float multiplier = 1.f;
   if (glutGetModifiers() == GLUT_ACTIVE_SHIFT)
   {
@@ -1637,7 +1648,7 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
 
   int8_t modi = glutGetModifiers();
   bool alt_pressed = modi & GLUT_ACTIVE_ALT;
-  printf("Keycode: %c, Modifier value: %d, shift_pressed=%u\n", key, modi, alt_pressed);
+  printf("Keycode: %c, Modifier value: %d, alt_pressed=%u\n", key, modi, alt_pressed);
 
   switch (key)
   {
@@ -1688,11 +1699,8 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
     case 'd': //Toggle draw grid
       m_cur_context->m_draw_grid = !m_cur_context->m_draw_grid;
       break;
-    case 'e': //Toggle draw edges
-      m_cur_context->m_draw_edges_of_triangels = !m_cur_context->m_draw_edges_of_triangels;
-      break;
-    case 'f': //Toggle fill triangles
-      m_cur_context->m_draw_filled_triangles = !m_cur_context->m_draw_filled_triangles;
+    case 'e': //Toggle draw triangles edges and / or filling
+      keyboardDrawTriangles();
       break;
     case 'g': //Toggle draw whole map
       m_cur_context->m_draw_whole_map = !m_cur_context->m_draw_whole_map;
@@ -1740,10 +1748,12 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
     case 'v':
       printViewInfo();
       break;
-    case 'x':
-      toggleLighting();
+    case ',':
+      lastKeyboardMode();
       break;
-
+    case '.':
+      nextKeyboardMode();
+      break;
     case '+': // increase light intensity
       m_cur_context->m_light_intensity += 20.f * multiplier;
       break;
@@ -1751,77 +1761,35 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
       m_cur_context->m_light_intensity -= 20.f * multiplier;
       m_cur_context->m_light_intensity = max(m_cur_context->m_light_intensity, 0.f);
       break;
-    case '1':
-      flipDrawType(eBVM_OCCUPIED);
-      break;
-    case '2':
-      flipDrawType(eBVM_COLLISION);
-      break;
-    case '3':
-      flipDrawType(eBVM_SWEPT_VOLUME_START);
-      break;
-    case '4':
-      if (!alt_pressed)
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 1));
-      }
-      else
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 6));
-      }
-      break;
-    case '5':
-      if (!alt_pressed)
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 2));
-      }
-      else
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 7));
-      }
-      break;
-    case '6':
-      if (!alt_pressed)
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 3));
-      }
-      else
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 8));
-      }
-      break;
-    case '7':
-      if (!alt_pressed)
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 4));
-      }
-      else
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 9));
-      }
-      break;
-    case '8':
-      if (!alt_pressed)
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 5));
-      }
-      else
-      {
-        flipDrawType(BitVoxelMeaning(eBVM_SWEPT_VOLUME_START + 10));
-      }
-      break;
-    case '9':
-      flipDrawType(eBVM_FREE);
-      break;
     case '0':
-      flipDrawType(eBVM_UNKNOWN);
-      break;
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      if (alt_pressed)
+      {
+        // Set the times 10 digit
+        decimal_prefix = 10 * (key - '0');
+      }
+      else
+      {
+        // Set the times 1 digit
+        decimal_key = key - '0';
+      }
 
+      flipDrawType(BitVoxelMeaning(decimal_prefix + decimal_key));
+      break;
   }
 }
 
 void Visualizer::keyboardSpecialFunction(int32_t key, int32_t x, int32_t y)
 {
+  //int8_t map_offset = 0;
   float speed_multiplier = m_cur_context->m_dim_svoxel.x * 0.3f;
 
   if (glutGetModifiers() == GLUT_ACTIVE_SHIFT)
@@ -1831,6 +1799,11 @@ void Visualizer::keyboardSpecialFunction(int32_t key, int32_t x, int32_t y)
   else if (glutGetModifiers() == GLUT_ACTIVE_CTRL)
   {
     speed_multiplier *= 30.f;
+  }
+  else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+  {
+    // add 4 to map ID
+    //map_offset = 4;
   }
 
   switch (key)
@@ -1854,45 +1827,118 @@ void Visualizer::keyboardSpecialFunction(int32_t key, int32_t x, int32_t y)
       m_cur_context->m_camera->moveAlongUp(-speed_multiplier);
       break;
     case GLUT_KEY_F1:
-      flipDrawVoxelmap(0);
+      keyboardFlipVisibility(0);
       break;
     case GLUT_KEY_F2:
-      flipDrawVoxelmap(1);
+      keyboardFlipVisibility(1);
       break;
     case GLUT_KEY_F3:
-      flipDrawVoxelmap(2);
+      keyboardFlipVisibility(2);
       break;
     case GLUT_KEY_F4:
-      flipDrawVoxelmap(3);
+      keyboardFlipVisibility(3);
       break;
     case GLUT_KEY_F5:
-      flipDrawOctree(0);
+      keyboardFlipVisibility(4);
       break;
     case GLUT_KEY_F6:
-      flipDrawOctree(1);
+      keyboardFlipVisibility(5);
       break;
     case GLUT_KEY_F7:
-      flipDrawOctree(2);
+      keyboardFlipVisibility(6);
       break;
     case GLUT_KEY_F8:
-      flipDrawOctree(3);
+      keyboardFlipVisibility(7);
       break;
     case GLUT_KEY_F9:
-      flipDrawVoxellist(0);
+      keyboardFlipVisibility(8);
       break;
     case GLUT_KEY_F10:
-      flipDrawVoxellist(1);
+      keyboardFlipVisibility(9);
       break;
     case GLUT_KEY_F11:
-      flipDrawVoxellist(2);
+      keyboardFlipVisibility(10);
       break;
     case GLUT_KEY_F12:
-      flipDrawVoxellist(3);
+      keyboardFlipVisibility(11);
       break;
     default:
       break;
   }
 }
+
+
+void Visualizer::nextKeyboardMode()
+{
+  if(++m_keyboardmode > 3) m_keyboardmode = 0;
+  LOGGING_INFO_C(Visualization, Visualizer, "Keyboardmode set to " << keyboardModetoString(m_keyboardmode) << endl);
+}
+
+void Visualizer::lastKeyboardMode()
+{
+  if(--m_keyboardmode < 0) m_keyboardmode = 3;
+  LOGGING_INFO_C(Visualization, Visualizer, "Keyboardmode set to " << keyboardModetoString(m_keyboardmode) << endl);
+}
+
+void Visualizer::keyboardFlipVisibility(int8_t index)
+{
+  switch (m_keyboardmode)
+  {
+    case 0:
+      flipDrawVoxelmap(index);
+      break;
+    case 1:
+      flipDrawVoxellist(index);
+      break;
+    case 2:
+      flipDrawOctree(index);
+      break;
+    case 3:
+      flipDrawPrimitiveArray(index);
+      break;
+    default:
+      break;
+  }
+}
+std::string Visualizer::keyboardModetoString(int8_t index)
+{
+  switch (index)
+  {
+    case 0:
+      return "Voxelmap";
+    case 1:
+      return "Voxellist";
+    case 2:
+      return "Octree";
+    case 3:
+      return "Primitivearray";
+    default:
+      return "";
+  }
+}
+
+void Visualizer::keyboardDrawTriangles()
+{
+  m_trianglemode =   (m_trianglemode+1)%3;
+  switch (m_trianglemode)
+  {
+    case 0:
+      m_cur_context->m_draw_edges_of_triangels = false;
+      m_cur_context->m_draw_filled_triangles = true;
+      break;
+    case 1:
+      m_cur_context->m_draw_edges_of_triangels = true;
+      m_cur_context->m_draw_filled_triangles = false;
+      break;
+    case 2:
+      m_cur_context->m_draw_edges_of_triangels = true;
+      m_cur_context->m_draw_filled_triangles = true;
+      break;
+    default:
+      break;
+  }
+}
+
 
 void Visualizer::idleFunction(void) const
 {
@@ -2020,6 +2066,27 @@ void Visualizer::flipDrawVoxellist(uint32_t index)
   {
     LOGGING_INFO_C(Visualization, Visualizer,
                    "Deactivated the drawing of the Voxellist: " << con->m_map_name << endl);
+  }
+}
+
+void Visualizer::flipDrawPrimitiveArray(uint32_t index)
+{
+  if(index >= m_cur_context->m_prim_arrays.size())
+  {
+    LOGGING_INFO_C(Visualization, Visualizer, "No PrimitiveArray registered at index " << index << endl);
+    return;
+  }
+  PrimitiveArrayContext* con = m_cur_context->m_prim_arrays[index];
+  con->m_draw_context = !con->m_draw_context;
+  if (con->m_draw_context)
+  {
+    LOGGING_INFO_C(Visualization, Visualizer,
+                   "Activated the drawing of the PrimitiveArray: " << con->m_map_name << endl);
+  }
+  else
+  {
+    LOGGING_INFO_C(Visualization, Visualizer,
+                   "Deactivated the drawing of the PrimitiveArray: " << con->m_map_name << endl);
   }
 }
 
@@ -2275,6 +2342,21 @@ void Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos
           << " z: " << n_pos.z * scale << unit << std::endl;
     }
 
+    VoxelmapContext* vm_context = m_cur_context->m_voxel_maps[data_index];
+    if (vm_context->m_voxelMap->getMapType() == MT_BITVECTOR_VOXELMAP) {
+      gpu_voxels::voxelmap::BitVectorVoxelMap* vm = static_cast<gpu_voxels::voxelmap::BitVectorVoxelMap *>(vm_context->m_voxelMap);
+
+      gpu_voxels::voxelmap::BitVectorVoxelMap::Voxel voxel;
+      cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(vm->getDeviceDataPtr(), vm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::BitVectorVoxelMap::Voxel), cudaMemcpyDeviceToHost);
+      std::cout << "Voxel info: " << voxel << std::endl;
+    } else if (vm_context->m_voxelMap->getMapType() == MT_PROBAB_VOXELMAP) {
+      gpu_voxels::voxelmap::ProbVoxelMap* vm = static_cast<gpu_voxels::voxelmap::ProbVoxelMap *>(vm_context->m_voxelMap);
+
+      gpu_voxels::voxelmap::ProbVoxelMap::Voxel voxel;
+      cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(vm->getDeviceDataPtr(), vm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::ProbVoxelMap::Voxel), cudaMemcpyDeviceToHost);
+      std::cout << "Voxel info: " << voxel << std::endl;
+    }
+
   }
   if (found_in_octree)
   {
@@ -2388,6 +2470,31 @@ void Visualizer::printViewInfo()
 
 /**
  * Prints the key bindings.
+ *  * <li>h: Prints help.</li>
+  * <li>a: move slice axis negative</li>
+  * <li>b: print number of Voxels drawn.</li>
+  * <li>c: Toggles between orbit and free-flight camera.</li>
+  * <li>d: Toggles drawing of the grid.</li>
+  * <li>e: Toggle through drawing modes for triangles </li>
+  * <li>g: Toggles draw whole map. This disables the clipping of the field of view.</li>
+  * <li>i: Toggles the OpenGL depth function for the collision type to draw colliding Voxles over all other Voxels. GL_ALWAYS should be used to get an overview (produces artifacts).</li>
+  * <li>k: Toggles use of camera target point from shared memory (Currently not implemented).</li>
+  * <li>l: Toggles lighting on/off.</li>
+  * <li>m: Prints total VBO size in GPU memory.</li>
+  * <li>n: Prints device memory info.</li>
+  * <li>o: Overwrite providers possibility to trigger visibility of swept volumes: The provider may select, which Swept-Volumes are visible. This option overwrites the behaviour.</li>
+  * <li>p: Print camera position. Output can directly be pasted into an XML Configfile.</li>
+  * <li>q: move slice axis positive</li>
+  * <li>r: Reset camera to default position.</li>
+  * <li>s: Draw all swept volume types on/off (All SweptVol types will be deactivated after switching off.)</li>
+  * <li>t: rotate slice axis</li>
+  * <li>v: Prints view info.</li>
+  * <li>+/-: Increase/decrease the light intensity. Can be multiplied with SHIFT / CTRL.</li>
+  * <li>CRTL: Hold down for high movement speed.</li>
+  * <li>SHIFT: Hold down for medium movement speed.</li>
+  * <li>0-9: Toggles the drawing of the different Voxel-types.</li>
+  * <li>,/.: previous/next keyboard mode: Voxelmap > Voxellist > Octree > Primitivearrays >
+  * <li>F1-F11 Toggle drawing according to the keyboard mode.</li>
  */
 void Visualizer::printHelp()
 {
@@ -2397,6 +2504,8 @@ void Visualizer::printHelp()
   std::cout << "" << std::endl;
   std::cout << "---->Keyboard" << std::endl;
   std::cout << "h: print this help." << std::endl;
+  std::cout << "b: print number of Voxels drawn." << std::endl;
+
   std::cout << "v: print view info." << std::endl;
   std::cout << "o: overwrite providers possibility to trigger visibility of swept volumes on/off" << std::endl;
   std::cout << "s: draw all swept volume types on/off (All SweptVol types will be deactivated after switching off.)" << std::endl;
@@ -2408,9 +2517,8 @@ void Visualizer::printHelp()
   std::cout << "t: change slice axis (none/x/y/z). requires 'draw whole map mode' to show slices." << std::endl;
   std::cout << "q|a: increment/decrement slice axis position (see 't'')" << std::endl;
   std::cout << "d: toggle draw grid." << std::endl;
-  std::cout << "e: toggle draw edges of the triangles." << std::endl;
-  std::cout << "f: toggle draw filled triangles." << std::endl;
-  std::cout << "l|x: toggle lighting on/off." << std::endl;
+  std::cout << "e: e: Toggle through drawing modes for triangles." << std::endl;
+  std::cout << "l: toggle lighting on/off." << std::endl;
   std::cout
       << "i: toggle the OpenGL depth function for the collision type. GL_ALWAYS should be used to get an overview (produces artifacts)."
       << std::endl;
@@ -2421,9 +2529,8 @@ void Visualizer::printHelp()
   std::cout << "CRTL: high movement speed." << std::endl;
   std::cout << "SHIFT: medium movement speed." << std::endl;
   std::cout << "0-9: toggle the drawing of the some types." << std::endl;
-  std::cout << "F1-F4: toggle the drawing of the first 4 registered voxel maps." << std::endl;
-  std::cout << "F5-F8: toggle the drawing of the first 4 registered octrees." << std::endl;
-  std::cout << "F9-F12: toggle the drawing of the first 4 registered voxellists." << std::endl;
+  std::cout << ",/.: previous/next keyboard mode: Voxelmap > Voxellist > Octree > Primitivearrays >" << std::endl;
+  std::cout << "F1-F11 Toggle drawing according to the keyboard mode." << std::endl;
   std::cout << "" << std::endl;
   std::cout << "---->Mouse" << std::endl;
   std::cout << "RIGHT_BUTTON: print x,y,z coordinates of the clicked voxel." << std::endl;
@@ -2488,6 +2595,11 @@ void Visualizer::logCreate()
 
   log_file.close();
 }
+
+
+
+
+
 
 } // end of namespace visualization
 } // end of namespace gpu_voxels

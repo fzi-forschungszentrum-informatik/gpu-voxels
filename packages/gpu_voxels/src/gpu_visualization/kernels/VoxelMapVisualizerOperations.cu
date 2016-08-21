@@ -40,7 +40,7 @@ namespace visualization {
  */
 __global__ void fill_vbo_without_precounting(ProbabilisticVoxel* voxelMap, Vector3ui dim_voxel_map,
                                               Vector3ui dim_super_voxel, Vector3ui start_voxel,
-                                              Vector3ui end_voxel, uint8_t occupancy_threshold, float4* vbo,
+                                              Vector3ui end_voxel, Probability occupancy_threshold, float4* vbo,
                                               uint32_t* vbo_offsets, uint32_t* vbo_limits,
                                               uint32_t* write_index, uint8_t* draw_voxel_type,
                                               uint8_t* prefixes)
@@ -70,13 +70,13 @@ __global__ void fill_vbo_without_precounting(ProbabilisticVoxel* voxelMap, Vecto
               ProbabilisticVoxel voxel = voxelMap[k * dim_voxel_map.x * dim_voxel_map.y
                   + j * dim_voxel_map.x + i];
 
-              if (voxel.getOccupancy() >= probability(occupancy_threshold - 128)) // Use signed values. Quick fix
+              if (voxel.getOccupancy() >= occupancy_threshold)
               {
                 //printf("occ thresh %u \n", occupancy_threshold);
-                //map the occupancy on the first 10 types, so type element [0,9]
-                uint8_t type = 9 - ((voxel.getOccupancy() + 128) * (10.f / 256.f));
+                // map the occupancy on the SweptVolume types, which is a bit fuzzy, was only 250 Types are available
+                // so we have to cap it
+                uint8_t type = MIN((eBVM_SWEPT_VOLUME_START + voxel.getOccupancy()), eBVM_SWEPT_VOLUME_END);
                 //printf("type %u \n", type);
-                //type = 245 + type; // to match the other types use types from 245 - 254
                 if (draw_voxel_type[type])
                 {
                   prefix = prefixes[type];

@@ -13,6 +13,9 @@
 //----------------------------------------------------------------------
 #include "MetaPointCloud.h"
 #include "gpu_voxels/helpers/MathHelpers.h"
+#include <gpu_voxels/helpers/kernels/MetaPointCloudOperations.h>
+#include "gpu_voxels/helpers/kernels/HelperOperations.h"
+#include <boost/shared_ptr.hpp>
 #include <cstdlib>
 
 namespace gpu_voxels {
@@ -41,10 +44,12 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
     m_accumulated_pointcloud_size += _point_cloud_sizes[i];
   }
 
+  // Memory is only allocated once with the accumulated cloud size:
   m_point_clouds_local->accumulated_cloud_size = m_accumulated_pointcloud_size;
   m_accumulated_cloud = new Vector3f[m_accumulated_pointcloud_size];
   memset(m_accumulated_cloud, 0, sizeof(Vector3f)*m_accumulated_pointcloud_size);
 
+  // The pointers in clouds_base_addresses point into the accumulated memory:
   Vector3f* tmp_addr = m_accumulated_cloud;
   for (uint16_t i = 0; i < m_num_clouds; i++)
   {
@@ -96,25 +101,22 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
       cudaMemcpy(m_dev_ptr_to_point_clouds_struct, m_dev_point_clouds_local, sizeof(MetaPointCloudStruct),
                  cudaMemcpyHostToDevice));
 
-  // used for transformations:
-  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
-
-  LOGGING_DEBUG_C(
-      Gpu_voxels_helpers,
-      MetaPointCloud,
-      "This MetaPointCloud requires: " << (m_accumulated_pointcloud_size * sizeof(Vector3f)) / 1024.0 / 1024.0 << "MB on the GPU and on the Host" << endl);
+//  LOGGING_DEBUG_C(
+//      Gpu_voxels_helpers,
+//      MetaPointCloud,
+//      "This MetaPointCloud requires: " << (m_accumulated_pointcloud_size * sizeof(Vector3f)) / 1024.0 / 1024.0 << "MB on the GPU and on the Host" << endl);
 
 }
 
 
 void MetaPointCloud::addClouds(const std::vector<std::string> &_point_cloud_files, bool use_model_path)
 {
-  std::vector<std::vector<Vector3f> > *point_clouds = new std::vector<std::vector<Vector3f> >(
+  std::vector<std::vector<Vector3f> > point_clouds = std::vector<std::vector<Vector3f> >(
       _point_cloud_files.size());
 
   for (size_t i = 0; i < _point_cloud_files.size(); i++)
   {
-    if(!file_handling::PointcloudFileHandler::Instance()->loadPointCloud(_point_cloud_files.at(i), use_model_path, point_clouds->at(i)))
+    if(!file_handling::PointcloudFileHandler::Instance()->loadPointCloud(_point_cloud_files.at(i), use_model_path, point_clouds.at(i)))
     {
       LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud,
                       "Could not read file " << _point_cloud_files.at(i) << icl_core::logging::endl);
@@ -122,25 +124,26 @@ void MetaPointCloud::addClouds(const std::vector<std::string> &_point_cloud_file
     }
   }
 
-  std::vector<uint32_t> point_cloud_sizes(point_clouds->size());
-  for (size_t i = 0; i < point_clouds->size(); i++)
+  std::vector<uint32_t> point_cloud_sizes(point_clouds.size());
+  for (size_t i = 0; i < point_clouds.size(); i++)
   {
-    point_cloud_sizes.at(i) = point_clouds->at(i).size();
+    point_cloud_sizes.at(i) = point_clouds.at(i).size();
   }
   init(point_cloud_sizes);
 
-  for (size_t i = 0; i < point_clouds->size(); i++)
+  for (size_t i = 0; i < point_clouds.size(); i++)
   {
-    updatePointCloud(i, point_clouds->at(i), false);
+    updatePointCloud(i, point_clouds.at(i), false);
   }
   syncToDevice();
-  delete point_clouds;
 }
 
 
 MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_files, bool use_model_path)
 {
   addClouds(_point_cloud_files, use_model_path);
+  // used for transformations:
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
 }
 
 MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_files,
@@ -159,6 +162,8 @@ MetaPointCloud::MetaPointCloud(const std::vector<std::string> &_point_cloud_file
     LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud,
                     "Number of names differs to number of pointcloud files!" << icl_core::logging::endl);
   }
+  // used for transformations:
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
 }
 
 
@@ -166,11 +171,15 @@ MetaPointCloud::MetaPointCloud()
 {
   const std::vector<uint32_t> _point_cloud_sizes(0,0);
   init(_point_cloud_sizes);
+  // used for transformations:
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
 }
 
 MetaPointCloud::MetaPointCloud(const std::vector<uint32_t> &_point_cloud_sizes)
 {
   init(_point_cloud_sizes);
+  // used for transformations:
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
 }
 
 MetaPointCloud::MetaPointCloud(const MetaPointCloud &other)
@@ -185,20 +194,8 @@ MetaPointCloud::MetaPointCloud(const MetaPointCloud &other)
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_dev_ptr_to_accumulated_cloud, other.m_dev_ptr_to_accumulated_cloud,
                  sizeof(Vector3f) * other.getAccumulatedPointcloudSize(), cudaMemcpyDeviceToDevice));
-}
-
-MetaPointCloud::MetaPointCloud(const MetaPointCloud *other)
-{
-  init(other->getPointcloudSizes());
-  m_point_cloud_names = other->getCloudNames();
-  for (uint16_t i = 0; i < other->getNumberOfPointclouds(); i++)
-  {
-    updatePointCloud(i, other->getPointCloud(i), other->getPointcloudSize(i), false);
-  }
-  // copy all clouds on the device
-  HANDLE_CUDA_ERROR(
-      cudaMemcpy(m_dev_ptr_to_accumulated_cloud, other->m_dev_ptr_to_accumulated_cloud,
-                 sizeof(Vector3f) * other->getAccumulatedPointcloudSize(), cudaMemcpyDeviceToDevice));
+  // used for transformations:
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
 }
 
 // copy assignment
@@ -206,6 +203,7 @@ MetaPointCloud& MetaPointCloud::operator=(const MetaPointCloud& other)
 {
   if (this != &other) // self-assignment check expected
   {
+    destruct();
     init(other.getPointcloudSizes());
     m_point_cloud_names = other.getCloudNames();
     for (uint16_t i = 0; i < other.getNumberOfPointclouds(); i++)
@@ -220,6 +218,69 @@ MetaPointCloud& MetaPointCloud::operator=(const MetaPointCloud& other)
   return *this;
 }
 
+
+bool MetaPointCloud::operator==(const MetaPointCloud& other) const
+{
+  // Things are clear if self comparison:
+  if(this == &other)
+  {
+    LOGGING_DEBUG_C(Gpu_voxels_helpers, MetaPointCloud, "Clouds are the same object." << icl_core::logging::endl);
+    return true;
+  }
+  // Size and number of subclouds have to match:
+  if(m_accumulated_pointcloud_size != other.m_accumulated_pointcloud_size)
+  {
+    LOGGING_DEBUG_C(Gpu_voxels_helpers, MetaPointCloud, "Accumulated sizes do not match." << icl_core::logging::endl);
+    return false;
+  }
+  if(m_num_clouds != other.m_num_clouds)
+  {
+    LOGGING_DEBUG_C(Gpu_voxels_helpers, MetaPointCloud, "Number of sub-clouds do not match." << icl_core::logging::endl);
+    return false;
+  }
+
+  // Allocate result memory on Host:
+  bool *host_equality_results = new bool[cMAX_NR_OF_BLOCKS];
+
+  bool *dev_equality_results;
+  // allocate result memory on device:
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&dev_equality_results, cMAX_NR_OF_BLOCKS * sizeof(bool)));
+
+  // initialze results memory to true:
+  HANDLE_CUDA_ERROR(cudaMemset(dev_equality_results, false, cMAX_NR_OF_BLOCKS * sizeof(bool)));
+
+  // do the actual comparison:
+  computeLinearLoad(m_accumulated_pointcloud_size, &m_blocks, &m_threads_per_block);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+  kernelCompareMem<<<m_blocks, m_threads_per_block>>>(m_dev_ptr_to_accumulated_cloud, other.m_dev_ptr_to_accumulated_cloud,
+                                                      m_accumulated_pointcloud_size * sizeof(Vector3f), dev_equality_results);
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  // copy back the whole array
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(host_equality_results, dev_equality_results, cMAX_NR_OF_BLOCKS * sizeof(bool),
+                 cudaMemcpyDeviceToHost));
+
+  bool ret = true;
+
+  // check only used portion of array:
+  for (uint32_t i = 0; i < m_blocks; i++)
+  {
+    if(!host_equality_results[i])
+    {
+      LOGGING_DEBUG_C(Gpu_voxels_helpers, MetaPointCloud, "Clouds data is different!" << icl_core::logging::endl);
+      ret = false;
+      break;
+    }
+  }
+
+  // clean up:
+  delete host_equality_results;
+  HANDLE_CUDA_ERROR(cudaFree(dev_equality_results));
+  return ret;
+}
+
 MetaPointCloud::MetaPointCloud(const std::vector<std::vector<Vector3f> > &point_clouds)
 {
   std::vector<uint32_t> point_cloud_sizes(point_clouds.size());
@@ -228,7 +289,8 @@ MetaPointCloud::MetaPointCloud(const std::vector<std::vector<Vector3f> > &point_
     point_cloud_sizes[i] = point_clouds[i].size();
   }
   init(point_cloud_sizes);
-
+  // used for transformations:
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_transformation_dev, sizeof(Matrix4f)));
   for (size_t i = 0; i < point_clouds.size(); i++)
   {
     updatePointCloud(i, point_clouds[i], false);
@@ -259,13 +321,24 @@ void MetaPointCloud::addCloud(uint32_t cloud_size)
   delete tmp_clouds;
 }
 
-void MetaPointCloud::addCloud(const std::vector<Vector3f> &cloud, bool sync, const std::string& name )
+void MetaPointCloud::addCloud(const PointCloud &cloud, bool sync, const std::string &name)
+{
+  // This could be optimized: Use two copy operations: One on the host points and one DevToDev, to avoid mem transfer.
+  addCloud(cloud.getPoints(), cloud.getPointCloudSize(), sync, name);
+}
+
+void MetaPointCloud::addCloud(const std::vector<Vector3f> &cloud, bool sync, const std::string& name)
+{
+  addCloud(cloud.data(), cloud.size(), sync, name);
+}
+
+void MetaPointCloud::addCloud(const Vector3f *points, uint32_t pointcloud_size, bool sync, const std::string &name)
 {
   // Allocate mem and restore old data
-  addCloud(cloud.size());
+  addCloud(pointcloud_size);
 
   // Copy the new cloud to host memory
-  memcpy(m_point_clouds_local->clouds_base_addresses[m_num_clouds-1], cloud.data(),
+  memcpy(m_point_clouds_local->clouds_base_addresses[m_num_clouds-1], points,
          sizeof(Vector3f) * m_point_clouds_local->cloud_sizes[m_num_clouds-1]);
 
   if(!name.empty())
@@ -286,6 +359,7 @@ std::string MetaPointCloud::getCloudName(uint16_t i) const
   {
     return it->second;
   }
+  LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud, "No name found for cloud index " << i << endl);
   return std::string();
 }
 
@@ -298,6 +372,7 @@ int16_t MetaPointCloud::getCloudNumber(const std::string& name) const
       return it->first;
     }
   }
+  LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud, "The name " << name << " is unknown" << endl);
   return -1;
 }
 
@@ -310,6 +385,7 @@ void MetaPointCloud::destruct()
   if (m_dev_ptr_to_accumulated_cloud)
     HANDLE_CUDA_ERROR(cudaFree(m_dev_ptr_to_accumulated_cloud));
   if (m_dev_ptr_to_clouds_base_addresses)
+    // No need to iteratively delete the subclouds, as the accumulated mem is deleted
     HANDLE_CUDA_ERROR(cudaFree(m_dev_ptr_to_clouds_base_addresses));
   if (m_accumulated_cloud)
     delete (m_accumulated_cloud);
@@ -320,6 +396,7 @@ void MetaPointCloud::destruct()
   if (m_point_clouds_local->cloud_sizes)
     delete (m_point_clouds_local->cloud_sizes);
   if (m_point_clouds_local->clouds_base_addresses)
+    // No need to iteratively delete the subclouds, as the accumulated mem is deleted
     delete (m_point_clouds_local->clouds_base_addresses);
   if (m_point_clouds_local)
     delete (m_point_clouds_local);
@@ -328,6 +405,8 @@ void MetaPointCloud::destruct()
 MetaPointCloud::~MetaPointCloud()
 {
   destruct();
+  if (m_transformation_dev)
+    HANDLE_CUDA_ERROR(cudaFree(m_transformation_dev));
 }
 
 void MetaPointCloud::syncToDevice()
@@ -367,19 +446,23 @@ void MetaPointCloud::updatePointCloud(uint16_t cloud, const std::vector<Vector3f
   updatePointCloud(cloud, pointcloud.data(), pointcloud.size(), sync);
 }
 
+void MetaPointCloud::updatePointCloud(uint16_t cloud, const PointCloud &pointcloud, bool sync)
+{
+  // This could be optimized: Use two copy operations: One on the host points and one DevToDev, to avoid mem transfer.
+  updatePointCloud(cloud, pointcloud.getPoints(), pointcloud.getPointCloudSize(), sync);
+}
+
 void MetaPointCloud::updatePointCloud(const std::string &cloud_name, const std::vector<Vector3f> &pointcloud, bool sync)
 {
   int16_t cloud_id = getCloudNumber(cloud_name);
-  if(cloud_id > 0)
-  {
-    updatePointCloud(cloud_id, pointcloud.data(), pointcloud.size(), sync);
-  }
-
+  updatePointCloud(cloud_id, pointcloud.data(), pointcloud.size(), sync);
 }
 
 void MetaPointCloud::updatePointCloud(uint16_t cloud, const Vector3f* pointcloud, uint32_t pointcloud_size,
                                       bool sync)
 {
+  assert(m_num_clouds >= cloud);
+
   if (pointcloud_size == m_point_clouds_local->cloud_sizes[cloud])
   {
     // Copy the cloud to host memory
@@ -388,8 +471,8 @@ void MetaPointCloud::updatePointCloud(uint16_t cloud, const Vector3f* pointcloud
   }
   else
   {
-    LOGGING_WARNING_C(Gpu_voxels_helpers, MetaPointCloud,
-                    "Size of pointcloud changed! Rearanging memory" << icl_core::logging::endl);
+//    LOGGING_WARNING_C(Gpu_voxels_helpers, MetaPointCloud,
+//                    "Size of pointcloud changed! Rearanging memory" << icl_core::logging::endl);
 
     std::vector<uint32_t> new_sizes = getPointcloudSizes();
     new_sizes.at(cloud) = pointcloud_size;
@@ -503,6 +586,13 @@ void MetaPointCloud::transformSelf(const Matrix4f* transformation)
 
 void MetaPointCloud::transform(const Matrix4f* transformation, MetaPointCloud* transformed_cloud) const
 {
+  if((m_accumulated_pointcloud_size != transformed_cloud->m_accumulated_pointcloud_size) ||
+     (m_num_clouds != transformed_cloud->m_num_clouds))
+  {
+    LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud,
+                    "Size of target pointcloud does not match local pointcloud. Not transforming!" << icl_core::logging::endl);
+    return;
+  }
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_transformation_dev, transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
 
@@ -512,14 +602,21 @@ void MetaPointCloud::transform(const Matrix4f* transformation, MetaPointCloud* t
   // transform the cloud via Kernel.
   kernelTransformCloud<<< m_blocks, m_threads_per_block >>>
      (m_transformation_dev,
-      getDeviceConstPointer(),
-      transformed_cloud->getDevicePointer());
+      m_dev_ptrs_to_addrs[0],
+      transformed_cloud->m_dev_ptrs_to_addrs[0],
+      m_accumulated_pointcloud_size);
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 void MetaPointCloud::transformSubCloud(uint8_t subcloud_to_transform, const Matrix4f* transformation, MetaPointCloud* transformed_cloud) const
 {
+  if(m_point_clouds_local->cloud_sizes[subcloud_to_transform] != transformed_cloud->m_point_clouds_local->cloud_sizes[subcloud_to_transform])
+  {
+    LOGGING_ERROR_C(Gpu_voxels_helpers, MetaPointCloud,
+                    "Size of target sub-pointcloud does not match local pointcloud. Not transforming!" << icl_core::logging::endl);
+    return;
+  }
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_transformation_dev, transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
 
@@ -527,10 +624,11 @@ void MetaPointCloud::transformSubCloud(uint8_t subcloud_to_transform, const Matr
                     &m_blocks, &m_threads_per_block);
   cudaDeviceSynchronize();
   // transform the cloud via Kernel.
-  kernelTransformSubCloud<<< m_blocks, m_threads_per_block >>>
-     (subcloud_to_transform, m_transformation_dev,
-      getDeviceConstPointer(),
-      transformed_cloud->getDevicePointer());
+  kernelTransformCloud<<< m_blocks, m_threads_per_block >>>
+     (m_transformation_dev,
+      m_dev_ptrs_to_addrs[subcloud_to_transform],
+      transformed_cloud->m_dev_ptrs_to_addrs[subcloud_to_transform],
+      m_point_clouds_local->cloud_sizes[subcloud_to_transform]);
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }

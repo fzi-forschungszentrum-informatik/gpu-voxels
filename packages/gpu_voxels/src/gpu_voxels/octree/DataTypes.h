@@ -53,6 +53,8 @@ namespace NTree {
 // only include declaration of template class NTree.hpp once to speed up the build process
 #define NTREE_PRECOMPILE
 
+#undef TREAT_UNKNOWN_AS_COLLISION // When defined, intesections with unknown octree nodes will result in collisions
+
 #define INITIAL_PROBABILITY Probability(0)  // probability used to initialize any new node
 #define INITIAL_FREE_SPACE_PROBABILITY Probability(0)
 #define INITIAL_OCCUPIED_PROBABILITY Probability(0)
@@ -74,9 +76,6 @@ namespace NTree {
 #define NUM_BLOCKS 2688 // 8192 * 8;
 #define NUM_THREADS_PER_BLOCK 128 // 32 // 32 * 8
 #define THRESHOLD_OCCUPANCY 10
-#define UNKNOWN_OCCUPANCY -128
-#define MIN_OCCUPANCY -127
-#define MAX_OCCUPANCY 127
 #define D_PTR(X) thrust::raw_pointer_cast((X).data())
 #define MAX_VALUE(TYPE) ((TYPE)((1 << (sizeof(TYPE) * 8)) - 1))
 

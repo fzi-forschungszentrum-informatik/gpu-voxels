@@ -37,16 +37,16 @@
 
 using namespace gpu_voxels;
 
-GpuVoxels* gvl;
+GpuVoxelsSharedPtr gvl;
 
 void ctrlchandler(int)
 {
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }
 void killhandler(int)
 {
-  delete gvl;
+  gvl.reset();
   exit(EXIT_SUCCESS);
 }
 
@@ -64,7 +64,8 @@ int main(int argc, char* argv[])
    * of your GPU. Even if an empty Octree is small, a
    * Voxelmap will always require the full memory.
    */
-  gvl = new GpuVoxels(200, 200, 100, 0.01);
+  gvl = GpuVoxels::getInstance();
+  gvl->initialize(200, 200, 100, 0.01);
 
   /*
    * Now we add a map, that will represent the robot.
@@ -186,7 +187,7 @@ int main(int argc, char* argv[])
      */
     LOGGING_INFO(
         Gpu_voxels,
-        "Collsions: " << gvl->getMap("myEnvironmentMap")->collideWith(gvl->getMap("myRobotMap")) << endl);
+        "Collsions: " << gvl->getMap("myEnvironmentMap")->as<NTree::GvlNTreeDet>()->collideWith(gvl->getMap("myRobotMap")->as<voxelmap::BitVectorVoxelMap>()) << endl);
 
     // visualize both maps
     gvl->visualizeMap("myRobotMap");

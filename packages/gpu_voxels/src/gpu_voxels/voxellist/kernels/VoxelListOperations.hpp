@@ -49,13 +49,13 @@ void kernelInsertGlobalPointCloud(MapVoxelID* id_list, Vector3ui* coord_list, Vo
 
   Voxel new_voxel = Voxel();
   new_voxel.insert(voxel_meaning);
-  Vector3ui integer_coordinates;
+  Vector3ui uint_coords;
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizePoints; i += blockDim.x * gridDim.x)
   {
-    integer_coordinates = voxelmap::mapToVoxels(voxel_side_length, points[i]);
-    coord_list[i+offset_new_points] = integer_coordinates;
+    uint_coords = voxelmap::mapToVoxels(voxel_side_length, points[i]);
+    coord_list[i+offset_new_points] = uint_coords;
     voxel_list[i+offset_new_points] = new_voxel;
-    id_list[i+offset_new_points] = voxelmap::getVoxelIndex(ref_map_dim, integer_coordinates);
+    id_list[i+offset_new_points] = voxelmap::getVoxelIndexUnsigned(ref_map_dim, uint_coords);
 
   }
 }
@@ -73,14 +73,14 @@ void kernelInsertMetaPointCloud(MapVoxelID* id_list, Vector3ui* coord_list, Voxe
   {
     Voxel new_voxel;
     new_voxel.insert(voxel_meaning);
-    Vector3ui integer_coordinates;
+    Vector3ui uint_coords;
     //printf("Inserting a voxel with meaning %d \n", voxel_meanings[sub_cloud]);
-    integer_coordinates = voxelmap::mapToVoxels(voxel_side_length,
+    uint_coords = voxelmap::mapToVoxels(voxel_side_length,
                                                       meta_point_cloud->clouds_base_addresses[0][i]);
 
-    coord_list[i+offset_new_points] = integer_coordinates;
+    coord_list[i+offset_new_points] = uint_coords;
     voxel_list[i+offset_new_points] = new_voxel;
-    id_list[i+offset_new_points] = voxelmap::getVoxelIndex(ref_map_dim, integer_coordinates);
+    id_list[i+offset_new_points] = voxelmap::getVoxelIndexUnsigned(ref_map_dim, uint_coords);
   }
 }
 
@@ -95,7 +95,7 @@ void kernelInsertMetaPointCloud(MapVoxelID* id_list, Vector3ui* coord_list, Voxe
 
   u_int16_t sub_cloud = 0;
   u_int32_t sub_cloud_upper_bound = meta_point_cloud->cloud_sizes[sub_cloud];
-  Vector3ui integer_coordinates;
+  Vector3ui uint_coords;
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < meta_point_cloud->accumulated_cloud_size;
       i += blockDim.x * gridDim.x)
   {
@@ -110,12 +110,12 @@ void kernelInsertMetaPointCloud(MapVoxelID* id_list, Vector3ui* coord_list, Voxe
     Voxel new_voxel;
     new_voxel.insert(voxel_meanings[sub_cloud]);
     //printf("Inserting a voxel with meaning %d \n", voxel_meanings[sub_cloud]);
-    integer_coordinates = voxelmap::mapToVoxels(voxel_side_length,
+    uint_coords = voxelmap::mapToVoxels(voxel_side_length,
                                                       meta_point_cloud->clouds_base_addresses[0][i]);
 
-    coord_list[i+offset_new_points] = integer_coordinates;
+    coord_list[i+offset_new_points] = uint_coords;
     voxel_list[i+offset_new_points] = new_voxel;
-    id_list[i+offset_new_points] = voxelmap::getVoxelIndex(ref_map_dim, integer_coordinates);
+    id_list[i+offset_new_points] = voxelmap::getVoxelIndexUnsigned(ref_map_dim, uint_coords);
   }
 }
 
@@ -127,7 +127,7 @@ template<class Voxel, class OtherVoxel, class Collider>
 __global__
 void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, Voxel* this_voxel_list, uint32_t this_list_size,
                                const OtherVoxel* other_map, Vector3ui other_map_dim, Collider collider,
-                               Vector3ui offset, uint16_t* results)
+                               Vector3i offset, uint16_t* results)
 {
   __shared__ uint16_t cache[cMAX_THREADS_PER_BLOCK];
   uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -137,8 +137,8 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, Voxel* this_voxel
   OtherVoxel* max_index = getHighestVoxelPtr(other_map, other_map_dim);
   while (i < this_list_size)
   {
-    const OtherVoxel* other_voxel = other_map + this_id_list[i] + voxelmap::getVoxelIndex(other_map_dim, offset);
-    if(other_voxel <= max_index)
+    const OtherVoxel* other_voxel = (other_map + this_id_list[i]) + voxelmap::getVoxelIndexSigned(other_map_dim, offset);
+    if(other_voxel >= other_map && other_voxel <= max_index)
     {
       const bool collision = collider.collide(this_voxel_list[i], *other_voxel);
       if (collision) // store collision info
@@ -182,7 +182,7 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, Voxel* this_voxel
 __global__
 void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
                                const ProbabilisticVoxel *other_map, Vector3ui other_map_dim, float col_threshold,
-                               Vector3ui offset, uint16_t* coll_counter_results, BitVectorVoxel* bitvoxel_results)
+                               Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* bitvoxel_results)
 {
   __shared__ uint16_t coll_counter_cache[cMAX_THREADS_PER_BLOCK];
 
@@ -197,8 +197,8 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *t
   ProbabilisticVoxel* max_index = voxelmap::getHighestVoxelPtr(other_map, other_map_dim);
   while (i < this_list_size)
   {
-    const ProbabilisticVoxel* other_voxel = other_map + this_id_list[i] + voxelmap::getVoxelIndex(other_map_dim, offset);
-    if(other_voxel <= max_index)
+    const ProbabilisticVoxel* other_voxel = (other_map + this_id_list[i]) + voxelmap::getVoxelIndexSigned(other_map_dim, offset);
+    if(other_voxel >= other_map && other_voxel <= max_index)
     {
       if(other_voxel->occupancy() >= col_threshold)
       {
@@ -332,9 +332,10 @@ template<class Voxel, class OtherVoxel, class Collider>
 __global__
 void kernelCollideWithVoxelMap(const OctreeVoxelID* this_id_list, Voxel* this_voxel_list, uint32_t this_list_size,
                                const OtherVoxel* other_map, Vector3ui other_map_dim, Collider collider,
-                               Vector3ui offset, uint16_t* results)
+                               Vector3i offset, uint16_t* results)
 {
   // NOP
+  printf("kernelCollideWithVoxelMap not implemented for Octreee!");
 }
 
 /*!
@@ -343,9 +344,10 @@ void kernelCollideWithVoxelMap(const OctreeVoxelID* this_id_list, Voxel* this_vo
 __global__
 void kernelCollideWithVoxelMap(const OctreeVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
                                const ProbabilisticVoxel *other_map, Vector3ui other_map_dim, float col_threshold,
-                               Vector3ui offset, uint16_t* coll_counter_results, BitVectorVoxel* bitvoxel_results)
+                               Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* bitvoxel_results)
 {
   // NOP
+  printf("kernelCollideWithVoxelMap not implemented for Octreee!");
 }
 
 
