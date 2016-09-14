@@ -30,7 +30,6 @@
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/logging/logging_robot.h>
-#include <Eigen/Dense>
 #include <kdl/frames.hpp>
 
 namespace gpu_voxels {

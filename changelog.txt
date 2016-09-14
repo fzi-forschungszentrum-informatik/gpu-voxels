@@ -229,3 +229,10 @@ Other changes:
 - Compiles with Ubuntu 16.04
     - Added CMake macro to remove VTK defines
     - Required lib glm fix: https://github.com/g-truc/glm/issues/530
+
+V 0.91 (2016-09-14):
+====================
+- Added example which shows how to link against GPU-Voxels.
+- Fixed a bug in the default collider regarding thresholds of probabilistic voxels.
+- Added code to visualize pointclouds as Primitive-Arrays.
+- Enhanced static Doxygen pages.

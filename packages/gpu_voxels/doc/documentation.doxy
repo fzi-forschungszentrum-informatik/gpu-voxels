@@ -3,15 +3,17 @@
  * Some words on what you will need to build the library. I don’t give explicit version requirements as they get outdated too fast. 
  * For specific problems or questions please consult the <a title="Contact" href="http://www.gpu-voxels.org/contact/">mailing-list</a>.
  * 
- * \section s1 Hardware
+ * \section hardware Hardware
  * As this is called GPU-Voxels, you will of course need a decent graphics card! 
  * CUDA <a title="CUDA Compute Capability" href="https://en.wikipedia.org/wiki/CUDA#Supported_GPUs" target="_blank">Compute Capability</a> 2.0 or greater is required. 
  * The more GPU memory the better.\n
  * We run the library on various workstations and even on laptops with 64 Bit OS. But we never tested it with 32 Bit! So be careful with that.\n
- * Also we made it compile on the NVIDIA Jetson TK1 (ARM SoC) but as CUDA does not support Shared Memory (so no visualization available) for 32 Bit ARMs we did not investigate that further.
+ * Also we made it compile on the NVIDIA Jetson TK1 (ARM32 SoC) but as CUDA does not support Shared Memory (so no visualization available) for 32 Bit ARMs we did not investigate that further.
+ * Things look a lot better on the NVIDIA Jetson TX1 (ARM64 SoC), although it requires huge effort to meet all the requirements to build GPU Voxels.
+ * We just exemeriment with that.
  *
- * \section s2 Required libraries to build GPU-Voxels
- * The software is tested on 64 Bit Ubuntu Linux Trusty (14.04.2 LTS Release: 14.04 ). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:
+ * \section req_libs Required libraries to build GPU-Voxels
+ * The software is tested on 64 Bit Ubuntu Linux Trusty (14.04) and Xenial (16.04). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:
  * <ul>
  * <li>CUDA &gt; 5.5</li>
  * <li>PCL</li>
@@ -22,12 +24,12 @@
  * For the visualizer you will also need:
  * <ul>
  * <li>GLEW (libglew1.10 Version: 1.10.0-3, libglew-dev Version: 1.10.0-3)</li>
- * <li>GLM (libglm-dev Version: 0.9.5.1-1)</li>
+ * <li>GLM (libglm-dev Version: 0.9.5.1-1) Probably you will have to patch one file: See <a title="GLM Bugtracker" href="https://github.com/g-truc/glm/issues/530" target="_blank">https://github.com/g-truc/glm/issues/530</a></li>
  * <li>OpenGL</li>
  * <li>GLUT (freeglut3 Version: 2.8.1-1, freeglut3-dev Version: 2.8.1-1)</li>
  * </ul>
  *  
- * \section s3 Additional Tools
+ * \section add_tools Additional Tools
  * As soon as you want to experiment with your own geometrical models, you will have to “voxelize” them. Models are represented as dense pointclouds in GPU-Voxels. I am using the really nice tool <b><em>binvox </em></b>to perform this task on the GPU. You can download it at <a title="Binvox" href="http://www.cs.princeton.edu/~min/binvox/" target="_blank">http://www.cs.princeton.edu/~min/binvox/</a>
  * \n\n
  * Huge thanks to Patrick Min (<a title="Patrick Min" href="http://www.cs.princeton.edu/~min/" target="_blank">http://www.cs.princeton.edu/~min/</a>) for offering the tool for free as a download!
@@ -42,7 +44,7 @@
  * \page Compiling Compiling
  * How can I build and use GPU-Voxels?
  *
- * \section s1 The environment
+ * \section environment The environment
  * <ul>
  * <li>The software is an interchangeable library (ICL) running within FZIs ic_workspace. ic means, it can run in whatever environment, e.g. as a ROS-node, as a MCA-module or as a standalone program.</li>
  * <li>ICLs are made to be platform independent. Therefore it should be possible to run gpu-voxels natively on the Mac. We never tried though…</li>
@@ -51,27 +53,12 @@
  * <li>There exist a lot more ICLs, making autonomous cars drive, Marsrovers explore, walking machines walk… Some of them will become OpenSource sooner or later.</li>
  * </ul>
  *
- * \section The_build_process The build process
+ * \section build_process The build process
  * <ol>
  * <li>Install the \ref Prerequisites "required libraries" and make sure that CUDA and its <em><b>nvcc</b></em> is correctly installed.</li>
  * <li>Clone the software from <a title="GitHub GPU-Voxles Download" href="https://github.com/fzi-forschungszentrum-informatik/gpu-voxels">GitHub</a> into a directory of your choice.</li>
- * <li>Change into the directory and create a build folder: <em><b>mkdir build</b></em></li>
- * <li>Change into the build folder and run cmake: <em><b>cd build &amp;&amp; cmake .. </b></em></li>
- * <li>Start compilation: <em><b>make</b></em> (or if you have some more cores <b><em>make -j9</em></b>)</li>
- * </ol>
- * \n\n
- * Feel free to use <b><em>ninja</em></b> for the build. We experienced no problems with that. \n
- * To switch between Debug and Release builds, use <em><b>cmake .. -DCMAKE_BUILD_TYPE=[Release/Debug/RelWithDebInfo]</b></em>
- * \n\n
- * ==> After installing the libs, continue with starting an \ref Examples "example".
- *
- * \section s3 Troubleshooting
- * <ul>
- * <li>No build targets are generated by cmake? ==> Read the output of cmake and search for missing dependencies.</li>
- * <li>You see hundreds of warnings during the build process? ==> Don’t worry, we seem then too (: This is work in progress…</li>
- * </ul>
- * \n\n
- * <b>A successfull cmake run should contain a section like this:</b>
+ * <li>Change into the directory and create a build folder: <em><b>mkdir build</b></em><br>
+ * A successfull cmake run should contain a section like this:</li>
  * \verbatim
 hermann-local@ids-isabel-2:~/src/ic_workspace_open_source/build$ cmake ..
 -- --------------------------------------------------------------------------
@@ -87,9 +74,21 @@ hermann-local@ids-isabel-2:~/src/ic_workspace_open_source/build$ cmake ..
 --
 -- -------------------- END of GPU Voxels configuration ---------------------
 -- --------------------------------------------------------------------------
-
 \endverbatim
+ * <li>Change into the build folder and run cmake: <em><b>cd build &amp;&amp; cmake .. </b></em></li>
+ * <li>Start compilation: <em><b>make</b></em> (or if you have some more cores <b><em>make -j9</em></b>)</li>
+ * </ol>
+ * Feel free to use <b><em>ninja</em></b> for the build. We experienced no problems with that. \n
+ * To switch between Debug and Release builds, use <em><b>cmake .. -DCMAKE_BUILD_TYPE=[Release/Debug/RelWithDebInfo]</b></em>
  *
+ * \section comp_troubleshooting Troubleshooting
+ * <ul>
+ * <li>No build targets are generated by cmake? ==> Read the output of cmake and search for missing dependencies.</li>
+ * <li>You see some warnings during the build process? ==> Don’t worry, we seem then too (: This is work in progress…</li>
+ * <li>Problems with GLM while building the Visualizer? ==> Most probably you will have to patch one file: See <a title="GLM Bugtracker" href="https://github.com/g-truc/glm/issues/530" target="_blank">https://github.com/g-truc/glm/issues/530</a>
+ * </ul>
+ * \n\n
+ * ==> After installing the libs, continue with starting an \ref Examples "example".
  */
 
 
@@ -99,7 +98,7 @@ hermann-local@ids-isabel-2:~/src/ic_workspace_open_source/build$ cmake ..
  * \page Examples Examples
  * Yay, it compiled - Whats next?!
  *
- * \section s1 Example Programs
+ * \section example_progs Example Programs
  * After compiling you should end with some example programs within the <b><em>build/bin</em></b> directory.\n
  * All programs require the environment variable <b><em>GPU_VOXELS_MODEL_PATH</em></b> be set to the folder, that contains the example files (<b><em>gpu_voxels/models</em></b>)
  * <ul>
@@ -120,23 +119,26 @@ hermann-local@ids-isabel-2:~/src/ic_workspace_open_source/build$ cmake ..
  * \page visualization Visualization
  * Okay, example is running, but where is the eyecandy?!
  *
- * \section s1 3D-Visualizer
+ * \section vis 3D-Visualizer
  * After you launched one of the examples or data providers, you have to launch the 3D-Viewer to actually see more than the Logstream on your console \n
  * <b><em>gpu_voxels_visualizer</em></b>.\n
  * As it based on Shared memory communication, a main-program has to run already and the Visualizer has to be restarted after the main program is restarted! \n
- * Press “h” while your mouse is inside the visualizer window, to get a list of Shortkeys in your console.
- * \n\n
- * The visualizer can be parametrized with XML configfiles: <em><b>./bin/gpu_voxels_visualizer -c ../packages/gpu_voxels/src/examples/VisConfig_live_col_detect.xml</b></em>\n
- * Find an example in the <em><b>examples</b></em> directory.
- * \n\n
- * If you experience a crash (either of the main program or the visualizer), it could be necessary to delete some shared-memory files: \n
- * <em><b>rm /dev/shm/{OctreeSharedMemory,PrimitiveArraysSharedMemory,VoxelmapSharedMemory}</b></em>
+ * You can control the rendering of various layers of information:
+ * First of all you can toggle the drawing of whole maps/octrees/lists by using <em>, or .</em> to switch between maps/octrees/lists and then use <em>Function Keys</em> to toggle the maps. \n
+ * You may inependently toggle the drawing of Voxeltypes with the number keys, holding ALT to set decimal prefix. E.g. Pressing "ALT + 2" and then "4" will toggle Voxeltype 24.
+ * Press "h" while your mouse is inside the visualizer window, to get a list of Shortkeys in your console.
  * \n\n
  * <b>Visualizer Keyboard Controls:</b>
  * @copydoc gpu_voxels::visualization::Visualizer::keyboardFunction()
  * \n\n
  * <b>Visualizer Mouse Controls:</b>
  * @copydoc gpu_voxels::visualization::Visualizer::mouseClickFunction()
+ * \n\n
+ * The visualizer can be parametrized with XML configfiles to set colors, camera poses and more: <em><b>./bin/gpu_voxels_visualizer -c ../packages/gpu_voxels/src/examples/VisConfig_live_col_detect.xml</b></em>\n
+ * Find an example in the <em><b>examples</b></em> directory.
+ * \n\n
+ * If you experience a crash (either of the main program or the visualizer), it could be necessary to delete some shared-memory files: \n
+ * <em><b>rm /dev/shm/{OctreeSharedMemory,PrimitiveArraysSharedMemory,VoxelmapSharedMemory}</b></em>
  *
  */
 
@@ -177,9 +179,16 @@ hermann-local@ids-isabel-2:~/src/ic_workspace_open_source/build$ cmake ..
 /**
  * \page usage_as_library Usage as a library
  * You convinced me, the lib is cool. But now I want to use it in my way!
- * \section s1 Use GPU-Voxels in own projects
- * Do a <em><b>make install</b></em> to export the Binaries and the required headers into the <em><b>export</b></em> directory to link against them from another Build-Environment.
- * We use this with ROS, where we generated planning and collision testing nodes that link against the ic_workspace.
+ * \section Use_as_lib Use GPU-Voxels in own projects
+ * Do a <em><b>make install</b></em> to export the Binaries and the required headers into the <em><b>export</b></em> directory to link against them from another Build-Environment. \n
+ * You should not install into your system pathes, which would require root-rights. Instead you may specify an install directory via running <em>cmake .. -DCMAKE_INSTALL_PREFIX=/my-home/my/gvl/install/dir</em> \n
+ * In your own project add a <em>FIND_PACKAGE(gpu_voxels REQUIRED)</em> and point cmake to the install directory of GPU-Voxels: <em>cmake .. -DCMAKE_PREFIX_PATH=/my-home/my/gvl/install/dir/</em> \n
+ * You can find an example in the GPU-Voxels base directory, <em>example_how_to_link</em>, including a README.txt
+ *
+ * \section link_troubleshooting Troubleshooting
+ * <ul>
+ * <li>You get errors like <em>No os_mem implementation defined for this platform.</em> when including ICL headers in your own project? ==> You are missing a precompiler define. Add <em>DEFINES += "_SYSTEM_POSIX_=_SYSTEM_ LINUX_</em> to your own <em>CMakeLists.txt</em></li>
+ * </ul>
  *
  */
 

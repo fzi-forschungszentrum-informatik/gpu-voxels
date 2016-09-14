@@ -159,6 +159,7 @@ public:
   * <li>RIGHT_BUTTON: Prints x,y,z coordinates of the clicked voxel on console.</li>
   * <li>LEFT_BUTTON: Enables mouse movement.</li>
   * <li>ALT + CTRL + LEFT_BUTTON: Enables focus point movement in X-Y-Plane for Orbit mode.</li>
+  * <li>ALT + CTRL + MIDDLE_BUTTON: Enables focus point movement in Z-Direction for Orbit mode.</li>
   * <li>ALT + CTRL + MOUSE_WHEEL: Move Camera closer of further away from focus point.</li>
   * <li>MOUSE_WHEEL: Increase/ decrease super voxel size. This influences rendering performance.</li>
   * </ul>

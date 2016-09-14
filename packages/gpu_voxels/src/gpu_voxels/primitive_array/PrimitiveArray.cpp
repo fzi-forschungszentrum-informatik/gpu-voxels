@@ -67,6 +67,16 @@ void PrimitiveArray::setPoints(const std::vector<Vector4f> &points)
                  cudaMemcpyHostToDevice));
 }
 
+void PrimitiveArray::setPoints(const std::vector<Vector3f> &points, const float &diameter)
+{
+  std::vector<Vector4f> points_4d(points.size());
+  for(size_t i = 0; i < points.size(); i++)
+  {
+    points_4d[i] = Vector4f(points[i].x , points[i].y, points[i].z, diameter);
+  }
+
+  setPoints(points_4d);
+}
 
 std::size_t PrimitiveArray::getMemoryUsage()
 {

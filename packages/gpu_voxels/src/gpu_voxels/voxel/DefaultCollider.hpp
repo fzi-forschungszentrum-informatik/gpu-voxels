@@ -48,7 +48,7 @@ DefaultCollider::DefaultCollider(const Probability threshold1, const Probability
 
 bool DefaultCollider::collide(const ProbabilisticVoxel& v1, const ProbabilisticVoxel& v2) const
 {
-  return v1.getOccupancy() >= m_threshold1 && v2.getOccupancy() > m_threshold2;
+  return v1.getOccupancy() >= m_threshold1 && v2.getOccupancy() >= m_threshold2;
 }
 
 bool DefaultCollider::collide(const ProbabilisticVoxel& v1) const

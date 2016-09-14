@@ -58,6 +58,9 @@ public:
   //! updates the points in the array
   void setPoints(const std::vector<Vector4f> &points);
 
+  //! generate entities at points, all with same diameter
+  void setPoints(const std::vector<Vector3f> &points, const float &diameter);
+
   //! get pointer to data array on device
   void* getVoidDeviceDataPtr() const { return (void*)m_dev_ptr_to_primitive_positions; }
 
@@ -69,9 +72,6 @@ public:
 
   //! get the diameter of the drawn entities.
   float getDiameter() const { return m_diameter; }
-
-  //! generate entities at points
-  void insertPoints(const std::vector<Vector3f> &points);
 
   //! get the number of bytes that is required for the array
   virtual std::size_t getMemoryUsage();

@@ -290,12 +290,21 @@ public:
   bool delPrimitives(const std::string &array_name);
 
   /*!
-   * \brief modifyPrimitives Sets to points and sizes of the primitives in the array.
+   * \brief modifyPrimitives Creates or updates points and sizes of the primitives.
    * \param array_name Name of array to modify
    * \param prim_positions Vector of new positions / sizes. Given in Voxels, not metric!
    * \return true if successful, false otherwise
    */
-  bool modifyPrimitives(const std::string &array_name, std::vector<Vector4f>& prim_positions);
+  bool modifyPrimitives(const std::string &array_name, const std::vector<Vector4f>& prim_positions);
+
+  /*!
+   * \brief modifyPrimitives Creates or updates points the primitives in the array. All have equal diameter.
+   * \param array_name Name of array to modify
+   * \param prim_positions Vector of new positions. Given in Voxels, not metric!
+   * \param diameter The diameter of all primitives
+   * \return true if successful, false otherwise
+   */
+  bool modifyPrimitives(const std::string &array_name, const std::vector<Vector3f>& prim_positions, const float& diameter);
 
   /*!
    * \brief getVisualization Gets a handle to the visualization interface of this map.

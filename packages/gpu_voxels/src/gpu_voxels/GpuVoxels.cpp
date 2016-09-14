@@ -111,7 +111,7 @@ bool GpuVoxels::delPrimitives(const std::string &array_name)
   return true;
 }
 
-bool GpuVoxels::modifyPrimitives(const std::string &array_name, std::vector<Vector4f>& prim_positions)
+bool GpuVoxels::modifyPrimitives(const std::string &array_name, const std::vector<Vector4f>& prim_positions)
 {
   ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(array_name);
   if (it == m_managed_primitive_arrays.end())
@@ -120,6 +120,18 @@ bool GpuVoxels::modifyPrimitives(const std::string &array_name, std::vector<Vect
     return false;
   }
   it->second.prim_array_shared_ptr->setPoints(prim_positions);
+  return true;
+}
+
+bool GpuVoxels::modifyPrimitives(const std::string &array_name, const std::vector<Vector3f>& prim_positions, const float& diameter)
+{
+  ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(array_name);
+  if (it == m_managed_primitive_arrays.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Primitives array with name '" << array_name << "' not found." << endl);
+    return false;
+  }
+  it->second.prim_array_shared_ptr->setPoints(prim_positions, diameter);
   return true;
 }
 
