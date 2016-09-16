@@ -17,21 +17,21 @@ and post to gpu-voxels@listserv.fzi.de
 This software is tested under 64 Bit Ubuntu Linux 14.04 and 16.04.
 Find detailed installation and linking instructions in our Doxygen.
 
-** Core: **
+**Core:**
  
 - CUDA > 5.5
 - PCL
 - OpenNI
 - Boost
 
-** Visualizer: **
+**Visualizer:**
 
 - GLEW (libglew, libglew-dev)
 - GLM (libglm-dev)
 - OpenGL
 - GLUT (freeglut3, freeglut3-dev)
 
-** Examples: **
+**Examples:**
 
 - ROS (Robot Operation System)
 - OpenNI to interface 3D cameras
@@ -82,9 +82,9 @@ as we are curious to find out how it enables other people's work or research.
 
 We would be grateful if scientific publications resulting from projects
 that make use of **GPU-Voxels** would cite our overview paper:
-*A. Hermann, F. Drews, J. Bauer, S. Klemm, A. Roennau and R. Dillmann:
-**“Unified GPU Voxel Collision Detection for Mobile Manipulation Planning”**
-in Intelligent Robots and Systems (IROS 2014, Chicago, September 2014)*
+*A. Hermann, F. Drews, J. Bauer, S. Klemm, A. Roennau and R. Dillmann:*
+***“Unified GPU Voxel Collision Detection for Mobile Manipulation Planning”***
+*in Intelligent Robots and Systems (IROS 2014, Chicago, September 2014)*
 
 Copyright (c) 2014, *FZI Forschungszentrum Informatik*, Karlsruhe, Germany
 All rights reserved.
