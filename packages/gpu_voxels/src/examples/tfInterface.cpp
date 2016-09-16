@@ -76,8 +76,8 @@ int main(int argc, char* argv[])
   PointCloud coord_system_object_transformed;
 
   Matrix4f trafo;
-  Matrix4f trafo_from_rpy1;
-  Matrix4f trafo_from_rpy2;
+  Matrix3f rot_from_rpy1;
+  Matrix3f rot_from_rpy2;
 
   Vector3f rpy1;
   Vector3f rpy2;
@@ -90,18 +90,18 @@ int main(int argc, char* argv[])
 
     coord_system_object.transform(&trafo, &coord_system_object_transformed);
 
-    Mat4ToRPY(trafo, rpy1, 1);
-    trafo_from_rpy1 = rotateRPY(rpy1);
-    Mat4ToRPY(trafo, rpy2, 2);
-    trafo_from_rpy2 = rotateRPY(rpy2);
+    rpy1 = trafo.getRotation().toRPY(1);
+    rot_from_rpy1 = Matrix3f::createFromRPY(rpy1);
+    rpy2 = trafo.getRotation().toRPY(2);
+    rot_from_rpy2 = Matrix3f::createFromRPY(rpy2);
 
     my_map->clearMap();
     my_map->insertPointCloud(coord_system_object_transformed, eBVM_OCCUPIED);
     gvl->visualizeMap("myObjectVoxelmap");
 
     // This is just for demonstration purposes:
-    my_tf_helper.publish(trafo_from_rpy1, "world", "demo_tf_rpy_1");
-    my_tf_helper.publish(trafo_from_rpy2, "world", "demo_tf_rpy_2");
+    my_tf_helper.publish(Matrix4f::createFromRotationAndTranslation(rot_from_rpy1, trafo.getTranslation()), "world", "demo_tf_rpy_1");
+    my_tf_helper.publish(Matrix4f::createFromRotationAndTranslation(rot_from_rpy2, trafo.getTranslation()), "world", "demo_tf_rpy_2");
 
     usleep(30000);
   }

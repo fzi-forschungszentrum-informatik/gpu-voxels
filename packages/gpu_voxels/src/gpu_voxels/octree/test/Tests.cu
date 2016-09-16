@@ -167,7 +167,7 @@ void rotate(thrust::host_vector<gpu_voxels::Vector3ui>& points, float angle_degr
 {
   float angle_radian = angle_degree / 180.0f * M_PI;
 
-  gpu_voxels::Matrix4f rotation_z = yaw(angle_radian);
+  gpu_voxels::Matrix3f rotation_z = gpu_voxels::Matrix3f::createFromYaw(angle_radian);
 
   for (uint32_t i = 0; i < points.size(); ++i)
   {

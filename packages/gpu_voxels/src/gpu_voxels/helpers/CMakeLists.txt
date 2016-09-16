@@ -16,10 +16,11 @@ ICMAKER_SET("gpu_voxels_helpers" IDE_FOLDER ${GPU_VOXELS_IDE_FOLDER})
 
 ICMAKER_ADD_HEADERS(
   GlobalLock.h
+  cuda_vectors.h
+  cuda_matrices.h
   cuda_datatypes.h
   common_defines.h
   cuda_handling.h
-  CudaMath.h
   cuda_handling.hpp
   PointcloudFileHandler.h
   BinvoxFileReader.h
@@ -51,12 +52,8 @@ ICMAKER_ADD_CUDA_FILES(
   cuda_handling.h
   cuda_handling.hpp
   cuda_handling.cu
-  CudaMath.h
-  CudaMath.cu
   PointCloud.h
   PointCloud.cu
-  kernels/PointCloudOperations.h
-  kernels/PointCloudOperations.cu
   MetaPointCloud.cu
   kernels/MetaPointCloudOperations.h
   kernels/MetaPointCloudOperations.cu
@@ -117,7 +114,6 @@ ICMAKER_BUILD_LIBRARY()
 ICMAKER_INSTALL_HEADERS(gpu_voxels/helpers)
 # Include files here that are needed when the package is installed.
 ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/helpers/kernels
-  kernels/PointCloudOperations.h
   kernels/HelperOperations.h
   kernels/MetaPointCloudOperations.h
 )

@@ -29,9 +29,6 @@
 
 #include <gpu_voxels/helpers/cuda_handling.hpp>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
-#include <gpu_voxels/helpers/CudaMath.h>
-
-
 
 namespace gpu_voxels {
 namespace robot {

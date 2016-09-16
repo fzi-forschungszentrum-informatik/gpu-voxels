@@ -29,7 +29,6 @@
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/common_defines.h>
-#include <gpu_voxels/helpers/CudaMath.h>
 //#include <gpu_voxels/voxelmap/Voxel.h>
 //#include <gpu_voxels/voxelmap/VoxelMap.hpp>
 
@@ -231,20 +230,17 @@ void VoxelMapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const 
   const string prefix = "VoxelMapProvider::" + string(__FUNCTION__);
   const string temp_timer = prefix + "_temp";
 
-  gpu_voxels::Matrix4f orientation;
-  orientation.setIdentity();
+  gpu_voxels::Matrix3f orientation;
   gpu_voxels::Vector3f temp = m_sensor_orientation;
 #ifdef MODE_KINECT
-  orientation = gpu_voxels::rotateYPR(KINECT_ORIENTATION.z, KINECT_ORIENTATION.y, KINECT_ORIENTATION.x);
+  orientation = gpu_voxels::Matrix3f::createFromYPR(KINECT_ORIENTATION.z, KINECT_ORIENTATION.y, KINECT_ORIENTATION.x);
   temp.z *= -1; // invert to fix the incorrect positioning for ptu-mode
 #endif
 
   Sensor sensor;
-  sensor.pose.setIdentity();
-  sensor.pose = gpu_voxels::rotateYPR(temp.z, temp.y, temp.x) * orientation;
-  sensor.pose.a14 = m_sensor_position.x;
-  sensor.pose.a24 = m_sensor_position.y;
-  sensor.pose.a34 = m_sensor_position.z;
+  sensor.pose = Matrix4f::createFromRotationAndTranslation(
+        Matrix3f::createFromYPR(temp.z, temp.y, temp.x) * orientation, m_sensor_position);
+
 
 // transform points in world corrdinates
   for (uint32_t i = 0; i < num_points; ++i)

@@ -89,14 +89,13 @@ int main(int argc, char* argv[])
   size_t colls;
 
   //----- insert map 100 times, transform, add to map and collide
-  Matrix4f trans;
+  Matrix4f trans = Matrix4f::createFromRotationAndTranslation(
+        Matrix3f::createIdentity(), Vector3f(0.0005, 0, 0));
   clock_t clock_tr_begin = clock();
   for (size_t i = 0; i < 100; i++)
   {
     gvl->getMap("myObjectVoxelmap")->clearMap();
 
-    trans.setIdentity();
-    Vec3ToMat4(Vector3f(0.0005, 0, 0), trans);
     mpc.transformSelf(&trans);
 
     gvl->getMap("myObjectVoxelmap")->insertMetaPointCloud(mpc, eBVM_SWEPT_VOLUME_START);

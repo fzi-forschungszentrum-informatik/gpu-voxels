@@ -1,6 +1,15 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This program is free software licensed under the CDDL
+// (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
+// You can find a copy of this license in LICENSE.txt in the top
+// directory of the source code.
+//
+// © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
+//
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -11,11 +20,11 @@
  *
  */
 //----------------------------------------------------------------------
-#include <gpu_voxels/helpers/CudaMath.h>
 
 #include <boost/test/unit_test.hpp>
 #include "boost/random.hpp"
 #include "boost/generator_iterator.hpp"
+#include "gpu_voxels/helpers/cuda_datatypes.h"
 
 using namespace gpu_voxels;
 
@@ -63,15 +72,13 @@ BOOST_AUTO_TEST_CASE(matrix_apprx_inequality)
 
 BOOST_AUTO_TEST_CASE(matrix_transpose)
 {
-  Matrix4f result;
+  Matrix4f result = matrix.transpose();
   Matrix4f correct_result = Matrix4f(0.9751700, 0.1976770, 0.0998334, 0, /**/
                                      -0.218711, 0.930432, 0.294044, 0,/**/
                                      -0.0347626, -0.3085770, 0.9505640, 0,/**/
                                      10, 11, 12, 1);/**/
 
-  transpose(matrix, result);
   BOOST_CHECK(result == correct_result);
-
 }
 BOOST_AUTO_TEST_CASE(matrix_multiply)
 {
@@ -91,14 +98,15 @@ BOOST_AUTO_TEST_CASE(matrix_inverse)
 {
 
   Matrix4f inverse;
-  invertMatrix(matrix, inverse);
+  if(matrix.invertMatrix(inverse))
+  {
+    Matrix4f result = matrix * inverse;
+    Matrix4f identity = Matrix4f::createIdentity();
 
-  Matrix4f result = matrix * inverse;
-
-  Matrix4f identity;
-  identity.setIdentity();
-
-  BOOST_CHECK(identity.apprx_equal(result, 0.00000011));
+    BOOST_CHECK(identity.apprx_equal(result, 0.00000011));
+  }else{
+    BOOST_CHECK(false && "Error in matrix inversion.");
+  }
 }
 
 
@@ -109,9 +117,9 @@ BOOST_AUTO_TEST_CASE(matrix_rpy)
   gpu_voxels::Vector3f rot_b; // Generated. Given in RPY
   gpu_voxels::Vector3f rot_c; // Generated. Given in RPY
 
-  Matrix4f a; // holds rot_a in form of a matrix
-  Matrix4f b; // holds rot_b in form of a matrix
-  Matrix4f c; // holds rot_c in form of a matrix
+  Matrix3f a; // holds rot_a in form of a matrix
+  Matrix3f b; // holds rot_b in form of a matrix
+  Matrix3f c; // holds rot_c in form of a matrix
 
 
   boost::mt19937 rng;
@@ -123,25 +131,27 @@ BOOST_AUTO_TEST_CASE(matrix_rpy)
   for(size_t n = 0; n < 1000; n++)
   {
     rot_a = gpu_voxels::Vector3f(gen(), gen(), gen());
-    a = rotateRPY(rot_a);
-    Mat4ToRPY(a, rot_b, 0);
-    Mat4ToRPY(a, rot_c, 1);
+    a = Matrix3f::createFromRPY(rot_a);
 
-    b = rotateRPY(rot_b);
-    c = rotateRPY(rot_c);
+    rot_b = a.toRPY(0);
+    rot_c = a.toRPY(1);
 
-    if(!(orientationMatrixDiff(a, b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
+    b = Matrix3f::createFromRPY(rot_b);
+    c = Matrix3f::createFromRPY(rot_c);
+
+    if(!(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
+    if(!(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
     {
-       std::cout << "a = " << a << " b = " << b << " Diff = " << orientationMatrixDiff(a, b) << std::endl;
+       std::cout << "a = " << a << " b = " << b << " Diff = " << a.orientationMatrixDiff(b) << std::endl;
     }
-    if(!(orientationMatrixDiff(a, c).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
+    if(!(a.orientationMatrixDiff(c).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
     {
-       std::cout << "a = " << a << " c = " << c << " Diff = " << orientationMatrixDiff(a, c) << std::endl;
+       std::cout << "a = " << a << " c = " << c << " Diff = " << a.orientationMatrixDiff(c) << std::endl;
     }
 
 
-    BOOST_CHECK_MESSAGE(orientationMatrixDiff(a, b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005), "Difference between input and first reconstructed RPY is zero.");
-    BOOST_CHECK_MESSAGE(orientationMatrixDiff(a, c).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005), "Difference between input and second reconstructed RPY is zero.");
+    BOOST_CHECK_MESSAGE(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005), "Difference between input and first reconstructed RPY is zero.");
+    BOOST_CHECK_MESSAGE(a.orientationMatrixDiff(c).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005), "Difference between input and second reconstructed RPY is zero.");
   }
 }
 

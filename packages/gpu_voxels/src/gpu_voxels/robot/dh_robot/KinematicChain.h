@@ -35,7 +35,6 @@
 #include <gpu_voxels/helpers/cuda_handling.hpp>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
-#include <gpu_voxels/helpers/CudaMath.h>
 #include <gpu_voxels/robot/dh_robot/KinematicLink.h>
 
 #include <gpu_voxels/logging/logging_robot.h>

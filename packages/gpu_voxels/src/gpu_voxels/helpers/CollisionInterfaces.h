@@ -1,5 +1,31 @@
-#ifndef COLLISIONINTERFACES_H
-#define COLLISIONINTERFACES_H
+// this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
+
+// -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This program is free software licensed under the CDDL
+// (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
+// You can find a copy of this license in LICENSE.txt in the top
+// directory of the source code.
+//
+// © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
+//
+// -- END LICENSE BLOCK ------------------------------------------------
+
+//----------------------------------------------------------------------
+/*!\file
+ *
+ * \author  Herbert Pietrzyk
+ * \date    2016-05-13
+ *
+ * This is the general interface definition from which all kinds of maps
+ * inherit their collision API.
+ *
+ */
+//----------------------------------------------------------------------/*
+
+#ifndef GPU_VOXELS_HELPERS_COLLISIONINTERFACES_H_INCLUDED
+#define GPU_VOXELS_HELPERS_COLLISIONINTERFACES_H_INCLUDED
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/common_defines.h>
@@ -403,4 +429,4 @@ public:
 
 } //end namespace gpu_voxels
 
-#endif // COLLISIONINTERFACES_H
+#endif // GPU_VOXELS_HELPERS_COLLISIONINTERFACES_H_INCLUDED

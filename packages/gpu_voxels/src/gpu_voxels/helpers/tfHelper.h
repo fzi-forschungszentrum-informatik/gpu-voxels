@@ -24,7 +24,6 @@
 #define GPU_VOXELS_HELPER_TF_HELPER_H_INCLUDED
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
-#include <gpu_voxels/helpers/CudaMath.h>
 
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>

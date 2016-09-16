@@ -32,8 +32,6 @@
 #define GPU_VOXELS_ROBOT_URDF_ROBOT_ROBOT_TO_GPU_H_INCLUDED
 
 #include "gpu_voxels/robot/urdf_robot/robot.h"
-#include <gpu_voxels/helpers/CudaMath.h>
-
 
 namespace gpu_voxels {
 namespace robot {

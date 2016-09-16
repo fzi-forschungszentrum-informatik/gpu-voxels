@@ -29,9 +29,9 @@ namespace geometry_generation
 {
 
 
-void createOrientedBoxEdges(const OrientedBoxParams& params, float spacing, gpu_voxels::PointCloud &ret)
+void createOrientedBoxEdges(const OrientedBoxParams& params, float spacing, PointCloud &ret)
 {
-    std::vector<gpu_voxels::Vector3f> cloud;
+    std::vector<Vector3f> cloud;
 
     for(float x_dim = -params.dim.x; x_dim <= params.dim.x; x_dim += spacing)
     {
@@ -56,18 +56,16 @@ void createOrientedBoxEdges(const OrientedBoxParams& params, float spacing, gpu_
     }
 
     ret.update(cloud);
-    gpu_voxels::Matrix4f transformation;
-    transformation = gpu_voxels::rotateYPR(params.rot);
-    gpu_voxels::Vec3ToMat4(params.center, transformation);
 
+    Matrix4f transformation = Matrix4f::createFromRotationAndTranslation(Matrix3f::createFromYPR(params.rot), params.center);
     ret.transformSelf(&transformation);
 
     return;
 }
 
-void createOrientedBox(const OrientedBoxParams& params, float spacing, gpu_voxels::PointCloud &ret)
+void createOrientedBox(const OrientedBoxParams& params, float spacing, PointCloud &ret)
 {
-  std::vector<gpu_voxels::Vector3f> cloud;
+  std::vector<Vector3f> cloud;
 
   for(float x_dim = -params.dim.x; x_dim <= params.dim.x; x_dim += spacing)
   {
@@ -82,10 +80,7 @@ void createOrientedBox(const OrientedBoxParams& params, float spacing, gpu_voxel
   }
 
   ret.update(cloud);
-  gpu_voxels::Matrix4f transformation;
-  transformation = gpu_voxels::rotateYPR(params.rot);
-  gpu_voxels::Vec3ToMat4(params.center, transformation);
-
+  Matrix4f transformation = Matrix4f::createFromRotationAndTranslation(Matrix3f::createFromYPR(params.rot), params.center);
   ret.transformSelf(&transformation);
 
   return;

@@ -236,3 +236,15 @@ V 0.91 (2016-09-14):
 - Fixed a bug in the default collider regarding thresholds of probabilistic voxels.
 - Added code to visualize pointclouds as Primitive-Arrays.
 - Enhanced static Doxygen pages.
+
+V 0.92 (2016-09-16):
+====================
+API breaking changes:
+- Restructured CUDA datatypes and their math functions:
+    - Removed CudaMath and put all functions into the datatypes.
+    - Split CUDA datatypes into Vectors and Matrices.
+
+Minor changes:
+- Switched readme file format to Markup
+- Deleted some examples that were not usable.
+- Removed PointCloudOperations as they were unused.

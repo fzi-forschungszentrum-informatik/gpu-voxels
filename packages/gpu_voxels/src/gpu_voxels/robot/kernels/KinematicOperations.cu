@@ -38,8 +38,7 @@ void kernelTransformPoseAlongChain(uint8_t chain_size, uint8_t joint_to_transfor
 
   if (i==0)
   {
-    Matrix4f transformation;
-    transformation.setIdentity();
+    Matrix4f transformation = gpu_voxels::Matrix4f::createIdentity();
 
     for (uint32_t j=1; j<=joint_to_transform; j++)
     {

@@ -24,7 +24,6 @@
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/helpers/PointCloud.h>
-#include <gpu_voxels/helpers/CudaMath.h>
 
 namespace gpu_voxels
 {

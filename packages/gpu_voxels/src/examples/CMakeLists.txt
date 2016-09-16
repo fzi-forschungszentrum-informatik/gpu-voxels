@@ -391,38 +391,5 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_PROGRAM()
 
-
-
-#------------- Example Program for the Refactoring Features ------------
-ICMAKER_SET("refactoringtest" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
-
-ICMAKER_ADD_HEADERS(
-
-  )
-
-ICMAKER_ADD_SOURCES(
-  RefactoringTest.cpp
-  )
-
-ICMAKER_ADD_CUDA_FILES(
-  )
-
-ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
-ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_)
-ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
-
-ICMAKER_INTERNAL_DEPENDENCIES(
-  icl_core
-  icl_core_config
-  icl_core_logging
-  gpu_voxels
-  )
-
-ICMAKER_EXTERNAL_DEPENDENCIES(
-
-  )
-
-ICMAKER_BUILD_PROGRAM()
-
 #------------- adding examples in subdirectories ------------
 ADD_SUBDIRECTORY(swept_fitter)

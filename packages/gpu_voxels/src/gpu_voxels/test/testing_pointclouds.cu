@@ -23,7 +23,6 @@
 //----------------------------------------------------------------------
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/helpers/PointCloud.h>
-#include <gpu_voxels/helpers/CudaMath.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -121,10 +120,8 @@ BOOST_AUTO_TEST_CASE(pointcloud_rotation)
   }
   orig.add(testdata);
 
-  gpu_voxels::Matrix4f transformation;
-  transformation.setIdentity();
-  transformation = gpu_voxels::rotateYPR(Vector3f(12.0, 11.0, 56.0));
-  //gpu_voxels::Vec3ToMat4(params.center, transformation);
+  gpu_voxels::Matrix4f transformation = gpu_voxels::Matrix4f::createFromRotationAndTranslation(
+        gpu_voxels::Matrix3f::createFromRPY(Vector3f(12.0, 11.0, 56.0)), Vector3f(2.2, 1.1, 3.3));
 
   orig.transformSelf(&transformation);
 

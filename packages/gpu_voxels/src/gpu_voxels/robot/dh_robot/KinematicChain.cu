@@ -101,8 +101,7 @@ void KinematicChain::setConfiguration(const JointValueMap &jointmap)
     }
   }
 
-  Matrix4f transformation;
-  transformation.setIdentity();
+  Matrix4f transformation = gpu_voxels::Matrix4f::createIdentity();
 
   // Iterate over all links and transform pointclouds with the according name
   // if no pointcloud was found, still the transformation has to be calculated and copied to the device

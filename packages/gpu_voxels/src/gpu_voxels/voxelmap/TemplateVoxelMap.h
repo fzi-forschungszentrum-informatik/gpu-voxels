@@ -30,8 +30,6 @@
 #include <gpu_voxels/helpers/cuda_handling.hpp>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/common_defines.h>
-//#include <gpu_voxels/voxelmap/Voxel.h>
-#include <gpu_voxels/helpers/CudaMath.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/voxelmap/AbstractVoxelMap.h>
 #include <gpu_voxels/voxel/DefaultCollider.h>

@@ -24,7 +24,6 @@
 #include "VoxelMapProvider.h"
 #include <gpu_voxels/vis_interface/VisualizerInterface.h>
 
-#include <gpu_voxels/helpers/CudaMath.h>
 //#include <gpu_voxels/octree/PointCloud.h>
 //#include <gpu_voxels/octree/kernels/kernel_PointCloud.h>
 #include <gpu_voxels/helpers/cuda_handling.h>
@@ -318,23 +317,19 @@ void NTreeProvider::newSensorData(const DepthData* h_depth_data, const uint32_t 
   PERF_MON_START(prefix);
   PERF_MON_START(temp_timer);
 
-  gpu_voxels::Matrix4f orientation;
-  orientation.setIdentity();
+  gpu_voxels::Matrix3f orientation;
 
   gpu_voxels::Vector3f temp = m_sensor_orientation;
 #ifdef MODE_KINECT
-  orientation = gpu_voxels::rotateYPR(KINECT_ORIENTATION.z, KINECT_ORIENTATION.y, KINECT_ORIENTATION.x);
+  orientation = gpu_voxels::Matrix3f::createFromYPR(KINECT_ORIENTATION.z, KINECT_ORIENTATION.y, KINECT_ORIENTATION.x);
   temp.z *= -1; // invert to fix the incorrect positioning for ptu-mode
 #endif
 
   m_sensor.data_width = width;
   m_sensor.data_height = height;
 
-  m_sensor.pose.setIdentity();
-  m_sensor.pose = gpu_voxels::rotateYPR(temp.z, temp.y, temp.x) * orientation;
-  m_sensor.pose.a14 = m_sensor_position.x;
-  m_sensor.pose.a24 = m_sensor_position.y;
-  m_sensor.pose.a34 = m_sensor_position.z;
+  m_sensor.pose = Matrix4f::createFromRotationAndTranslation(
+        Matrix3f::createFromYPR(temp.z, temp.y, temp.x) * orientation, m_sensor_position);
 
   const uint32_t ntree_resolution = m_ntree->m_resolution;
 

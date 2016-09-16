@@ -19,7 +19,6 @@
 
 #include <gpu_voxels/voxellist/AbstractVoxelList.h>
 #include <gpu_voxels/voxellist/kernels/VoxelListOperations.h>
-#include <gpu_voxels/helpers/CudaMath.h>
 #include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/vis_interface/VisualizerInterface.h>
 
