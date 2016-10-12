@@ -1,0 +1,732 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  If the color is not specified by a word, the RGBA-values will be used instead.
+  The RGBA-values should be between 0 and 1.
+  Currently supported colors are: black, white, red, green, blue, gray, yellow, cyan, magenta
+  To get a darker version of the color add "dark" infront of the name
+  (e.g. dark blue), that doesn't work with black or white.
+-->
+
+<visualizer_context>
+
+<background>
+      <rgba>
+        <r> 0.9 </r>
+        <g> 0.9 </g>
+        <b> 0.9 </b>
+      </rgba>
+</background>
+
+
+<!--The parameter for the voxel map 0-->
+<pbaDistanceVoxmapVisual>
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
+  <occupancy_threshold> 1 </occupancy_threshold>
+
+
+
+<type_0>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_0>
+
+<!--<type_1>
+  <rgba>
+    <r> 0.5 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_1>-->
+
+<type_1>
+<rgba>
+  <r> 0.0 </r>
+  <g> 1.0 </g>
+  <b> 0.0 </b>
+</rgba>
+</type_1>
+
+<type_11>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.0 </g>
+    <b> 1.0 </b>
+  </rgba>
+</type_11>
+<type_12>
+  <rgba>
+    <r> 0.111111111111 </r>
+    <g> 0.111111111111 </g>
+    <b> 0.888888888889 </b>
+  </rgba>
+</type_12>
+<type_13>
+  <rgba>
+    <r> 0.222222222222 </r>
+    <g> 0.222222222222 </g>
+    <b> 0.777777777778 </b>
+  </rgba>
+</type_13>
+<type_14>
+  <rgba>
+    <r> 0.333333333333 </r>
+    <g> 0.333333333333 </g>
+    <b> 0.666666666667 </b>
+  </rgba>
+</type_14>
+<type_15>
+  <rgba>
+    <r> 0.444444444444 </r>
+    <g> 0.444444444444 </g>
+    <b> 0.555555555556 </b>
+  </rgba>
+</type_15>
+<type_16>
+  <rgba>
+    <r> 0.555555555556 </r>
+    <g> 0.555555555556 </g>
+    <b> 0.444444444444 </b>
+  </rgba>
+</type_16>
+<type_17>
+  <rgba>
+    <r> 0.666666666667 </r>
+    <g> 0.666666666667 </g>
+    <b> 0.333333333333 </b>
+  </rgba>
+</type_17>
+<type_18>
+  <rgba>
+    <r> 0.777777777778 </r>
+    <g> 0.777777777778 </g>
+    <b> 0.222222222222 </b>
+  </rgba>
+</type_18>
+<type_19>
+  <rgba>
+    <r> 0.888888888889 </r>
+    <g> 0.888888888889 </g>
+    <b> 0.111111111111 </b>
+  </rgba>
+</type_19>
+<type_20>
+  <rgba>
+    <r> 1.0 </r>
+    <g> 1.0 </g>
+    <b> 0.0 </b>
+  </rgba>
+</type_20>
+
+</pbaDistanceVoxmapVisual>
+
+
+<!--The parameter for the voxel map 0-->
+<jfaDistanceVoxmap>
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
+  <occupancy_threshold> 1 </occupancy_threshold>
+
+
+<type_0>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_0>
+
+<type_1>
+  <rgba>
+    <r> 0.5 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_1>
+
+<type_11>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.0 </g>
+    <b> 1.0 </b>
+  </rgba>
+</type_11>
+<type_12>
+  <rgba>
+    <r> 0.111111111111 </r>
+    <g> 0.111111111111 </g>
+    <b> 0.888888888889 </b>
+  </rgba>
+</type_12>
+<type_13>
+  <rgba>
+    <r> 0.222222222222 </r>
+    <g> 0.222222222222 </g>
+    <b> 0.777777777778 </b>
+  </rgba>
+</type_13>
+<type_14>
+  <rgba>
+    <r> 0.333333333333 </r>
+    <g> 0.333333333333 </g>
+    <b> 0.666666666667 </b>
+  </rgba>
+</type_14>
+<type_15>
+  <rgba>
+    <r> 0.444444444444 </r>
+    <g> 0.444444444444 </g>
+    <b> 0.555555555556 </b>
+  </rgba>
+</type_15>
+<type_16>
+  <rgba>
+    <r> 0.555555555556 </r>
+    <g> 0.555555555556 </g>
+    <b> 0.444444444444 </b>
+  </rgba>
+</type_16>
+<type_17>
+  <rgba>
+    <r> 0.666666666667 </r>
+    <g> 0.666666666667 </g>
+    <b> 0.333333333333 </b>
+  </rgba>
+</type_17>
+<type_18>
+  <rgba>
+    <r> 0.777777777778 </r>
+    <g> 0.777777777778 </g>
+    <b> 0.222222222222 </b>
+  </rgba>
+</type_18>
+<type_19>
+  <rgba>
+    <r> 0.888888888889 </r>
+    <g> 0.888888888889 </g>
+    <b> 0.111111111111 </b>
+  </rgba>
+</type_19>
+<type_20>
+  <rgba>
+    <r> 1.0 </r>
+    <g> 1.0 </g>
+    <b> 0.0 </b>
+  </rgba>
+</type_20>
+
+
+</jfaDistanceVoxmap>
+
+
+<!--The parameter for the voxel map 0-->
+<exactDistanceVoxmap>
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
+  <occupancy_threshold> 1 </occupancy_threshold>
+
+
+<type_0>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_0>
+
+<type_1>
+  <rgba>
+    <r> 0.5 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_1>
+
+<type_11>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.0 </g>
+    <b> 1.0 </b>
+  </rgba>
+</type_11>
+<type_12>
+  <rgba>
+    <r> 0.111111111111 </r>
+    <g> 0.111111111111 </g>
+    <b> 0.888888888889 </b>
+  </rgba>
+</type_12>
+<type_13>
+  <rgba>
+    <r> 0.222222222222 </r>
+    <g> 0.222222222222 </g>
+    <b> 0.777777777778 </b>
+  </rgba>
+</type_13>
+<type_14>
+  <rgba>
+    <r> 0.333333333333 </r>
+    <g> 0.333333333333 </g>
+    <b> 0.666666666667 </b>
+  </rgba>
+</type_14>
+<type_15>
+  <rgba>
+    <r> 0.444444444444 </r>
+    <g> 0.444444444444 </g>
+    <b> 0.555555555556 </b>
+  </rgba>
+</type_15>
+<type_16>
+  <rgba>
+    <r> 0.555555555556 </r>
+    <g> 0.555555555556 </g>
+    <b> 0.444444444444 </b>
+  </rgba>
+</type_16>
+<type_17>
+  <rgba>
+    <r> 0.666666666667 </r>
+    <g> 0.666666666667 </g>
+    <b> 0.333333333333 </b>
+  </rgba>
+</type_17>
+<type_18>
+  <rgba>
+    <r> 0.777777777778 </r>
+    <g> 0.777777777778 </g>
+    <b> 0.222222222222 </b>
+  </rgba>
+</type_18>
+<type_19>
+  <rgba>
+    <r> 0.888888888889 </r>
+    <g> 0.888888888889 </g>
+    <b> 0.111111111111 </b>
+  </rgba>
+</type_19>
+<type_20>
+  <rgba>
+    <r> 1.0 </r>
+    <g> 1.0 </g>
+    <b> 0.0 </b>
+  </rgba>
+</type_20>
+
+
+</exactDistanceVoxmap>
+
+
+<!--The parameter for the voxel map 0-->
+<intermediatePBAmap1>
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
+  <occupancy_threshold> 1 </occupancy_threshold>
+
+
+<type_0>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_0>
+
+<type_1>
+  <rgba>
+    <r> 0.5 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_1>
+
+<type_11>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.0 </g>
+    <b> 1.0 </b>
+  </rgba>
+</type_11>
+<type_12>
+  <rgba>
+    <r> 0.111111111111 </r>
+    <g> 0.111111111111 </g>
+    <b> 0.888888888889 </b>
+  </rgba>
+</type_12>
+<type_13>
+  <rgba>
+    <r> 0.222222222222 </r>
+    <g> 0.222222222222 </g>
+    <b> 0.777777777778 </b>
+  </rgba>
+</type_13>
+<type_14>
+  <rgba>
+    <r> 0.333333333333 </r>
+    <g> 0.333333333333 </g>
+    <b> 0.666666666667 </b>
+  </rgba>
+</type_14>
+<type_15>
+  <rgba>
+    <r> 0.444444444444 </r>
+    <g> 0.444444444444 </g>
+    <b> 0.555555555556 </b>
+  </rgba>
+</type_15>
+<type_16>
+  <rgba>
+    <r> 0.555555555556 </r>
+    <g> 0.555555555556 </g>
+    <b> 0.444444444444 </b>
+  </rgba>
+</type_16>
+<type_17>
+  <rgba>
+    <r> 0.666666666667 </r>
+    <g> 0.666666666667 </g>
+    <b> 0.333333333333 </b>
+  </rgba>
+</type_17>
+<type_18>
+  <rgba>
+    <r> 0.777777777778 </r>
+    <g> 0.777777777778 </g>
+    <b> 0.222222222222 </b>
+  </rgba>
+</type_18>
+<type_19>
+  <rgba>
+    <r> 0.888888888889 </r>
+    <g> 0.888888888889 </g>
+    <b> 0.111111111111 </b>
+  </rgba>
+</type_19>
+<type_20>
+  <rgba>
+    <r> 1.0 </r>
+    <g> 1.0 </g>
+    <b> 0.0 </b>
+  </rgba>
+</type_20>
+
+</intermediatePBAmap1>
+
+
+<!--The parameter for the voxel map 0-->
+<intermediatePBAmap2>
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
+  <occupancy_threshold> 1 </occupancy_threshold>
+
+
+<type_0>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_0>
+
+<type_1>
+  <rgba>
+    <r> 0.5 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_1>
+
+<type_11>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.0 </g>
+    <b> 1.0 </b>
+  </rgba>
+</type_11>
+<type_12>
+  <rgba>
+    <r> 0.111111111111 </r>
+    <g> 0.111111111111 </g>
+    <b> 0.888888888889 </b>
+  </rgba>
+</type_12>
+<type_13>
+  <rgba>
+    <r> 0.222222222222 </r>
+    <g> 0.222222222222 </g>
+    <b> 0.777777777778 </b>
+  </rgba>
+</type_13>
+<type_14>
+  <rgba>
+    <r> 0.333333333333 </r>
+    <g> 0.333333333333 </g>
+    <b> 0.666666666667 </b>
+  </rgba>
+</type_14>
+<type_15>
+  <rgba>
+    <r> 0.444444444444 </r>
+    <g> 0.444444444444 </g>
+    <b> 0.555555555556 </b>
+  </rgba>
+</type_15>
+<type_16>
+  <rgba>
+    <r> 0.555555555556 </r>
+    <g> 0.555555555556 </g>
+    <b> 0.444444444444 </b>
+  </rgba>
+</type_16>
+<type_17>
+  <rgba>
+    <r> 0.666666666667 </r>
+    <g> 0.666666666667 </g>
+    <b> 0.333333333333 </b>
+  </rgba>
+</type_17>
+<type_18>
+  <rgba>
+    <r> 0.777777777778 </r>
+    <g> 0.777777777778 </g>
+    <b> 0.222222222222 </b>
+  </rgba>
+</type_18>
+<type_19>
+  <rgba>
+    <r> 0.888888888889 </r>
+    <g> 0.888888888889 </g>
+    <b> 0.111111111111 </b>
+  </rgba>
+</type_19>
+<type_20>
+  <rgba>
+    <r> 1.0 </r>
+    <g> 1.0 </g>
+    <b> 0.0 </b>
+  </rgba>
+</type_20>
+
+
+</intermediatePBAmap2>
+
+
+<!--The parameter for the voxel map 0-->
+<intermediatePBAmap3>
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
+  <occupancy_threshold> 1 </occupancy_threshold>
+
+
+<type_0>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_0>
+
+<type_1>
+  <rgba>
+    <r> 0.5 </r>
+    <g> 0.1 </g>
+    <b> 0.2 </b>
+  </rgba>
+</type_1>
+
+<type_11>
+  <rgba>
+    <r> 0.0 </r>
+    <g> 0.0 </g>
+    <b> 1.0 </b>
+  </rgba>
+</type_11>
+<type_12>
+  <rgba>
+    <r> 0.111111111111 </r>
+    <g> 0.111111111111 </g>
+    <b> 0.888888888889 </b>
+  </rgba>
+</type_12>
+<type_13>
+  <rgba>
+    <r> 0.222222222222 </r>
+    <g> 0.222222222222 </g>
+    <b> 0.777777777778 </b>
+  </rgba>
+</type_13>
+<type_14>
+  <rgba>
+    <r> 0.333333333333 </r>
+    <g> 0.333333333333 </g>
+    <b> 0.666666666667 </b>
+  </rgba>
+</type_14>
+<type_15>
+  <rgba>
+    <r> 0.444444444444 </r>
+    <g> 0.444444444444 </g>
+    <b> 0.555555555556 </b>
+  </rgba>
+</type_15>
+<type_16>
+  <rgba>
+    <r> 0.555555555556 </r>
+    <g> 0.555555555556 </g>
+    <b> 0.444444444444 </b>
+  </rgba>
+</type_16>
+<type_17>
+  <rgba>
+    <r> 0.666666666667 </r>
+    <g> 0.666666666667 </g>
+    <b> 0.333333333333 </b>
+  </rgba>
+</type_17>
+<type_18>
+  <rgba>
+    <r> 0.777777777778 </r>
+    <g> 0.777777777778 </g>
+    <b> 0.222222222222 </b>
+  </rgba>
+</type_18>
+<type_19>
+  <rgba>
+    <r> 0.888888888889 </r>
+    <g> 0.888888888889 </g>
+    <b> 0.111111111111 </b>
+  </rgba>
+</type_19>
+<type_20>
+  <rgba>
+    <r> 1.0 </r>
+    <g> 1.0 </g>
+    <b> 0.0 </b>
+  </rgba>
+</type_20>
+
+
+</intermediatePBAmap3>
+
+
+<camera>
+  <!-- Free flight mode: show hollie cutout front -->
+  <position>
+    <x> -36.5636 </x>
+    <y> 14.8804 </y>
+    <z> 25.7837 </z>
+  </position>
+  <horizontal_angle> 97.8267 </horizontal_angle> <!-- given in Deg -->
+  <vertical_angle> -7.57205 </vertical_angle> <!-- given in Deg -->
+  <field_of_view> 60 </field_of_view> <!-- given in Deg -->
+  <!-- Orbit mode -->
+  <focus>
+    <x> 14.1515 </x>
+    <y> 119.229 </y>
+    <z> 0 </z>
+  </focus>
+  <window_width> 1600 </window_width>
+  <window_height> 1145 </window_height>
+</camera>
+
+
+
+<!--
+<position>
+  <x> -50 </x>
+  <y> -50 </y>
+  <z> 65 </z>
+</position>
+-->
+<!--
+<focus>
+    <x> 50 </x>
+    <y> 50 </y>
+    <z> 0 </z>
+  </focus>
+-->
+<!--  <horizontal_angle> 135 </horizontal_angle>
+  <vertical_angle> -25 </vertical_angle>-->
+<!--
+<camera>
+<position>
+    <x> -47.8469 </x>
+    <y> -52.1399 </y>
+    <z> 65 </z>
+</position>
+  <focus>
+    <x> 52.1531 </x>
+    <y> 47.86 </y>
+    <z> 0 </z>
+  </focus>
+
+  <horizontal_angle> 135.089 </horizontal_angle>
+  <vertical_angle> -6.93751 </vertical_angle>
+  <field_of_view> 60 </field_of_view>
+  <window_width> 1024 </window_width>
+  <window_height> 768 </window_height>
+</camera>
+-->
+
+<!-- some miscellaneous parameter-->
+<miscellaneous>
+  <interpolation_repeat> 500 </interpolation_repeat>   <!-- interpolation color repeats after x voxels -->
+  <min_view_dim> 200 </min_view_dim>
+
+  <min_xyz_value>   <!--minimal x,y,z value that will be drawn. Input will be treated as unsigned integer-->
+    <!--
+    <x> 0 </x>
+    <y> 0 </y>
+    <z> 32 </z>
+    -->
+    <!--
+    <x> 0 </x>
+    <y> 31 </y>
+    <z> 0 </z>
+    -->
+  </min_xyz_value>
+  <max_xyz_value>    <!--exclusive upper x,y,z boundary. Input will be treated as unsigned integer-->
+    <!--
+    <x> 0 </x>
+    <y> 0 </y>
+    <z> 33 </z>
+    -->
+    <!--
+    <x> -1 </x>
+    <y> 32 </y>
+    <z> -1 </z>
+    -->
+  </max_xyz_value>
+
+  <max_memory_usage> 0 </max_memory_usage>  <!--In MByte, 0 <=> no limit -->
+  <max_fps> 60 </max_fps>  <!--0 <=> no limit -->
+  <draw_edges_of_triangles> false </draw_edges_of_triangles>
+  <draw_filled_triangles> true </draw_filled_triangles>
+  <draw_whole_map> true </draw_whole_map> <!-- disables the view cutting -->
+  <grid_distance> 25 </grid_distance> <!-- the distance between two grid lines -->
+  <grid_height> 0 </grid_height> <!-- the height where the grid will be drawn -->
+  <grid_max_x> 500 </grid_max_x> <!-- the x dimension of the grid -->
+  <grid_max_y> 500 </grid_max_y> <!-- the y dimension of the grid -->
+  <grid_color> black </grid_color>
+  <unit_scale> 1 cm </unit_scale>
+</miscellaneous>
+
+<defaultSpheroid>
+  cyan
+  <position>
+    <x> 0 </x>
+    <y> 0 </y>
+    <z> 0 </z>
+  </position>
+  <side_length>
+    <x> 1 </x>
+    <y> 1 </y>
+    <z> 1 </z>
+  </side_length>
+</defaultSpheroid>
+
+
+</visualizer_context>
+
+
+
+

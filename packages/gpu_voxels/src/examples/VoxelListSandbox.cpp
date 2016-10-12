@@ -53,28 +53,34 @@ int main(int argc, char* argv[])
   gvl->initialize(100, 100, 100, 0.1);
 
   gvl->addMap(MT_BITVECTOR_VOXELLIST, "myVoxelList");
-  gvl->addMap(MT_BITVECTOR_VOXELLIST, "myVoxelList2");
-  gvl->addMap(MT_BITVECTOR_OCTREE, "myOctree");
-  gvl->addMap(MT_BITVECTOR_VOXELMAP, "myVoxelMap");
   gvl->addMap(MT_PROBAB_VOXELMAP, "myProbVoxelMap");
 
-  Vector3f center1_min(0.1,0.1,0.1);
-  Vector3f center1_max(0.7,0.7,0.7);
 
-//  gvl->insertBoxIntoMap(center1_min, center1_max, "myVoxelList", eBVM_OCCUPIED, 1);
-  gvl->insertBoxIntoMap(center1_min, center1_max, "myVoxelMap", gpu_voxels::BitVoxelMeaning(24), 1);
+//  gvl->addMap(MT_BITVECTOR_VOXELLIST, "myVoxelList2");
+//  gvl->addMap(MT_BITVECTOR_OCTREE, "myOctree");
+//  gvl->addMap(MT_BITVECTOR_VOXELMAP, "myVoxelMap");
 
-  Vector3f center2_min(0.5,0.6,0.6);
-  Vector3f center2_max(3.7,3.7,3.7);
-  gvl->insertBoxIntoMap(center2_min, center2_max, "myOctree", gpu_voxels::BitVoxelMeaning(24), 1);
 
-  gvl->insertBoxIntoMap(center2_min, center2_max, "myProbVoxelMap", gpu_voxels::eBVM_OCCUPIED, 1);
+  Vector3f center1_min(0.09,0.09,0.09);
+  Vector3f center1_max(0.91,0.41,0.41);
+  gvl->insertBoxIntoMap(center1_min, center1_max, "myProbVoxelMap", gpu_voxels::eBVM_OCCUPIED, 1);
 
-  gvl->insertBoxIntoMap(center1_min, center1_max, "myVoxelList", gpu_voxels::BitVoxelMeaning(23), 1);
+  center1_min = Vector3f(0.09,0.29,0.09);
+  center1_max = Vector3f(0.31,0.61,0.41);
+  gvl->insertBoxIntoMap(center1_min, center1_max, "myVoxelList", gpu_voxels::BitVoxelMeaning(34), 1);
+
+  center1_min = Vector3f(0.29,0.29,0.09);
+  center1_max = Vector3f(0.61,0.61,0.41);
+  gvl->insertBoxIntoMap(center1_min, center1_max, "myVoxelList", gpu_voxels::BitVoxelMeaning(63), 1);
+
+  center1_min = Vector3f(0.59,0.29,0.09);
+  center1_max = Vector3f(0.91,0.61,0.41);
+  gvl->insertBoxIntoMap(center1_min, center1_max, "myVoxelList", gpu_voxels::BitVoxelMeaning(102), 1);
+
   std::cout << "Voxellist1 size: " << gvl->getMap("myVoxelList")->getDimensions().x << " voxels" << std::endl;
 
   // We load the model of a coordinate system.
-  if (!gvl->insertPointcloudFromFile("myVoxelList2", "coordinate_system_100.binvox", true,
+  if (!gvl->insertPointCloudFromFile("myVoxelList2", "coordinate_system_100.binvox", true,
                                      gpu_voxels::BitVoxelMeaning(24), true, Vector3f(0, 0, 0),1.0))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);
@@ -82,10 +88,33 @@ int main(int argc, char* argv[])
 
   //std::cout << "Voxellist2 size: " << gvl->getMap("myVoxelList2")->getDimensions().x << " voxels" << std::endl;
 
+  size_t num_colls;
+
   BitVectorVoxel collision_types_map;
-  size_t num_colls = gvl->getMap("myVoxelList")->as<voxellist::BitVectorVoxelList>()->collideWithTypes(gvl->getMap("myProbVoxelMap")->as<voxelmap::ProbVoxelMap>(), collision_types_map, 1.0f);
-  std::cout << "Voxellist1 collided with Probab Voxelmap. Bitcheck gives: " << num_colls << std::endl;
-  std::cout << collision_types_map << std::endl;
+//  num_colls = gvl->getMap("myVoxelList")->as<voxellist::BitVectorVoxelList>()->collideWithTypes(gvl->getMap("myProbVoxelMap")->as<voxelmap::ProbVoxelMap>(), collision_types_map, 1.0f);
+//  std::cout << "Voxellist1 collided with Probab Voxelmap. Bitcheck gives: " << num_colls << std::endl;
+//  std::cout << "In voxeltypes: " << collision_types_map << std::endl;
+
+
+  BitVectorVoxel types_to_check;
+  num_colls = gvl->getMap("myVoxelList")->as<voxellist::BitVectorVoxelList>()->collideWithTypeMask(gvl->getMap("myProbVoxelMap")->as<voxelmap::ProbVoxelMap>(), types_to_check, 1.0f);
+  std::cout << "Voxellist1 collided with Probab Voxelmap. No Bits in mask set: " << num_colls << std::endl;
+
+//  types_to_check.bitVector().setBit(34);
+//  num_colls = gvl->getMap("myVoxelList")->as<voxellist::BitVectorVoxelList>()->collideWithTypeMask(gvl->getMap("myProbVoxelMap")->as<voxelmap::ProbVoxelMap>(), types_to_check, 1.0f);
+//  std::cout << "Voxellist1 collided with Probab Voxelmap. Bit 34 in mask set: " << num_colls << std::endl;
+
+  types_to_check.bitVector().setBit(63);
+  num_colls = gvl->getMap("myVoxelList")->as<voxellist::BitVectorVoxelList>()->collideWithTypeMask(gvl->getMap("myProbVoxelMap")->as<voxelmap::ProbVoxelMap>(), types_to_check, 1.0f, Vector3i(0,-1,0));
+  std::cout << "Voxellist1 collided with Probab Voxelmap. Bit 63 in mask set: " << num_colls << std::endl;
+
+//  types_to_check.bitVector().setBit(66);
+//  num_colls = gvl->getMap("myVoxelList")->as<voxellist::BitVectorVoxelList>()->collideWithTypeMask(gvl->getMap("myProbVoxelMap")->as<voxelmap::ProbVoxelMap>(), types_to_check, 1.0f);
+//  std::cout << "Voxellist1 collided with Probab Voxelmap. Bit 66 in mask set: " << num_colls << std::endl;
+
+//  types_to_check.bitVector().setBit(102);
+//  num_colls = gvl->getMap("myVoxelList")->as<voxellist::BitVectorVoxelList>()->collideWithTypeMask(gvl->getMap("myProbVoxelMap")->as<voxelmap::ProbVoxelMap>(), types_to_check, 1.0f);
+//  std::cout << "Voxellist1 collided with Probab Voxelmap. Bit 102 in mask set: " << num_colls << std::endl;
 
 //  bool bin_coll = gvl->getMap("myVoxelList")->collideWith(gvl->getMap("myVoxelList2"));
 //  std::cout << "Voxellist1 collided with Voxellist2: " << bin_coll << std::endl;

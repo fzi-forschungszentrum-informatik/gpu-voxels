@@ -6,6 +6,8 @@ if [ $# -ne 2 ]
     exit 1
 fi
 
+PATH=$PATH:.
+
 MESH_FILE="$1"
 SCALING="$2"
 

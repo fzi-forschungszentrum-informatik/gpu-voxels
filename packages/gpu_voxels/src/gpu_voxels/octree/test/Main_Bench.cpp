@@ -38,7 +38,7 @@ using namespace gpu_voxels::NTree::Bench;
 using namespace gpu_voxels::NTree::Provider;
 
 Bech_Parameter parameter;
-std::vector<Provider::Provider*> provider;
+std::vector<gpu_voxels::NTree::Provider::Provider*> provider;
 const int num_names = 1000, num_events = 1000;
 SensorData* sensor_data = NULL;
 
@@ -71,7 +71,7 @@ void build()
             for (size_t i = 0; i < parameter.provider_parameter.size(); ++i)
             {
               Provider_Parameter* my_parameter = &parameter.provider_parameter[i];
-              Provider::Provider* m_provider = NULL;
+              gpu_voxels::NTree::Provider::Provider* m_provider = NULL;
 
               // free data of last iteration
               if (provider[i] != NULL)
@@ -140,7 +140,7 @@ void collideRun()
   for (size_t i = 0; i < parameter.provider_parameter.size(); ++i)
   {
     Provider_Parameter* my_parameter = &parameter.provider_parameter[i];
-    Provider::Provider* m_provider = NULL;
+    gpu_voxels::NTree::Provider::Provider* m_provider = NULL;
 
     if (my_parameter->mode == Provider_Parameter::MODE_RANDOM_PLAN)
     {
@@ -179,7 +179,7 @@ void collideRun()
     for (size_t i = 0; i < parameter.provider_parameter.size(); ++i)
     {
       Provider_Parameter* my_parameter = &parameter.provider_parameter[i];
-      Provider::Provider* m_provider = provider[i];
+      gpu_voxels::NTree::Provider::Provider* m_provider = provider[i];
       if (my_parameter->collide)
         m_provider->setCollideWith(provider[i + 1]);
 
@@ -257,7 +257,7 @@ void insert_collide()
           for (size_t i = 0; i < parameter.provider_parameter.size(); ++i)
           {
             Provider_Parameter* my_parameter = &parameter.provider_parameter[i];
-            Provider::Provider* m_provider = NULL;
+            gpu_voxels::NTree::Provider::Provider* m_provider = NULL;
 
             // free data of last iteration
             if (provider[i] != NULL)
@@ -363,7 +363,7 @@ void insert_collide()
 
 void run()
 {
-  provider = std::vector<Provider::Provider*>(parameter.provider_parameter.size(), NULL);
+  provider = std::vector<gpu_voxels::NTree::Provider::Provider*>(parameter.provider_parameter.size(), NULL);
 //  for(size_t i = 0; i < provider.size(); ++i)
 //    provider[i] = NULL;
 

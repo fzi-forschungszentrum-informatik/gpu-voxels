@@ -30,6 +30,5 @@ include(PrintLibraryStatus)
 include(LibFindMacros)
 
 libfind_lib_with_pkg_config(LibSnap7 libsnap7
-  HEADERS snap7.h
   LIBRARIES snap7
   )

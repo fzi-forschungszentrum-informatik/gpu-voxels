@@ -28,26 +28,39 @@ find_path(CarMaker_BIN_DIR
 )
 
 # Libraries
+# Determine Architecture
+EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE )
+message( STATUS "Linking against CarMaker Libs for: ${ARCHITECTURE}" )
+
+if( ${ARCHITECTURE} MATCHES "64" )
+    set( CARMAKER_LIBRARY_PATH "/opt/ipg/hil/linux/lib64" )
+else()
+    set( CARMAKER_LIBRARY_PATH "/opt/ipg/hil/linux/lib" )
+endif()
+
+
+
 find_library(CarMaker_CM_LIBRARY
   NAMES carmaker
-  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "${CARMAKER_LIBRARY_PATH}"
 )
 find_library(CarMaker_C_LIBRARY
   NAMES car
-  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "${CARMAKER_LIBRARY_PATH}"
 )
 find_library(CarMaker_D_LIBRARY
   NAMES ipgdriver
-  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "${CARMAKER_LIBRARY_PATH}"
 )
 find_library(CarMaker_R_LIBRARY
   NAMES ipgroad
-  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "${CARMAKER_LIBRARY_PATH}"
 )
 find_library(CarMaker_T_LIBRARY
   NAMES tametire
-  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "/opt/ipg/hil/linux/lib"
+  PATHS ${CarMaker_PKGCONF_LIBRARY_DIRS} "${CARMAKER_LIBRARY_PATH}"
 )
+
 
 # Set the include dir variables and the libraries and let libfind_process do the rest.
 # NOTE: Singular variables for this library, plural for libraries this this lib depends on.

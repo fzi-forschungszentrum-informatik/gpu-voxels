@@ -118,6 +118,6 @@ if(XSD_FOUND)
 
 else(XSD_FOUND)
   MACRO(ICMAKER_GENERATE_XSD_CLASSES)
-   MESSAGE(STATUS "XSD not found -> ICMAKER_GENERATE_XSD_CLASSES MACRO is empty!")
+    MESSAGE(STATUS "XSD not found -> ICMAKER_GENERATE_XSD_CLASSES MACRO is empty! Please check if the following packages are installed on your system: xsdcxx libxerces-c-dev.")
   ENDMACRO(ICMAKER_GENERATE_XSD_CLASSES)
 endif(XSD_FOUND)

@@ -187,29 +187,7 @@ hermann-local@ids-isabel-2:~/src/ic_workspace_open_source/build$ cmake ..
  *
  * \section link_troubleshooting Troubleshooting
  * <ul>
- * <li>You get errors like <em>No os_mem implementation defined for this platform.</em> when including ICL headers in your own project? ==> You are missing a precompiler define. Add <em>DEFINES += "_SYSTEM_POSIX_=_SYSTEM_ LINUX_</em> to your own <em>CMakeLists.txt</em></li>
+ * <li>You get errors like <em>No os_mem implementation defined for this platform.</em> when including ICL headers in your own project? ==> You are missing a precompiler define. Add <em>add_definitions( ${icl_core_DEFINITIONS} ${gpu_voxels_DEFINITIONS} )</em> to your own <em>CMakeLists.txt</em></li>
  * </ul>
  *
  */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

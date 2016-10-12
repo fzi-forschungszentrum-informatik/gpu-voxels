@@ -48,8 +48,8 @@ public:
 protected:
 
 /**
- * @brief getBit Gets the reference to the given index position (given in Bits).
- * @return Reference to byte of given index position
+ * @brief getBit Gets the reference to the byte that contains the bit at the given index position (given in bits).
+ * @return Reference to the byte that contains the bit at the given bit index position
  */
 __host__ __device__
 item_type* getByte(const uint32_t index)
@@ -140,7 +140,7 @@ public:
   # pragma unroll
   #endif
     for (uint32_t i = 0; i < m_size; ++i)
-      res.m_bytes[i] = ~res.m_bytes[i];
+      res.m_bytes[i] = ~m_bytes[i];
     return res;
   }
 
@@ -177,7 +177,28 @@ public:
   }
 
   /**
-   * @brief getBit Gets the bit with at the given index.
+   * @brief noneButEmpty Checks for sematic emptyness
+   * @return True, if none or only the eBVM_FREE bit is set
+   */
+  __host__ __device__
+  bool noneButEmpty() const
+  {
+    bool result;
+    // Get the first byte which includes eBVM_FREE (Bit 0)
+    // Create a bitmask to exclude eBVM_FREE
+    // Check emptyness of masked first Byte:
+    result = !(m_bytes[0] & item_type(254));
+
+  #if defined(__CUDACC__) && !defined(__GNUC__)
+  # pragma unroll
+  #endif
+    for (uint32_t i = 1; i < m_size; ++i)
+      result &= m_bytes[i] == 0;
+    return result;
+  }
+
+  /**
+   * @brief getBit Gets the bit with at the given bit index.
    * @return Value of the selected bit.
    */
   __host__ __device__
@@ -187,7 +208,7 @@ public:
   }
 
   /**
-   * @brief clearBit Clears the bit at the given index
+   * @brief clearBit Clears the bit at the given bit index
    */
   __host__ __device__
   void clearBit(const uint32_t index)
@@ -197,7 +218,7 @@ public:
   }
 
   /**
-   * @brief setBit Sets the bit with at the given index.
+   * @brief setBit Sets the bit with at the given bit index.
    */
   __host__ __device__
   void setBit(const uint32_t index)
@@ -207,10 +228,10 @@ public:
   }
 
   /**
-   * @brief getByte Gets the byte to the given index position.
+   * @brief getByte Gets the byte that contains the bit at the given index position (given in Bits).
    * Note: The dummy argument helps nvcc to distinguish this function from the protected pointer version
    *
-   * @return Byte of given index position
+   * @return Byte that contains the bit at the given bit index position
    */
   __host__ __device__
   item_type getByte(const uint32_t index, const uint8_t dummy = 0) const
@@ -219,8 +240,8 @@ public:
   }
 
   /**
-   * @brief setByte Sets the byte at the given index position.
-   * @param index Which byte to set
+   * @brief setByte Sets the byte at the given bit index position.
+   * @param index Which byte to set (given in bits)
    * @param data Data to write into byte
    */
   __host__ __device__
@@ -273,6 +294,7 @@ public:
   __host__
   friend std::istream& operator>>(std::istream& in, BitVector<num_bits>& dt)
   {
+    //TODO: Check the lenghts of the input stream!
     typename BitVector<num_bits>::item_type byte;
     std::bitset<num_bits> bs;
     in >> bs;

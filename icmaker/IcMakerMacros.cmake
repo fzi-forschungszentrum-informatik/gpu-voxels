@@ -1,4 +1,8 @@
 # this is for emacs file handling -*- mode: cmake; indent-tabs-mode: nil -*-
+
+# -- BEGIN LICENSE BLOCK ----------------------------------------------
+# -- END LICENSE BLOCK ------------------------------------------------
+
 # ===================================================
 # Macros that checks if module have been installed.
 # After it adds module to build and define
@@ -58,6 +62,7 @@ ENDMACRO(CDR)
 MACRO(ICMAKER_REGISTER_PACKAGE _package)
   SET(icmaker_package "${_package}")
   SET(${icmaker_package}_COMPONENTS "" CACHE INTERNAL "")
+  SET(${icmaker_package}_DEFINITIONS "" CACHE INTERNAL "")
 ENDMACRO()
 
 # ----------------------------------------------------------------------------
@@ -93,6 +98,13 @@ MACRO(ICMAKER_ADD_HEADERS)
   PARSE_ARGUMENTS(ADD_HEADERS "" "" ${ARGN})
   CAR(__headers "${ADD_HEADERS_DEFAULT_ARGS}")
   LIST(APPEND ${icmaker_target}_HEADERS ${__headers})
+ENDMACRO()
+
+# ----------------------------------------------------------------------------
+#                       ADDS SWIG FILE TO PROJECT:
+# ----------------------------------------------------------------------------
+MACRO(ICMAKER_ADD_SWIG_FILE _file)
+  SET(${icmaker_target}_SWIG_FILE "${_file}")
 ENDMACRO()
 
 # ----------------------------------------------------------------------------
@@ -514,6 +526,10 @@ MACRO(ICMAKER_BUILD_LIBRARY_IN_SUBDIR _subdir_lib _subdir_bin _sources)
 
     SET(${icmaker_package}_COMPONENTS ${${icmaker_package}_COMPONENTS} ${icmaker_target} CACHE INTERNAL "")
 
+    # add export definitions to package definitions to be used in cmake package config
+    SET(${icmaker_package}_DEFINITIONS ${${icmaker_package}_DEFINITIONS} ${${icmaker_target}_MACRO_EXPORT_DEFINITIONS} CACHE INTERNAL "")
+
+
     IF(ICMAKER_VERBOSE)
       message(STATUS "III. Building LIBRARY ${icmaker_target} into dir '${_subdir_lib}':")
       message(STATUS "    dependencies: ${${icmaker_target}_TARGET_DEPENDENCIES}")
@@ -530,6 +546,147 @@ MACRO(ICMAKER_BUILD_LIBRARY_IN_SUBDIR _subdir_lib _subdir_bin _sources)
   ELSE()
     MESSAGE(STATUS "Warning: ${icmaker_target} -- not building library, missing [${${icmaker_target}_DEPENDENCIES_MISSING}].")
     SET(${icmaker_target}_FOUND FALSE CACHE INTERNAL "")
+  ENDIF()
+ENDMACRO()
+
+
+# ----------------------------------------------------------------------------
+#                       BUILD A SET OF SWIG MODULES:
+# ----------------------------------------------------------------------------
+MACRO(ICMAKER_BUILD_SWIG_MODULES)
+  PARSE_ARGUMENTS(SWIG_MODULES
+    ""
+    ""
+    ${ARGN}
+    )
+
+  IF(ICMAKER_VERBOSE)
+    message(STATUS "  Creating SWIG MODULES for target ${icmaker_target}")
+  ENDIF()
+
+  CAR(__swig_modules "${SWIG_MODULES_DEFAULT_ARGS}")
+
+  IF(NOT DEFINED ${icmaker_target}_SWIG_FILE)
+    MESSAGE(STATUS "Warning: ${icmaker_target} -- tried to run ICMAKER_BUILD_SWIG_MODULES but no input file was defined using ICMAKER_ADD_SWIG_FILE().")
+  ELSE()
+    IF(NOT SWIG_FOUND)
+      MESSAGE(STATUS "Warning: ${icmaker_target} -- not building SWIG modules. Missing [SWIG].")
+    ELSE()
+
+      INCLUDE(${SWIG_USE_FILE})
+      SET(CMAKE_SWIG_FLAGS "")
+
+      SET_SOURCE_FILES_PROPERTIES(${${icmaker_target}_SWIG_FILE} PROPERTIES CPLUSPLUS ON)
+
+      # we don't want to use this as long as it is possible.
+#      SET_SOURCE_FILES_PROPERTIES(${${icmaker_target}_SWIG_FILE} PROPERTIES SWIG_FLAGS "-cpperraswarn")
+
+
+      FOREACH(_swig_module ${__swig_modules})
+        SET(_name ${_swig_module})
+
+        string(TOLOWER ${_swig_module} _module)
+
+
+        # set icmaker_target to the created swig module and save the parent one before.
+        SET(icmaker_target_parent ${icmaker_target})
+        SET(icmaker_target ${icmaker_target}_${_module})
+
+        # add original target to the export dependencies
+        ICMAKER_DEPENDENCIES(EXPORT ${icmaker_target_parent})
+
+
+        # Add output-specific dependencies
+        IF(${_module} STREQUAL "python")
+          # add module-specific libs to the export dependencies>
+          ICMAKER_DEPENDENCIES(EXPORT
+              PythonLibs
+          )
+        ELSEIF(${_module} STREQUAL "java")
+          # add module-specific libs to the export dependencies>
+          ICMAKER_DEPENDENCIES(EXPORT
+              JNI
+          )
+          MESSAGE(STATUS "Warning: ${icmaker_target_parent} -- tried to run ICMAKER_BUILD_SWIG_MODULES but this output is not completely supported yet: ${_swig_module}")
+        ELSEIF(${_module} STREQUAL "perl")
+          # add module-specific libs to the export dependencies>
+          ICMAKER_DEPENDENCIES(EXPORT
+              PerlLibs
+          )
+          MESSAGE(STATUS "Warning: ${icmaker_target_parent} -- tried to run ICMAKER_BUILD_SWIG_MODULES but this output is not completely supported yet: ${_swig_module}")
+        ELSE()
+          MESSAGE(STATUS "Warning: ${icmaker_target_parent} -- tried to run ICMAKER_BUILD_SWIG_MODULES but this output is not explicitly supported yet: ${_swig_module}")
+        ENDIF()
+
+
+        ###### DEPENDENCY HANDLING
+        # This part is very similar to the one in ICMAKER_BUILD_LIBRARY_IN_SUBDIR
+        # and ICMAKER_BUILD_PROGRAM_INTERNAL. Consider merging them.
+
+        IF(NOT DEFINED ${icmaker_target}_DEPENDENCIES_MATCHED OR ${icmaker_target}_DEPENDENCIES_MATCHED)
+          SET(${icmaker_target}_FOUND TRUE CACHE INTERNAL "")
+          SET(${icmaker_target}_ICMAKER_PROJECT TRUE CACHE INTERNAL "")
+
+          LIST(APPEND ${icmaker_target}_TARGET_DEPENDENCIES ${${icmaker_target}_MACRO_EXPORT_DEPENDENCIES_C} ${${icmaker_target}_MACRO_DEPENDENCIES})
+          IF(${icmaker_target}_TARGET_DEPENDENCIES)
+            LIST(REMOVE_DUPLICATES ${icmaker_target}_TARGET_DEPENDENCIES)
+          ENDIF()
+
+          IF(ICMAKER_VERBOSE)
+            message(STATUS "  Dependencies for ${icmaker_target}:")
+            message(STATUS "      (export) ${${icmaker_target}_MACRO_EXPORT_DEPENDENCIES_C}")
+            message(STATUS "      (hidden) ${${icmaker_target}_MACRO_DEPENDENCIES}")
+            message(STATUS "")
+            message(STATUS "II. Preflight target ${icmaker_target}")
+          ENDIF()
+          ICMAKER_DEPENDECY_LIBS_AND_FLAGS(${${icmaker_target}_TARGET_DEPENDENCIES})
+
+
+          # Setup target properties (definitions, includes, link libraries)
+          LIST(APPEND ${icmaker_target}_AGGREGATE_DEFINITIONS ${${icmaker_target}_MACRO_DEFINITIONS} ${${icmaker_target}_MACRO_EXPORT_DEFINITIONS})
+          LIST(APPEND ${icmaker_target}_AGGREGATE_INCLUDE_DIRS ${${icmaker_target}_MACRO_INCLUDE_DIRS} ${${icmaker_target}_MACRO_EXPORT_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
+          LIST(APPEND ${icmaker_target}_AGGREGATE_IDL_DIRS ${${icmaker_target}_MACRO_IDL_DIRS} ${${icmaker_target}_MACRO_EXPORT_IDL_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
+          LIST(APPEND ${icmaker_target}_AGGREGATE_TARGET_LINK_LIBRARIES ${${icmaker_target}_MACRO_TARGET_LINK_LIBRARIES})
+          LIST(APPEND ${icmaker_target}_AGGREGATE_LDFLAGS ${${icmaker_target}_MACRO_LDFLAGS})
+
+
+          ####### SETUP
+
+          include_directories(${${icmaker_target}_AGGREGATE_INCLUDE_DIRS})
+
+          SWIG_ADD_MODULE(${icmaker_target} ${_module} ${${icmaker_target_parent}_SWIG_FILE})
+
+          SWIG_LINK_LIBRARIES(${icmaker_target} ${${icmaker_target}_AGGREGATE_TARGET_LINK_LIBRARIES})
+
+
+          ####### INSTALL
+
+          IF(${_module} STREQUAL "python")
+            SET_TARGET_PROPERTIES(_${icmaker_target} PROPERTIES OUTPUT_NAME _${icmaker_target_parent})
+
+            # NOTE: this could be placed at a more central place
+            # get the python module path where we want to install to
+            execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "from distutils import sysconfig; print( sysconfig.get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
+                              OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+                              OUTPUT_STRIP_TRAILING_WHITESPACE )
+
+            # install lib and python file to python module path
+            install(TARGETS _${icmaker_target} DESTINATION ${_ABS_PYTHON_MODULE_PATH})
+            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${icmaker_target_parent}.py DESTINATION ${_ABS_PYTHON_MODULE_PATH})
+          ENDIF()
+
+
+        ELSE()
+          MESSAGE(STATUS "Warning: ${icmaker_target} -- not building library, missing [${${icmaker_target}_DEPENDENCIES_MISSING}].")
+          SET(${icmaker_target}_FOUND FALSE CACHE INTERNAL "")
+        ENDIF()
+
+
+        # reset icmaker_target to the parent
+        SET(icmaker_target ${icmaker_target_parent})
+      ENDFOREACH(_swig_module)
+
+    ENDIF()
   ENDIF()
 ENDMACRO()
 
@@ -590,6 +747,10 @@ MACRO(ICMAKER_BUILD_ANNOUNCEMENT)
     SET(${icmaker_targetUpper}_LIBRARIES ""  CACHE INTERNAL "")
     SET(${icmaker_targetUpper}_INCLUDE_DIRS "${${icmaker_target}_MACRO_EXPORT_INCLUDE_DIRS}" CACHE INTERNAL "")
     SET(${icmaker_targetUpper}_DEFINITIONS "${${icmaker_target}_MACRO_EXPORT_DEFINITIONS}" CACHE INTERNAL "")
+
+    # add export definitions to package definitions to be used in cmake package config
+    SET(${icmaker_package}_DEFINITIONS ${${icmaker_package}_DEFINITIONS} ${${icmaker_target}_MACRO_EXPORT_DEFINITIONS} CACHE INTERNAL "")
+
   ELSE()
     MESSAGE(STATUS "Warning: ${icmaker_target} -- not building announcement, missing [${${icmaker_target}_DEPENDENCIES_MISSING}].")
     SET(${icmaker_target}_FOUND FALSE CACHE INTERNAL "")
@@ -851,6 +1012,7 @@ ENDMACRO()
 MACRO(ICMAKER_CONFIGURE_PACKAGE)
   set(ICLIB_PACKAGE_NAME_CONFIGCMAKE "${icmaker_package}")
   set(ICLIB_PACKAGE_NAME_CONFIGCMAKE_COMPONENTS "${${icmaker_package}_COMPONENTS}")
+  set(ICLIB_PACKAGE_NAME_CONFIGCMAKE_DEFINITIONS "${${icmaker_package}_DEFINITIONS}")
 
   #  Part 1/3: ${CURRENT_BIN_DIR}/${icmaker_package}-config.cmake              -> For use *without* "make install"
   set(ICLIB_INCLUDE_DIRS_CONFIGCMAKE "\"${CMAKE_CURRENT_SOURCE_DIR}/src\"")

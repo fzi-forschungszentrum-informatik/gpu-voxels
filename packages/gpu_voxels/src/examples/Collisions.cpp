@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 
 
   // We load a pointcloud
-  if (!gvl->insertPointcloudFromFile("myPointcloud", "robot4cmRes.pcd", true,
+  if (!gvl->insertPointCloudFromFile("myPointcloud", "robot4cmRes.pcd", true,
                                      gpu_voxels::eBVM_OCCUPIED, true, gpu_voxels::Vector3f(0.3, 0.2, 0.0),0.5))
   {
     LOGGING_WARNING(gpu_voxels::Gpu_voxels, "Could not insert the pointcloud..." << gpu_voxels::endl);

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- If the color is not specified by a word, the RGBA-values will be used instead.
+     The RGBA-values should be between 0 and 1.
+     Currently supported colors are: black, white, red, green, blue, gray, yellow, cyan, magenta
+     To get a darker version of the color add "dark" infront of the name (e.g. dark blue), that doesn't work with black or white.
+-->
+  <visualizer_context>
+    <background>
+          white
+    </background>
+    <edges> <!-- Not used at the moment-->
+          green
+    </edges>
+
+    
+    <!--------------- The parameter for the octree 0--------> 
+    <octree_0>
+    <type_0>
+            red
+    </type_0>
+      <!---------- type DYNAMIC --------------->
+      <type_1>
+            <color_1>  yellow </color_1>
+            <color_2>  dark green   </color_2>
+      </type_1>
+      <!---------- type STATIC ---------------->
+
+       <!---------- type COLLISION ------------>
+      <type_2> <!-- type dynamic -->
+            red
+      </type_2>
+      <!---------- type SWEPT_VOLUME_END ------>
+      <type_3>
+            yellow
+      </type_3>
+      <!---------- type SWEPT_VOLUME(250) ----->
+      <type_4>
+            dark gray
+      </type_4>
+    </octree_0>
+    
+    <!--------------- The parameter for the octree 1--------> 
+    <octree_1>
+        <!--<offset>
+        <x> 0 </x>
+        <y> 0 </y>
+        <z> 0 </z>
+        </offset>-->
+      <!---------- type DYNAMIC --------------->
+      <type_0> 
+            blue
+      </type_0>
+      <!---------- type STATIC ---------------->
+      <type_1>
+            <color_1>  green </color_1>
+            <color_2>  red   </color_2>
+      </type_1>
+      <!---------- type COLLISION ------------->
+      <type_2>
+            blue
+      </type_2>
+       <!---------- type SWEPT_VOLUME_END ----->
+      <type_3> 
+            red
+      </type_3>
+       <!---------- type SWEPT_VOLUME(250) ---->
+      <type_4>
+        dark gray
+      </type_4>
+    </octree_1>
+        
+        
+    <!------------------ The parameter for camera--------------> 
+    <camera>
+      <!-- Free flight mode -->
+      <position>
+        <x> 420.711 </x>
+        <y> -29.8273 </y>
+        <z> 178.847 </z>
+      </position>
+      <horizontal_angle> 213.993 </horizontal_angle> <!-- given in Deg -->
+      <vertical_angle> -26.8235 </vertical_angle> <!-- given in Deg -->
+      <field_of_view> 60 </field_of_view> <!-- given in Deg -->
+      <!-- Orbit mode -->
+      <focus>
+        <x> -1e-06 </x>
+        <y> -1e-06 </y>
+        <z> -1e-06 </z>
+      </focus>
+      <window_width> 1024 </window_width>
+      <window_height> 1243 </window_height>
+    </camera>
+
+    
+    <!------------------ some miscellaneous parameter--------------> 
+    <miscellaneous>
+      <interpolation_repeat> 200 </interpolation_repeat>   <!-- interpolation color repeats after x voxels -->
+      <min_view_dim> 200 </min_view_dim>
+      <min_xyz_value>   <!--minimal x,y,z value that will be drawn. Input will be treated as unsigned integer-->
+        <x> 0 </x>
+        <y> 0 </y>
+        <z> 0 </z>
+      </min_xyz_value>
+      <max_xyz_value>    <!--exclusive upper x,y,z boundary. Input will be treated as unsigned integer-->
+        <x> -1 </x>
+        <y> -1 </y>
+        <z> -1 </z>
+      </max_xyz_value>
+      <max_memory_usage> 0 </max_memory_usage>  <!--In MByte, 0 <=> no limit -->
+      <max_fps> 60 </max_fps>  <!--0 <=> no limit -->
+      <draw_edges_of_triangles> true </draw_edges_of_triangles>
+      <draw_filled_triangles> true </draw_filled_triangles>
+      <draw_whole_map> true </draw_whole_map> <!-- disables the view cutting -->
+      <draw_octree> true </draw_octree>
+      <grid_distance> 25 </grid_distance> <!-- the distance between two grid lines -->
+      <grid_height> 0 </grid_height> <!-- the height where the grid will be drawn -->
+      <grid_max_x> 500 </grid_max_x> <!-- the x dimension of the grid -->
+      <grid_max_y> 500 </grid_max_y> <!-- the y dimension of the grid -->
+      <grid_color> black </grid_color>
+      <unit_scale> 1 cm </unit_scale>
+    </miscellaneous>
+    
+
+    
+</visualizer_context>

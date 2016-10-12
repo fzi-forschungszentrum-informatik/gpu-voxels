@@ -28,7 +28,7 @@
 #endif
 
 #if defined ICL_CORE_QT_SUPPORT
-#include <QtCore/QString>
+#include <QString>
 #endif
 
 namespace icl_core {

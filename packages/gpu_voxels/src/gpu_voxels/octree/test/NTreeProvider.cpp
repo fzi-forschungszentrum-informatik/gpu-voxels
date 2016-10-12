@@ -38,6 +38,7 @@
 
 #include <sstream>
 #include <istream>
+#include <fstream>
 #include <ostream>
 
 using namespace std;
@@ -269,7 +270,7 @@ void NTreeProvider::init(Provider_Parameter& parameter)
                                            m_ntree->m_center.z * m_ntree->m_resolution) * 0.001f; // position in meter
   m_sensor_orientation = gpu_voxels::Vector3f(0, 0, 0);
 
-  printf("Octree mem usage: %f\n", double(m_ntree->getMemUsage()) / 1024 / 1024);
+  printf("Octree mem usage: %f\n", double(m_ntree->getMemUsage()) * cBYTE2MBYTE);
 
   if (parameter.mode == Provider_Parameter::MODE_ROS)
   {
@@ -414,7 +415,7 @@ void NTreeProvider::collide_wo_locking()
     {
       // compute offset since NTree centers its data in the middle of the tree, to handle the problem of only positive coordinates
       // compute offset so the NTree/Voxelmap intersection uses the same data as NTree/NTree intersection and therfore gets the same result
-      Vector3ui voxelmap_offset(0);
+      Vector3i voxelmap_offset(0);
 //      Vector3ui voxelmap_offset = m_ntree->m_center
 //          - (_provider->getVoxelMap()->getDimensions() / gpu_voxels::Vector3ui(2));
 
@@ -526,7 +527,7 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
     PERF_MON_START(temp_timer);
 
     std::size_t size = msg->height * msg->width;
-    Vector3f points[size];
+    std::vector<Vector3f> points(size);
     for (std::size_t i = 0; i < size; ++i)
     {
       float* x = (float*) &msg->data[i * 16];
@@ -570,7 +571,7 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
     m_sensor.pose.a34 = sensor_position.z;
 
     // processSensorData() will allcate space for d_free_space_voxel and d_object_voxel if they are NULL
-    m_sensor.processSensorData(points, d_free_space_voxel2, d_object_voxel2);
+    m_sensor.processSensorData(&points.front(), d_free_space_voxel2, d_object_voxel2);
     printf("Num points %lu\n", d_free_space_voxel2->size());
 
     // convert sensor origin in discrete coordinates of the NTree
@@ -592,14 +593,14 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
     if (m_ntree->needsRebuild()
         || (m_parameter->rebuild_frame_count != -1 && m_fps_rebuild == m_parameter->rebuild_frame_count))
     {
-      printf("BEFORE: Octree mem usage: %f\n", double(m_ntree->getMemUsage()) / 1024 / 1024);
+      printf("BEFORE: Octree mem usage: %f\n", double(m_ntree->getMemUsage()) * cBYTE2MBYTE);
       printf("OLD allocInnerNodes %u, allocLeafNodes %u \n", m_ntree->allocInnerNodes,
              m_ntree->allocLeafNodes);
       m_ntree->rebuild();
       printf("NEW allocInnerNodes %u, allocLeafNodes %u \n", m_ntree->allocInnerNodes,
              m_ntree->allocLeafNodes);
       m_fps_rebuild = 0;
-      printf("AFTER: Octree mem usage: %f\n", double(m_ntree->getMemUsage()) / 1024 / 1024);
+      printf("AFTER: Octree mem usage: %f\n", double(m_ntree->getMemUsage()) * cBYTE2MBYTE);
     }
 #endif
 

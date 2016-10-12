@@ -26,7 +26,6 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/io/openni_grabber.h>
-#include <pcl/visualization/cloud_viewer.h>
 
 #include <gpu_voxels/voxelmap/VoxelMap.h>
 
@@ -53,12 +52,12 @@ public:
   bool isRunning();
 
   //! Direct access to the stored data
-  std::vector<Vector3f>& getDataPtr() { return *m_data; }
+  const std::vector<Vector3f>& getDataPtr() { return m_data; }
 
 private:
 
   pcl::Grabber* m_interface;
-  std::vector<Vector3f> *m_data;
+  std::vector<Vector3f> m_data;
 
   bool m_running;
 

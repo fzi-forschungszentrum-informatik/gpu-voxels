@@ -1,3 +1,6 @@
+# -- BEGIN LICENSE BLOCK ----------------------------------------------
+# -- END LICENSE BLOCK ------------------------------------------------
+
 # Works the same as find_package, but forwards the "REQUIRED" and "QUIET" arguments
 # used for the current package. For this to work, the first parameter must be the
 # prefix of the current package, then the prefix of the new package etc, which are
@@ -133,6 +136,7 @@ endmacro(libfind_library)
 #          EXECUTABLES exec1 exec2 ...
 #          HINTS hint1 hint2 ...
 #          HEADER_PATHS path1 path2 ...
+#          HEADER_SUFFIXES path1 path2 ...
 #          LIBRARY_PATHS path1 path2 ...
 #          EXECUTABLE_PATHS path1 path2 ...
 #          DEFINE definition)
@@ -143,6 +147,7 @@ endmacro(libfind_library)
 #  EXECUTABLES      ... Required executables.
 #  HINTS            ... Path prefixes to search under.
 #  HEADER_PATHS     ... Paths where to search headers.
+#  HEADER_SUFFIXES  ... Subfolders in which the headers should be searched
 #  LIBRARY_PATHS    ... Paths where to search libraries.
 #  EXECUTABLE_PATHS ... Paths where to search executables.
 #  DEFINE           ... Name of the preprocessor macro to define if
@@ -169,7 +174,7 @@ endmacro(libfind_library)
 macro(libfind_lib_with_pkg_config)
   # Get all arguments
   parse_arguments(LIBFIND
-    "HEADERS;LIBRARIES;EXECUTABLES;HINTS;HEADER_PATHS;LIBRARY_PATHS;EXECUTABLE_PATHS;DEFINE"
+    "HEADERS;LIBRARIES;EXECUTABLES;HINTS;HEADER_PATHS;HEADER_SUFFIXES;LIBRARY_PATHS;EXECUTABLE_PATHS;DEFINE"
     ""
     ${ARGN})
   list(GET LIBFIND_DEFAULT_ARGS 0 NAME)
@@ -229,7 +234,8 @@ macro(libfind_lib_with_pkg_config)
     unset(LIBFIND_INCLUDE_DIR CACHE)
     find_path(LIBFIND_INCLUDE_DIR
       NAMES ${h}
-      PATHS ${LIBFIND_HEADER_PATHS})
+      PATHS ${LIBFIND_HEADER_PATHS}
+      PATH_SUFFIXES ${LIBFIND_HEADER_SUFFIXES})
     if (LIBFIND_INCLUDE_DIR)
       list(APPEND LIBFIND_FOUND_INCLUDE_DIRS ${LIBFIND_INCLUDE_DIR})
     else ()
@@ -253,9 +259,7 @@ macro(libfind_lib_with_pkg_config)
       NAMES ${l}
       PATHS ${LIBFIND_LIBRARY_PATHS})
     if (LIBFIND_LIBRARY_PATH)
-      list(APPEND LIBFIND_FOUND_LIBRARIES "${l}")
-      get_filename_component(LIBFIND_LIBRARY_DIR ${LIBFIND_LIBRARY_PATH} PATH)
-      set(LIBFIND_LIBRARY_PATHS ${LIBFIND_LIBRARY_DIR})
+      list(APPEND LIBFIND_FOUND_LIBRARIES ${LIBFIND_LIBRARY_PATH})
     else ()
       message(STATUS "${NAME}: Could not find required library ${l}.")
       return ()
@@ -289,15 +293,20 @@ macro(libfind_lib_with_pkg_config)
   libfind_process(${NAME})
 
   if (${NAME}_FOUND)
-    set(${NAME}_LIBRARY_DIRS ${${NAME}_PKGCONF_LIBRARY_DIRS} ${LIBFIND_LIBRARY_PATHS} CACHE INTERNAL "")
-    set(${NAME}_LDFLAGS ${${NAME}_PKGCONF_LDFLAGS} ${LIBFIND_LDFLAGS} CACHE INTERNAL "")
-    foreach (l ${LIBFIND_LIBRARY_PATHS})
-      list(APPEND ${NAME}_LDFLAGS "-L${l}")
-    endforeach ()
-    set(${NAME}_LDFLAGS_OTHER ${${NAME}_PKGCONF_LDFLAGS_OTHER} CACHE INTERNAL "")
-    set(${NAME}_CFLAGS ${${NAME}_PKGCONF_CFLAGS} CACHE INTERNAL "")
-    set(${NAME}_CFLAGS_OTHER ${${NAME}_PKGCONF_CFLAGS_OTHER} CACHE INTERNAL "")
-    set(${NAME}_DEFINITIONS "-D${LIBFIND_DEFINE}")
+    set(${NAME}_LIBRARY_DIRS ${${NAME}_PKGCONF_LIBRARY_DIRS} CACHE PATH "")
+    set(${NAME}_LIBRARIES ${LIBFIND_FOUND_LIBRARIES} CACHE FILEPATH "")
+    set(${NAME}_LDFLAGS ${${NAME}_PKGCONF_LDFLAGS} ${LIBFIND_LDFLAGS} CACHE STRING "")
+    set(${NAME}_LDFLAGS_OTHER ${${NAME}_PKGCONF_LDFLAGS_OTHER} CACHE STRING "")
+    set(${NAME}_CFLAGS ${${NAME}_PKGCONF_CFLAGS} CACHE STRING "")
+    set(${NAME}_CFLAGS_OTHER ${${NAME}_PKGCONF_CFLAGS_OTHER} CACHE STRING "")
+    set(${NAME}_DEFINITIONS "-D${LIBFIND_DEFINE}" CACHE STRING "")
+    mark_as_advanced(${NAME}_LIBRARY_DIRS)
+    mark_as_advanced(${NAME}_LIBRARIES)
+    mark_as_advanced(${NAME}_LDFLAGS)
+    mark_as_advanced(${NAME}_LDFLAGS_OTHER)
+    mark_as_advanced(${NAME}_CFLAGS)
+    mark_as_advanced(${NAME}_CFLAGS_OTHER)
+    mark_as_advanced(${NAME}_DEFINITIONS)
   endif ()
 
   print_library_status(${NAME}

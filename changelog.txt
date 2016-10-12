@@ -248,3 +248,54 @@ Minor changes:
 - Switched readme file format to Markup
 - Deleted some examples that were not usable.
 - Removed PointCloudOperations as they were unused.
+
+
+V 0.93 (2016-12-24):
+====================
+API breaking changes:
+- Multiplying a vector<int> with an int scalar now gives a vector<int>
+- Removed offset when colliding VoxelLists as implementation was faulty
+- Unified CTor of VoxelLists and VoxelMaps
+- Unified spelling of insertPointcloud ==> insertPointCloud
+
+Major changes:
+- Added DistanceField calculations (thanks to Christian Jülg)
+    - New DistanceVoxelMap type
+    - Re-implementation of the Parallel Banding Algorithm (Original by Cao Thanh Tung)
+    - Added according example and test cases
+- Added BitMasked collision check and testcase for BitVoxels
+- Implemented a HeighMap loader to populate 3D worlds from Bitmap files
+- Added insertPointCloudIntoMap() to HighLevel-API
+- Added collision functions between BitVectorVoxelList and BitVectorVoxelMap
+- Improved Mutex-Locking (thanks to Christian Jülg)
+    - No more busy waiting
+    - Recursive locking now possible
+- Reworked Boost-Tests to function as Benchmarks (Thanks to Herbert Pietrzyk)
+- Improved BitVector code
+    - Fixed error in Bit-negation
+    - Added according testcase
+- Fixed defaultCollider for BitVoxels (counted eBVM_FREE as collision previously)
+
+Minor changes:
+- Added screendump function for VoxelLists
+- Fix in CMake to export CUDA dependency
+- Restructured optional dependency management
+- Improved the handling of warnings within Kernels (less printf spam)
+- Visualizer config files: Added option to set color for all BitVoxelMeanings at once
+- Consistently using RPY for geometry generation (instead of YPR formerly)
+- Improved BitVoxelLists operations
+    - Thrust performance optimization
+    - Added according testcase
+
+Other changes:
+- Now compiles with CLang (fixed ambigous names)
+- Improved docs
+- Improved tescases for VoxelLists
+- Fix for CUDA 7 on Ubuntu 16.04 (-D_FORCE_INLINES)
+- Added UR10 & Robotique FTS model (10% larger, voxelized at 4mm)
+- Added Pelican UAV model
+- Corrected copy paste errors in CMake IC_BUILDER defines
+- Removed own source version of TinyXML: Now using system lib
+- Updated icmaker build tools
+- Updated QT include dirs in icl_core
+- icl_performance_monitor got some new functions

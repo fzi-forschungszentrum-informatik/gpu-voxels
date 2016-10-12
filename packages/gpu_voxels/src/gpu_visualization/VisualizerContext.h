@@ -71,7 +71,8 @@ struct VisualizerContext
       m_lighting(true),
       m_light_intensity(2500.f),
       m_slice_axis(0),
-      m_slice_axis_position(0)
+      m_slice_axis_position(0),
+      m_distance_drawmode(0)
   {
     m_draw_types = thrust::host_vector<uint8_t>(MAX_DRAW_TYPES, 0);
     m_draw_types[eBVM_OCCUPIED] = (uint8_t) 1;
@@ -189,6 +190,8 @@ struct VisualizerContext
   int m_slice_axis;
 
   int m_slice_axis_position;
+
+  uint8_t m_distance_drawmode;
 };
 
 } // end of namespace visualization

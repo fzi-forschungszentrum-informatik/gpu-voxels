@@ -24,10 +24,6 @@
 #include "ArgumentHandling.h"
 #include "gpu_voxels/helpers/PointcloudFileHandler.h"
 
-// PCL
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
-
 using namespace std;
 
 namespace gpu_voxels {
@@ -195,7 +191,7 @@ bool parseArguments(vector<Provider_Parameter>& parameter, int argc, char **argv
         if (i + 1 < argc)
         {
           argv[i] = deleted_argument;
-          parameter.back().max_memory = size_t(atoi(argv[++i])) * 1024 * 1024;
+          parameter.back().max_memory = size_t(atoi(argv[++i])) * gpu_voxels::cMBYTE2BYTE;
           argv[i] = deleted_argument;
         }
       }

@@ -75,6 +75,13 @@
   #define PERF_MON_PRINT_AND_RESET_INFO_P(timer_name, description, prefix) \
     ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, prefix, ::icl_core::logging::eLL_INFO);
 
+  //! Performs a time measurement and resets the timer to 0
+  #define PERF_MON_SILENT_MEASURE_AND_RESET_INFO(timer_name, description) \
+    ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, "", ::icl_core::logging::eLL_INFO, true);
+  //! Time measurement with reset and prefix
+  #define PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P(timer_name, description, prefix) \
+    ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, prefix, ::icl_core::logging::eLL_INFO, true);
+
   //! add arbitrary single floating point data. This information will be listed in de summary as well
   #define PERF_MON_ADD_STATIC_DATA(description, data) \
     ::icl_core::perf_mon::PerformanceMonitor::addStaticData(description, data, "");
@@ -124,6 +131,16 @@
       ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, "", ::icl_core::logging::eLL_TRACE);
     #define PERF_MON_PRINT_AND_RESET_TRACE_P(timer_name, description, prefix) \
       ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, prefix, ::icl_core::logging::eLL_TRACE);
+
+    #define PERF_MON_SILENT_MEASURE_AND_RESET_DEBUG(timer_name, description) \
+      ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, "", ::icl_core::logging::eLL_DEBUG, true);
+    #define PERF_MON_SILENT_MEASURE_AND_RESET_DEBUG_P(timer_name, description, prefix) \
+      ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, prefix, ::icl_core::logging::eLL_DEBUG, true);
+    #define PERF_MON_SILENT_MEASURE_AND_RESET_TRACE(timer_name, description) \
+      ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, "", ::icl_core::logging::eLL_TRACE, true);
+    #define PERF_MON_SILENT_MEASURE_AND_RESET_TRACE_P(timer_name, description, prefix) \
+      ::icl_core::perf_mon::PerformanceMonitor::startStop(timer_name, description, prefix, ::icl_core::logging::eLL_TRACE, true);
+
     #define PERF_MON_SUMMARY_DEBUG(prefix, description) \
       ::icl_core::perf_mon::PerformanceMonitor::printSummary(prefix, description, ::icl_core::logging::eLL_DEBUG);
     #define PERF_MON_SUMMARY_TRACE(prefix, description) \
@@ -145,6 +162,12 @@
     #define PERF_MON_PRINT_AND_RESET_DEBUG_P(timer_name, description, prefix) (void)0
     #define PERF_MON_PRINT_AND_RESET_TRACE(timer_name, description) (void)0
     #define PERF_MON_PRINT_AND_RESET_TRACE_P(timer_name, description, prefix) (void)0
+
+    #define PERF_MON_SILENT_MEASURE_AND_RESET_DEBUG(timer_name, description) (void)0
+    #define PERF_MON_SILENT_MEASURE_AND_RESET_DEBUG_P(timer_name, description, prefix) (void)0
+    #define PERF_MON_SILENT_MEASURE_AND_RESET_TRACE(timer_name, description) (void)0
+    #define PERF_MON_SILENT_MEASURE_AND_RESET_TRACE_P(timer_name, description, prefix) (void)0
+
     #define PERF_MON_SUMMARY_DEBUG(prefix, description) (void)0
     #define PERF_MON_SUMMARY_TRACE(prefix, description) (void)0
     #define PERF_MON_SUMMARY_PREFIX_DEBUG(prefix) (void)0
@@ -173,6 +196,15 @@
   #define PERF_MON_PRINT_AND_RESET_DEBUG_P(timer_name, description, prefix) (void)0
   #define PERF_MON_PRINT_AND_RESET_TRACE(timer_name, description) (void)0
   #define PERF_MON_PRINT_AND_RESET_TRACE_P(timer_name, description, prefix) (void)0
+
+  #define PERF_MON_SILENT_MEASURE_AND_RESET_INFO(timer_name, description) (void)0
+  #define PERF_MON_SILENT_MEASURE_AND_RESET_DEBUG(timer_name, description) (void)0
+  #define PERF_MON_SILENT_MEASURE_AND_RESET_TRACE(timer_name, description) (void)0
+
+  #define PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P(timer_name, description, prefix) (void)0
+  #define PERF_MON_SILENT_MEASURE_AND_RESET_DEBUG_P(timer_name, description, prefix) (void)0
+  #define PERF_MON_SILENT_MEASURE_AND_RESET_TRACE_P(timer_name, description, prefix) (void)0
+
   #define PERF_MON_SUMMARY_INFO(prefix, description) (void)0
   #define PERF_MON_SUMMARY_DEBUG(prefix, description) (void)0
   #define PERF_MON_SUMMARY_TRACE(prefix, description) (void)0

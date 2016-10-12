@@ -15,6 +15,8 @@ find_path(Osmium_INCLUDE_DIR
   PATHS ${Osmium_PKGCONF_INCLUDE_DIRS} "/usr/include/"
 )
 
+cmake_policy(SET CMP0017 NEW)
+
 FIND_PACKAGE(Zlib)
 FIND_PACKAGE(Pthread)
 FIND_PACKAGE(Protobuf)

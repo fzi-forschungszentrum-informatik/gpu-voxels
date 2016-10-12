@@ -40,7 +40,7 @@ public:
   typedef ProbabilisticVoxel Voxel;
   typedef TemplateVoxelMap<Voxel> Base;
 
-  ProbVoxelMap(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z, const float voxel_side_length, const MapType map_type);
+  ProbVoxelMap(const Vector3ui dim, const float voxel_side_length, const MapType map_type);
   ProbVoxelMap(Voxel* dev_data, const Vector3ui dim, const float voxel_side_length, const MapType map_type);
   virtual ~ProbVoxelMap();
 

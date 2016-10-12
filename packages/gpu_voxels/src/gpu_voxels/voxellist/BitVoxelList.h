@@ -109,6 +109,7 @@ template<std::size_t length, class VoxelIDType>
 class BitVoxelList : public TemplateVoxelList<BitVectorVoxel, VoxelIDType>,
     public CollidableWithBitVectorVoxelMap, public CollidableWithBitVectorVoxelList, public CollidableWithProbVoxelMap,
     public CollidableWithTypesBitVectorVoxelList, public CollidableWithTypesProbVoxelMap,
+    public CollidableWithTypesBitVectorVoxelMap,
     public CollidableWithBitcheckBitVectorVoxelList
 {
 public:
@@ -139,6 +140,9 @@ public:
   size_t collideWith(const voxellist::BitVectorVoxelList* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWithTypes(const voxelmap::ProbVoxelMap* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWithTypes(const voxellist::BitVectorVoxelList* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWithTypes(const voxelmap::BitVectorVoxelMap *map, BitVectorVoxel &types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWithTypeMask(const voxelmap::ProbVoxelMap* map, const BitVectorVoxel& types_to_check, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWithTypeMask(const voxelmap::BitVectorVoxelMap* map, const BitVectorVoxel& types_to_check, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWithBitcheck(const voxellist::BitVectorVoxelList* map, const u_int8_t margin = 0, const Vector3i &offset = Vector3i());
 
 
@@ -170,6 +174,7 @@ private:
 
   thrust::device_vector< BitVectorVoxel > m_dev_colliding_bits_result_list;
   thrust::host_vector< BitVectorVoxel > m_colliding_bits_result_list;
+  BitVectorVoxel* m_dev_bitmask;
 
 
 };

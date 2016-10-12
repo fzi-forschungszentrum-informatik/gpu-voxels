@@ -24,9 +24,9 @@
 #ifndef ULS_UDP_LOGGING_SERVER_H_INCLUDED
 #define ULS_UDP_LOGGING_SERVER_H_INCLUDED
 
-#include <QtCore/QObject>
-#include <QtNetwork/QUdpSocket>
-#include <QtSql/QSqlDatabase>
+#include <QObject>
+#include <QUdpSocket>
+#include <QSqlDatabase>
 
 class UdpLoggingServer : QObject
 {

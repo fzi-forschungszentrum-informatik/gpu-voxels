@@ -32,10 +32,7 @@ using boost::bad_lexical_cast;
 namespace gpu_voxels {
 namespace visualization {
 
-/**
- * Loads the specified color from the XML file.
- * icl_core::config::initalize(..) must be called before use.
- */
+
 bool XMLInterpreter::getColorFromXML(glm::vec4& color, boost::filesystem::path c_path)
 {
   std::string value;
@@ -136,11 +133,36 @@ bool XMLInterpreter::getDataContext(DataContext* context, std::string name)
   }
   bool found_something = false;
   // get the colors for all the specified types
+  glm::vec4 color;
+  colorPair colors;
+  
+  //first we look for a general color:
+  std::string pt = "all_types";
+    
+  if (getColorFromXML(color, c_path / pt))
+  {
+    colors.first = color;
+    colors.second = color;
+    for (size_t i=0; i < MAX_DRAW_TYPES; ++i)
+    {
+      context->m_colors[i] = colors;
+    }
+    found_something = true;
+  }
+  else if (getColorPairFromXML(colors, c_path / pt))
+  {
+    for (size_t i=0; i < MAX_DRAW_TYPES; ++i)
+    {
+      context->m_colors[i] = colors;
+    }
+    found_something = true;
+  }
+  
+  // Afterwards we allow to overwrite colors of specific types:
   for (size_t i=0; i < MAX_DRAW_TYPES; ++i)
   {
     std::string pt = "type_" + boost::lexical_cast<std::string>(i);
-    glm::vec4 color;
-    colorPair colors;
+    
     if (getColorFromXML(color, c_path / pt))
     {
       colors.first = color;

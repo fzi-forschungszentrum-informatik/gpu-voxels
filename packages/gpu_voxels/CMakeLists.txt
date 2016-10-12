@@ -9,6 +9,8 @@ SET(GPU_VOXELS_IDE_FOLDER "gpu_voxels")
 
 FIND_PACKAGE(CUDA)
 
+FIND_PACKAGE(Boost COMPONENTS system thread filesystem date_time unit_test_framework chrono)
+
 # LibRT is needed for Boost Interprocess on POSIX systems
 IF(UNIX AND NOT APPLE)
   FIND_PACKAGE(LibRt)
@@ -20,7 +22,7 @@ FIND_PACKAGE(GLM)
 FIND_PACKAGE(OpenGL)
 FIND_PACKAGE(GLUT)
 
-# Dependencies for URDF loading
+# Dependencies for URDF loading (also requires ROS for kdl/frames.hpp)
 FIND_PACKAGE(urdfdom)
 FIND_PACKAGE(orocos_kdl)
 FIND_PACKAGE(kdl_parser)
@@ -33,11 +35,15 @@ FIND_PACKAGE(PCL)
 
 # Dependencies for ROS interconnect
 FIND_PACKAGE(ROS)
+
 FIND_PACKAGE(pcl_ros)
 
 # Dependencies for Kinect support
 FIND_PACKAGE(OpenNi)
 #FIND_PACKAGE(OpenNi2)
+
+# ICL Package management
+ICMAKER_REGISTER_PACKAGE(gpu_voxels)
 
 MESSAGE(STATUS "--------------------------------------------------------------------------")
 MESSAGE(STATUS "------------------------ GPU Voxels configuration ------------------------")
@@ -55,17 +61,17 @@ ELSE(GLEW_FOUND AND GLM_FOUND AND OPENGL_FOUND AND GLUT_FOUND)
   MESSAGE(STATUS "[WARNING] Building GPU-Voxels without visualization. Could not find GLEW, GLM, OpenGL or GLUT.")
 ENDIF(GLEW_FOUND AND GLM_FOUND AND OPENGL_FOUND AND GLUT_FOUND)
 
-IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
-  MESSAGE(STATUS "[OK]      Building GPU-Voxels with URDF support. urdfdom, orocos and kdl_parser were found.")
-ELSE(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
-  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without URDF support. Could not find urdfdom or orocos or kdl_parser. ")
-ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
-
 IF(ROS_FOUND)
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with ROS connections. ROS was found.")
 ELSE(ROS_FOUND)
   MESSAGE(STATUS "[WARNING] Building GPU-Voxels without ROS connections. ROS not found.")
 ENDIF(ROS_FOUND)
+
+IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
+  MESSAGE(STATUS "[OK]      Building GPU-Voxels with URDF support. urdfdom, orocos and kdl_parser and ROS-kdl were found.")
+ELSE(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
+  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without URDF support. Could not find urdfdom or orocos or kdl_parser or ROS-kdl. ")
+ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
 
 #IF(OPENNI2_FOUND)
 #  MESSAGE(STATUS "[OK]      Building GPU-Voxels with Kinect support. OpenNI2 was found.")
@@ -86,8 +92,10 @@ ELSEIF(Octomap_FOUND)
 ENDIF(Octomap_FOUND)
 
 IF(PCL_FOUND)
+  # needed because of problems with libvtk6 and PCL on Jetson
+  list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with PCL interfaces. PCL found.")
-ELSEIF(PCL_FOUND)
+ELSE(PCL_FOUND)
   MESSAGE(STATUS "[WARNING] Building GPU-Voxels without PCL interfaces. PCL not found.")
 ENDIF(PCL_FOUND)
 
@@ -97,10 +105,19 @@ MESSAGE(STATUS "----------------------------------------------------------------
 
 
 ###############################################################################
-# Enable position independent code
 # Change these lines to increase performance if your GPU's compute capability is higher
 # GPU-Voxels requires GPU CUDA capabilities >= 2.0
+#SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} -arch=sm_20)
+SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} -arch=sm_35)
 
+#SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} --ptxas-options=-v) #nvcc outputs register and memory usage data for each kernel
+SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} -Xcompiler=-Wall)
+SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler=-Wall")
+#SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler=-Wall --maxrregcount=31") # uncomment this to compile for JetsonTX1
+MESSAGE("ICMAKER_CUDA_CPPDEFINES: ${ICMAKER_CUDA_CPPDEFINES}")
+MESSAGE("CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+
+# Enable position independent code
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 SET(ICMAKER_CUDA_CPPDEFINES "-gencode=arch=compute_20,code=compute_20")
 
@@ -127,10 +144,11 @@ endmacro(REMOVE_VTK_DEFINITIONS)
 
 
 ###############################################################################
-# ICL Package management
-ICMAKER_REGISTER_PACKAGE(gpu_voxels)
 
 REMOVE_VTK_DEFINITIONS()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_FORCE_INLINES")
+
 ADD_SUBDIRECTORY(src/gpu_voxels)
 ADD_SUBDIRECTORY(src/gpu_visualization)
 

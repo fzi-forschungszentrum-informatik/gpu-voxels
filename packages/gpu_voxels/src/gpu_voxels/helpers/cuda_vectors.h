@@ -114,11 +114,23 @@ struct Vector3i
   int32_t y;
   int32_t z;
 
-  __device__ __host__ Vector3i(const Vector3ui& _v)
+  __device__ __host__ explicit Vector3i(const Vector3ui& _v)
   {
     x = _v.x;
     y = _v.y;
     z = _v.z;
+  }
+
+  __device__ __host__
+  inline Vector3i operator-(const Vector3i& b)
+  {
+    return Vector3i(x - b.x, y - b.y, z - b.z);
+  }
+
+  __device__ __host__
+  inline Vector3i operator*(const Vector3i& b)
+  {
+    return Vector3i(x * b.x, y * b.y, z * b.z);
   }
 
   __device__ __host__
@@ -548,6 +560,26 @@ __device__ __host__
    inline Vector3f operator*(const Vector3i& b, const float& a)
 {
   Vector3f result;
+  result.x = a * b.x;
+  result.y = a * b.y;
+  result.z = a * b.z;
+  return result;
+}
+
+__device__ __host__
+   inline Vector3i operator*(const int32_t& a, const Vector3i& b)
+{
+  Vector3i result;
+  result.x = a * b.x;
+  result.y = a * b.y;
+  result.z = a * b.z;
+  return result;
+}
+
+__device__ __host__
+   inline Vector3i operator*(const Vector3i& b, const int32_t& a)
+{
+  Vector3i result;
   result.x = a * b.x;
   result.y = a * b.y;
   result.z = a * b.z;

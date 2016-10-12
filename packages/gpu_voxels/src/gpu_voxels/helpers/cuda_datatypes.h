@@ -85,7 +85,7 @@ struct OrientedBoxParams
 {
   gpu_voxels::Vector3f dim; //< half the side length
   gpu_voxels::Vector3f center; //< center of the cube
-  gpu_voxels::Vector3f rot; //< rotation of the cube (Yaw, Pitch, Roll)
+  gpu_voxels::Vector3f rot; //< rotation of the cube (Roll, Pitch, Yaw)
 };
 
 } // end of namespace

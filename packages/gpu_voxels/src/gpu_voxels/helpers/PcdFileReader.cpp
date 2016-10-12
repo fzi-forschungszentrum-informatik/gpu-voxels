@@ -23,7 +23,7 @@
 #include <gpu_voxels/helpers/PcdFileReader.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
-
+#include <gpu_voxels/helpers/common_defines.h>
 
 namespace gpu_voxels {
 namespace file_handling {
@@ -50,7 +50,7 @@ bool PcdFileReader::readPointCloud(const std::string filename, std::vector<Vecto
 
   LOGGING_DEBUG(
       Gpu_voxels_helpers,
-      "PCD Handler: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f))/1024.0/1024.0 << " MB on CPU) from "<< filename.c_str() << "." << endl);
+      "PCD Handler: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f)) * cBYTE2MBYTE << " MB on CPU) from "<< filename.c_str() << "." << endl);
   return true;
 }
 

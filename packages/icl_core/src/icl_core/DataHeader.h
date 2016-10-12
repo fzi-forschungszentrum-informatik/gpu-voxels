@@ -265,6 +265,7 @@ public:
     os << "[seq: " << this->m_header.sequence_number
        << ", timestamp: " << boost::posix_time::to_simple_string(this->m_header.timestamp)
        << ", DSIN: " << this->m_header.dsin
+       << ", Frame: " << m_header.coordinate_system
        << "; ";
 #if (BOOST_VERSION >= 104800)
     internal::ToStream<DataType, boost::has_left_shift<std::ostream, DataType>::value>::print(os, m_data);

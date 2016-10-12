@@ -28,6 +28,7 @@
 #include <gpu_voxels/octree/NTreeData.h>
 #include <gpu_voxels/octree/load_balancer/kernel_config/LoadBalance.cuh>
 #include <gpu_voxels/helpers/BitVector.h>
+#include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 
 namespace gpu_voxels {
 namespace NTree {

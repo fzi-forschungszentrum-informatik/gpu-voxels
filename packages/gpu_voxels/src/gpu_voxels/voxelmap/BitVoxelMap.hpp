@@ -35,9 +35,8 @@ namespace gpu_voxels {
 namespace voxelmap {
 
 template<std::size_t length>
-BitVoxelMap<length>::BitVoxelMap(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z,
-                                 const float voxel_side_length, const MapType map_type) :
-    Base(dim_x, dim_y, dim_z, voxel_side_length, map_type)
+BitVoxelMap<length>::BitVoxelMap(const Vector3ui dim, const float voxel_side_length, const MapType map_type) :
+    Base(dim, voxel_side_length, map_type)
 {
 
 }
@@ -174,7 +173,7 @@ void BitVoxelMap<length>::shiftLeftSweptVolumeIDs(uint8_t shift_size)
 {
   if (shift_size > 56) // restriction due to internal buffer
   {
-    LOGGING_ERROR_C(VoxelmapLog, BitVoxelMap, "Maximum shift size is 63! Higher shift number requested. Not performing shift operation." << endl);
+    LOGGING_ERROR_C(VoxelmapLog, BitVoxelMap, "Maximum shift size is 56! Higher shift number requested. Not performing shift operation." << endl);
     return;
   }
   this->lockSelf("BitVoxelMap::shiftLeftSweptVolumeIDs");

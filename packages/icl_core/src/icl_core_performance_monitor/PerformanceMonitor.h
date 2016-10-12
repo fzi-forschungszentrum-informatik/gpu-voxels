@@ -114,10 +114,11 @@ public:
    * @param description The event description. Keep it short for better readability.
    * @param prefix Optional prefix to put the event into a group. Defaults to ""
    * @param level Optional logging level. Defaults to icl_core::logging::eLL_INFO
+   * @param silent Optional overwrite to suppress the output into the logstream
    * @return The measurement value in ms
    */
   static double startStop(std::string timer_name, std::string description, std::string prefix = "",
-                          logging::LogLevel level = icl_core::logging::eLL_INFO);
+                          logging::LogLevel level = icl_core::logging::eLL_INFO, const bool silent = false);
 
   /**
    * @brief addData Manually insert a time measurement with given identifier
@@ -147,6 +148,20 @@ public:
   static void addNonTimeData(std::string name, double data, std::string prefix);
 
   /**
+   * @brief getData Returns all data added under the given prefix and name combination.
+   * @param name Short data description
+   * @param prefix Prefix that the data belongs to.
+   */
+  static std::vector<double> getData(std::string name, std::string prefix);
+
+  /**
+   * @brief getNonTimeData Returns all nontime data added under the given prefix and name combination.
+   * @param name Short data description
+   * @param prefix Prefix that the data belongs to.
+   */
+  static std::vector<double> getNonTimeData(std::string name, std::string prefix);
+
+  /**
    * @brief enablePrefix Enables a given prefix
    * @param prefix Prefix that will be enabled.
    */
@@ -172,7 +187,7 @@ public:
    * @param name The events' description
    * @param level Optional logging level. Defaults to icl_core::logging::eLL_INFO
    */
-  static void printSummary(std::string prefix, std::string name,
+  static std::string printSummary(std::string prefix, std::string name,
                            icl_core::logging::LogLevel level = icl_core::logging::eLL_INFO);
 
   /**
@@ -181,7 +196,7 @@ public:
    * first.
    * @param level Optional logging level. Defaults to icl_core::logging::eLL_INFO
    */
-  static void printSummaryAll(icl_core::logging::LogLevel level = icl_core::logging::eLL_INFO);
+  static std::string printSummaryAll(icl_core::logging::LogLevel level = icl_core::logging::eLL_INFO);
 
 
   /**
@@ -189,7 +204,7 @@ public:
    * @param prefix Prefix for which the summary will be printed
    * @param level Optional logging level. Defaults to icl_core::logging::eLL_INFO
    */
-  static void printSummaryFromPrefix(std::string prefix, icl_core::logging::LogLevel level = icl_core::logging::eLL_INFO);
+  static std::string printSummaryFromPrefix(std::string prefix, icl_core::logging::LogLevel level = icl_core::logging::eLL_INFO);
 
   //! if set to false, the performance monitor will be non-operational
   bool m_enabled;

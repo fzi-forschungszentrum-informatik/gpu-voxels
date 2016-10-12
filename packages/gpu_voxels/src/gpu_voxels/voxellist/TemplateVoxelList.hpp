@@ -22,6 +22,7 @@
 //----------------------------------------------------------------------
 
 #include "TemplateVoxelList.h"
+#include <fstream>
 #include <gpu_voxels/logging/logging_voxellist.h>
 #include <gpu_voxels/voxellist/kernels/VoxelListOperations.hpp>
 #include <thrust/execution_policy.h>
@@ -39,6 +40,58 @@
 
 namespace gpu_voxels {
 namespace voxellist {
+
+// Thrust Operator Merge:
+template<class Voxel, class VoxelIDType>
+struct Merge : public thrust::binary_function<thrust::tuple<VoxelIDType, Voxel>,
+    thrust::tuple<VoxelIDType, Voxel>, thrust::tuple<VoxelIDType, Voxel> >
+{
+  typedef thrust::tuple<VoxelIDType, Voxel> keyVoxelTuple;
+
+  __host__ __device__
+  keyVoxelTuple operator()(const keyVoxelTuple &lhs, const keyVoxelTuple &rhs) const
+  {
+    VoxelIDType l_key = thrust::get<0>(lhs);
+    Voxel l_voxel = thrust::get<1>(lhs);
+
+    VoxelIDType r_key = thrust::get<0>(rhs);
+    Voxel r_voxel = thrust::get<1>(rhs);
+
+    keyVoxelTuple ret = rhs;
+
+    if (l_key == r_key)
+    {
+      thrust::get<1>(ret) = Voxel::reduce(l_voxel, r_voxel);
+    }
+    return ret;
+  }
+};
+
+// Thrust operator applyOffsetOperator:
+template<class VoxelIDType>
+struct applyOffsetOperator : public thrust::unary_function<thrust::tuple<Vector3ui, VoxelIDType>,
+    thrust::tuple<Vector3ui, VoxelIDType> >
+{
+  typedef thrust::tuple<Vector3ui, VoxelIDType> coordKeyTuple;
+
+  ptrdiff_t addr_offset;
+  Vector3i coord_offset;
+  applyOffsetOperator(const Vector3ui &ref_map_dim, const Vector3i &offset)
+  {
+    coord_offset = offset;
+    addr_offset = voxelmap::getVoxelIndexSigned(ref_map_dim, offset);
+  }
+
+  __host__ __device__
+  coordKeyTuple operator()(const coordKeyTuple &input) const
+  {
+    coordKeyTuple ret;
+    thrust::get<0>(ret) = thrust::get<0>(input) + coord_offset;
+    thrust::get<1>(ret) = thrust::get<1>(input) + addr_offset;
+    return ret;
+  }
+};
+
 
 template<class Voxel, class VoxelIDType>
 TemplateVoxelList<Voxel, VoxelIDType>::TemplateVoxelList(const Vector3ui ref_map_dim, const float voxel_sidelength, const MapType map_type)
@@ -158,37 +211,33 @@ void TemplateVoxelList<Voxel, VoxelIDType>::make_unique()
 
 template<class Voxel, class VoxelIDType>
 size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(const TemplateVoxelList<Voxel, VoxelIDType> *other,
-                                                                const Vector3i &offset, thrust::device_vector<bool>& collision_stencil, bool do_locking) const
+                                                                const Vector3i &offset, thrust::device_vector<bool>& collision_stencil) const
 {
-  if (do_locking) lockBoth(this, other, "TemplateVoxelList::collideVoxellists");
+  lockBoth(this, other, "TemplateVoxelList::collideVoxellists");
 
   // searching for the elements of "other" in "this". Therefore stencil has to be the size of "this"
   try
   {
-    // if offset is given, we need our own comparison opperator!
+    // if offset is given, we need our own comparison opperator which is a lot slower than the comparison on built in datatypes!
+    // See: http://stackoverflow.com/questions/9037906/fast-cuda-thrust-custom-comparison-operator
     if(offset != Vector3i(0))
     {
-      LOGGING_WARNING_C(VoxellistLog, TemplateVoxelList, "Offset for VoxelList collision was given. Thrust performace is not optimal with that!" << endl);
-      thrust::binary_search(thrust::device,
-                            other->m_dev_id_list.begin(), other->m_dev_id_list.end(),
-                            m_dev_id_list.begin(), m_dev_id_list.end(),
-                            collision_stencil.begin(), offsetLessOperator<VoxelIDType>(m_ref_map_dim, offset));
+      LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Offset for VoxelList collision not supported! Not performing collision check." << endl);
+      return 0;
     }else{
       thrust::binary_search(thrust::device,
                             other->m_dev_id_list.begin(), other->m_dev_id_list.end(),
                             m_dev_id_list.begin(), m_dev_id_list.end(),
                             collision_stencil.begin());
     }
-    if (do_locking)
-    {
-      unlockBoth(this, other, "TemplateVoxelList::collideVoxellists");
-    }
+    unlockBoth(this, other, "TemplateVoxelList::collideVoxellists");
 
     return thrust::count(collision_stencil.begin(), collision_stencil.end(), true);
   }
   catch(thrust::system_error &e)
   {
     LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Caught Thrust exception " << e.what() << endl);
+    unlockBoth(this, other, "TemplateVoxelList::collideVoxellists");
     exit(-1);
   }
 }
@@ -358,7 +407,7 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::writeToDisk(const std::string path)
 {
 
   LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Dumping VoxelList to disk: " <<
-                 getDimensions().x << " Voxels ==> " << (getMemoryUsage() / 1024.0 / 1024.0) << " MB. ..." << endl);
+                 getDimensions().x << " Voxels ==> " << (getMemoryUsage() * cBYTE2MBYTE) << " MB. ..." << endl);
 
   lockSelf("TemplateVoxelList::writeToDisk");
   std::ofstream out(path.c_str());
@@ -510,7 +559,7 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr ot
 template<class Voxel, class VoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset, const BitVoxelMeaning *new_meaning)
 {
-  Vector3i voxel_offset = voxelmap::mapToVoxels(m_voxel_side_length, metric_offset);
+  Vector3i voxel_offset = voxelmap::mapToVoxelsSigned(m_voxel_side_length, metric_offset);
   return merge(other, voxel_offset, new_meaning); // does the locking
 }
 
@@ -521,7 +570,7 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const TemplateVoxelList<Vox
   lockBoth(this, other, "TemplateVoxelList::subtract");
   // find the overlapping voxels:
   thrust::device_vector<bool> overlap_stencil(m_dev_id_list.size()); // A stencil of the voxels in collision
-  collideVoxellists(other, voxel_offset, overlap_stencil, false); // suppress locking
+  collideVoxellists(other, voxel_offset, overlap_stencil);
 
   keyCoordVoxelZipIterator new_end;
 
@@ -545,7 +594,7 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const TemplateVoxelList<Vox
 template<class Voxel, class VoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3f &metric_offset)
 {
-  Vector3i voxel_offset = voxelmap::mapToVoxels(m_voxel_side_length, metric_offset);
+  Vector3i voxel_offset = voxelmap::mapToVoxelsSigned(m_voxel_side_length, metric_offset);
   return subtract(other, voxel_offset); // does the locking
 }
 
@@ -633,6 +682,35 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collisionCheckWithCollider(const v
   unlockBoth(this, other, "TemplateVoxelList::collisionCheckWithCollider");
 
   return number_of_collisions;
+}
+
+template<class Voxel, class VoxelIDType>
+void TemplateVoxelList<Voxel, VoxelIDType>::screendump(bool with_voxel_content) const
+{
+
+  LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Dumping VoxelList with " << getDimensions().x << " entries to screen: " << endl);
+
+  lockSelf("TemplateVoxelList::screendump");
+
+  thrust::host_vector<VoxelIDType> host_id_list = m_dev_id_list;
+  thrust::host_vector<Vector3ui> host_coord_list = m_dev_coord_list;
+  thrust::host_vector<Voxel> host_list = m_dev_list;
+
+  if(with_voxel_content)
+  {
+    for(uint32_t i = 0; i < host_list.size(); i++)
+    {
+      std::cout << "[" << i << "] ID = " << host_id_list[i] << " Coords: " << host_coord_list[i] << "Voxel: " << host_list[i] << std::endl;
+    }
+  }else{
+    for(uint32_t i = 0; i < host_list.size(); i++)
+    {
+      std::cout << "[" << i << "] ID = " << host_id_list[i] << " Coords: " << host_coord_list[i] << std::endl;
+    }
+  }
+
+  LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Dumped "<< getDimensions().x << " Voxels." << endl);
+  unlockSelf("TemplateVoxelList::screendump");
 }
 
 

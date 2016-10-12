@@ -64,6 +64,12 @@ __global__ void fill_vbo_without_precounting(BitVectorVoxel* voxelMap, Vector3ui
                                              uint32_t* vbo_offsets, uint32_t* vbo_limits,
                                              uint32_t* write_index, uint8_t*, uint8_t* prefixes);
 
+__global__ void fill_vbo_without_precounting(DistanceVoxel* voxelMap, Vector3ui dim_voxel_map,
+                                             Vector3ui dim_super_voxel, Vector3ui start_voxel,
+                                             Vector3ui end_voxel, visualizer_distance_drawmodes drawmode, float4* vbo,
+                                             uint32_t* vbo_offsets, uint32_t* vbo_limits,
+                                             uint32_t* write_index, uint8_t*, uint8_t* prefixes);
+
 
 __global__ void fill_vbo_with_cubelist(Cube* cubes, uint32_t size, float4* vbo, uint32_t* vbo_offsets,
                                      uint32_t* write_index, uint8_t* draw_voxel_type, uint8_t* prefixes);

@@ -26,6 +26,7 @@
 #include <gpu_voxels/octree/test/NTreeProvider.h>
 
 #include <string>
+#include <iostream>
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/common_defines.h>
@@ -109,13 +110,13 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
     Vector3f offset;
     Vector3ui point_data_bounds = getMapDimensions(parameter.points, offset);
     map_dim = point_data_bounds;
-    printf("point cloud dimension %u %u %u\n", map_dim.x, map_dim.y, map_dim.z);
+    std::cout << "point cloud dimension: " << map_dim << std::endl;
 
     if (parameter.plan_size.x != 0.0f && parameter.plan_size.y != 0.0f && parameter.plan_size.z != 0.0f)
     {
       Vector3f tmp = parameter.plan_size * 1000.0f;
       map_dim = Vector3ui(uint32_t(tmp.x), uint32_t(tmp.y), uint32_t(tmp.z));
-      printf("dim in cm %u %u %u\n", map_dim.x, map_dim.y, map_dim.z);
+      std::cout << "dim in cm:" << map_dim << std::endl;
     }
 
     uint64_t map_voxel = uint64_t(map_dim.x) * uint64_t(map_dim.y) * uint64_t(map_dim.z);
@@ -143,7 +144,7 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
 
     map_dim = Vector3ui(uint32_t(ceil(map_dim.x * scaling)), uint32_t(ceil(map_dim.y * scaling)),
                         uint32_t(ceil(map_dim.z * scaling)));
-    printf("voxel map dimension %u %u %u\n", map_dim.x, map_dim.y, map_dim.z);
+    std::cout << "voxel map dimension: " <<  map_dim << std::endl;
 
     // center data at the middle of the map, just like for NTree
     point_data_bounds = Vector3ui(uint32_t(ceil(point_data_bounds.x * scaling)),
@@ -176,12 +177,12 @@ void VoxelMapProvider::init(Provider_Parameter& parameter)
   {
     case Provider_Parameter::eMT_Probabilistic:
     {
-      m_voxelMap = new gpu_voxels::voxelmap::ProbVoxelMap(map_dim.x, map_dim.y, map_dim.z, voxel_map_res, MT_PROBAB_VOXELMAP);
+      m_voxelMap = new gpu_voxels::voxelmap::ProbVoxelMap(map_dim, voxel_map_res, MT_PROBAB_VOXELMAP);
       break;
     }
     case Provider_Parameter::eMT_BitVector:
     {
-      m_voxelMap = new gpu_voxels::voxelmap::BitVectorVoxelMap(map_dim.x, map_dim.y, map_dim.z, voxel_map_res, MT_BITVECTOR_VOXELMAP);
+      m_voxelMap = new gpu_voxels::voxelmap::BitVectorVoxelMap(map_dim, voxel_map_res, MT_BITVECTOR_VOXELMAP);
       break;
     }
     default:

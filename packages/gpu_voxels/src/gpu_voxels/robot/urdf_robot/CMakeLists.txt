@@ -10,12 +10,11 @@
 #
 #----------------------------------------------------------------------
 
-
 #------------- gpu_voxels_urdf_robot libaray -----------------------
-IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
-  ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_URDF_SUPPORT_)
-
+IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
   ICMAKER_SET("gpu_voxels_urdf_robot" IDE_FOLDER ${GPU_VOXELS_IDE_FOLDER})
+
+  ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_URDF_SUPPORT_)
 
   ICMAKER_ADD_HEADERS(
       node.h
@@ -44,12 +43,8 @@ IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
 
   # removing unknown pragma warnings due to OpenNI spam
   ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
-  ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_)
-  ICMAKER_INCLUDE_DIRECTORIES(
-    ${GPU_VOXELS_INCLUDE_DIRS}
-    ${kdl_parser_INCLUDE_DIRS}
-    ${orocos_kdl_INCLUDE_DIRS}
-  )
+  ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_URDF_ROBOT_)
+  ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
 
   ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
     icl_core
@@ -59,10 +54,12 @@ IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
     gpu_voxels_helpers
     )
 
-  ICMAKER_DEPENDENCIES(EXPORT
+  ICMAKER_EXTERNAL_DEPENDENCIES(EXPORT
     urdfdom
     kdl_parser
     orocos_kdl
+    Boost_FILESYSTEM
+    ROS
     )
 
 
@@ -76,4 +73,4 @@ IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
     ../robot_interface.h
   )
 
-ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
+ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)

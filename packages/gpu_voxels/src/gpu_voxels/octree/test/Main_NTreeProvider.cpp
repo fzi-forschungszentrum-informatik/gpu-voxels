@@ -55,7 +55,7 @@ using namespace gpu_voxels::NTree::Provider;
 boost::barrier* my_barrier;
 
 std::vector<boost::thread*> vec_threads;
-std::vector<Provider::Provider*> vec_provider;
+std::vector<gpu_voxels::NTree::Provider::Provider*> vec_provider;
 std::vector<SensorData*> vec_sensor_data;
 volatile bool global_start;
 volatile bool global_stop;
@@ -108,7 +108,7 @@ void killhandler(int)
 
 void thread_handleProvider(Provider_Parameter& parameter, uint32_t id)
 {
-  Provider::Provider** provider = &vec_provider[id];
+  gpu_voxels::NTree::Provider::Provider** provider = &vec_provider[id];
   SensorData** kinect = &vec_sensor_data[id];
   *kinect = NULL;
   *provider = NULL;

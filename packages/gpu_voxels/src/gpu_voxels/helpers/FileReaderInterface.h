@@ -32,8 +32,9 @@ namespace file_handling {
 
 class FileReaderInterface
 {
+public:
+  virtual ~FileReaderInterface(){};
 
-private:
   /*!
    * \brief readPointCloud is the file specific parsing function that has to be implemented
    * \param filename Filename

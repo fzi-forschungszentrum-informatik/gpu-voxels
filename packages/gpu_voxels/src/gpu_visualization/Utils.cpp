@@ -97,6 +97,9 @@ std::string typeToString(MapType type)
     case MT_BITVECTOR_VOXELMAP:
       name = "BIT_VOXELMAP";
       break;
+    case MT_DISTANCE_VOXELMAP:
+      name = "DISTANCE_VOXELMAP";
+      break;
     default:
       name = "";
       break;

@@ -44,10 +44,7 @@ Robot::~Robot()
 
 void Robot::loadTrajectories(std::string path, size_t numTraj, bool useModelPath)
 {
-    if (useModelPath)
-    {
-        path = (file_handling::getGpuVoxelsPath() / boost::filesystem::path("trajectories") / boost::filesystem::path(path)).string();
-    }
+    path = (getGpuVoxelsPath(useModelPath) / boost::filesystem::path("trajectories") / boost::filesystem::path(path)).string();
 
     std::ifstream trajs(path.c_str(), std::ifstream::in);
 

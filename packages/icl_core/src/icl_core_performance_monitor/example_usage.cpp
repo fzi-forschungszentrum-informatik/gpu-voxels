@@ -22,7 +22,10 @@
 */
 //----------------------------------------------------------------------
 
+
+//! Important: This define is required BEFORE including the header!!
 #define IC_PERFORMANCE_MONITOR
+
 #include "icl_core_performance_monitor/PerformanceMonitor.h"
 
 using namespace icl_core::perf_mon;

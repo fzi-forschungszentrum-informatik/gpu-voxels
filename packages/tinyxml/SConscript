@@ -1,6 +1,0 @@
-import os.path
-
-Import ('*')
-
-AddCPPPATH('src')
-AddSConscript(os.path.join('src', 'tinyxml', 'SConscript'), 'tinyxml')

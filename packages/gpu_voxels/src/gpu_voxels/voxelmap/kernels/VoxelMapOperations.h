@@ -27,6 +27,9 @@
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/voxel/BitVoxel.h>
 #include <gpu_voxels/voxel/ProbabilisticVoxel.h>
+#include <gpu_voxels/voxel/DistanceVoxel.h>
+
+#include "VoxelMapOperationsPBA.h"
 
 namespace gpu_voxels {
 namespace voxelmap {
@@ -129,6 +132,19 @@ Vector3ui mapToVoxels(const float voxel_side_length, const Vector3f &coordinates
   return uint_coords;
 }
 
+//! Partitioning of continuous data into voxels. Maps float coordinates to dicrete voxel coordinates.
+__device__ __host__     __forceinline__
+Vector3i mapToVoxelsSigned(const float voxel_side_length, const Vector3f &coordinates)
+{
+  Vector3i integer_coordinates;
+  integer_coordinates.x = static_cast<int32_t>(floor(coordinates.x / voxel_side_length));
+  integer_coordinates.y = static_cast<int32_t>(floor(coordinates.y / voxel_side_length));
+  integer_coordinates.z = static_cast<int32_t>(floor(coordinates.z / voxel_side_length));
+
+  // printf("coordinates.x = %f -> integer_coordinates.x = %u \n", coordinates.x, integer_coordinates.x);
+  return integer_coordinates;
+}
+
 template<class Voxel>
 __device__ __host__     __forceinline__
 Voxel* getHighestVoxelPtr(const Voxel* base_addr, const Vector3ui &dimensions)
@@ -144,6 +160,40 @@ Vector3f getVoxelCenter(float voxel_side_length, const Vector3ui &voxel_coords)
   return Vector3f(voxel_coords.x * voxel_side_length + voxel_side_length / 2.0,
                   voxel_coords.y * voxel_side_length + voxel_side_length / 2.0,
                   voxel_coords.z * voxel_side_length + voxel_side_length / 2.0);
+}
+
+//! update min_voxel if newVoxel is valid and closer
+__device__      __forceinline__
+void updateMinVoxel(const DistanceVoxel& new_voxel, DistanceVoxel& min_voxel, const Vector3i& cur_pos)
+{
+// optimise: don't skip obstacles in global function to reduce divergence? remove check for 0 or -1 here
+
+  //TODO optimise: pass min_distance as argument; return new min_distance; most calls of updateMinVoxel will just read and not change the value
+  //TODO optimise: change function updateMinVoxel to macro? check performance
+  const int min_distance = min_voxel.squaredObstacleDistance(cur_pos);
+
+  // check if min_distance is invalid, or just ignore
+  // assumption: p_min_distance is either MAX_DISTANCE or a valid distance > 0
+  if (min_distance == PBA_OBSTACLE_DISTANCE) { //minVoxel uninitialised, not an obstacle
+    printf("should never happen: updateVoxel min_distance: %i (pos: %i/%i/%i)\n", min_distance, cur_pos.x, cur_pos.y, cur_pos.z);
+    return;
+  } else {
+    const Vector3ui new_obstacle_u = new_voxel.getObstacle();
+    const Vector3i new_obstacle = Vector3i(new_obstacle_u);
+
+    const int dx = cur_pos.x - new_obstacle.x;
+    const int dy = cur_pos.y - new_obstacle.y;
+    const int dz = cur_pos.z - new_obstacle.z;
+    int32_t new_distance = (dx * dx) + (dy * dy) + (dz * dz); //squared distance
+
+    // int curiosity: other_map[0] 2147483647/2147483647/2147483647 (distance: 3)
+    if ((new_obstacle.x != PBA_UNINITIALISED_COORD)
+        && (new_distance < min_distance)
+        && (new_obstacle.y != PBA_UNINITIALISED_COORD)
+        && (new_obstacle.z != PBA_UNINITIALISED_COORD)) { //need to update; never overwrite with UNINITIALIZED
+      min_voxel = DistanceVoxel(new_obstacle_u);
+    } // else: don't need to consider new_voxel
+  }
 }
 
 struct RayCaster
@@ -367,19 +417,22 @@ void kernelCollideVoxelMapsDebug(Voxel* voxelmap, const uint32_t voxelmap_size, 
 template<class Voxel>
 __global__
 void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui map_dim, const float voxel_side_length,
-                                  const Vector3f* points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning);
+                                  const Vector3f* points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning,
+                                  bool *points_outside_map);
 
 
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *meta_point_cloud,
-                                BitVoxelMeaning voxel_meaning, const Vector3ui map_dim, const float voxel_side_length);
+                                BitVoxelMeaning voxel_meaning, const Vector3ui map_dim, const float voxel_side_length,
+                                bool *points_outside_map);
 
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *meta_point_cloud,
                                 BitVoxelMeaning* voxel_meanings, const Vector3ui map_dim,
-                                const float voxel_side_length);
+                                const float voxel_side_length,
+                                bool *points_outside_map);
 
 /**
  * Shifts all swept-volume-IDs by shift_size towards lower IDs.
@@ -388,6 +441,19 @@ void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *met
 template<std::size_t length>
 __global__
 void kernelShiftBitVector(BitVoxel<length>* voxelmap, const uint32_t voxelmap_size, uint8_t shift_size);
+
+/**
+ * cjuelg: jump flood distances, obstacle vectors
+ */
+__global__
+void kernelJumpFlood3D(const DistanceVoxel * __restrict__ const voxels_input, DistanceVoxel* __restrict__ const voxels_output, const Vector3ui dims, const int32_t step_width);
+
+/**
+ * cjuelg: brute force exact obstacle distances
+ */
+__global__
+void kernelExactDistances3D(DistanceVoxel* voxels, const Vector3ui dims, const float voxel_side_length,
+                            Vector3f* points, const std::size_t sizePoints);
 
 } // end of namespace voxelmap
 } // end of namespace gpu_voxels

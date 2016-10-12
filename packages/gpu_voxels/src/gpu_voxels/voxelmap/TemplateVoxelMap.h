@@ -32,9 +32,8 @@
 #include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/voxelmap/AbstractVoxelMap.h>
-#include <gpu_voxels/voxel/DefaultCollider.h>
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
-
+#include <gpu_voxels/voxel/DefaultCollider.h>
 
 
 /**
@@ -44,42 +43,14 @@
 namespace gpu_voxels {
 namespace voxelmap {
 
-//// todo: use VoxelMapConfig instead of the many other variables
-//class VoxelMapConfig
-//{
-//public:
-//  //! Constructor
-//  __host__ VoxelMapConfig(uint32_t _dim_x, uint32_t _dim_y, uint32_t _dim_z, float _voxel_side_length) :
-//      dimension(Vector3ui(_dim_x, _dim_y, _dim_z)), voxel_side_length(_voxel_side_length)
-//  {
-//  }
-//
-//  //! Copy constructor
-//  __host__ VoxelMapConfig(const VoxelMapConfig& other) :
-//      dimension(other.dimension), voxel_side_length(other.voxel_side_length), voxelmap(other.voxelmap)
-//  {
-//  }
-//
-//  //! Destructor
-//  __host__ ~VoxelMapConfig()
-//  {
-//  }
-//
-//  Vector3ui dimension;
-//  float voxel_side_length;
-//  Voxel* voxelmap;
-//};
-
 template<class Voxel>
 class TemplateVoxelMap : public AbstractVoxelMap
 {
 public:
-  /*! Create a voxelmap that holds dim_x * dim_y * dim_z voxels.
+  /*! Create a voxelmap that holds dim.x * dim.y * dim.z voxels.
    *  A voxel is treated as cube with side length voxel_side_length. */
-  TemplateVoxelMap(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z, const float voxel_side_length, const MapType map_type);
+  TemplateVoxelMap(const Vector3ui dim, const float voxel_side_length, const MapType map_type);
 
-  // __host__
-  // VoxelMap(VoxelMapConfig config);
   /*!
    * This constructor does NOT create a new voxel map on the GPU.
    * The new object will represent the voxel map specified in /p dev_data.
@@ -131,21 +102,9 @@ public:
    * that the map did not change since it was cleared.
    */
   void clearVoxelMapRemoteLock(BitVoxelMeaning voxel_meaning);
-//  //! use a kernel call and print data from within
-//  __host__
-//  void printVoxelMapDataFromDevice();
+
   //! print data array to screen for debugging (low performance)
   virtual void printVoxelMapData();
-
-//  //! write log for data / performance measurement
-//  __host__
-//  bool writeLog(std::string filename, uint32_t loop_size = 1, bool reset_values = false);
-
-  /* ----- mutex locking and unlocking ----- */
-//  mutable boost::mutex m_mutex;
-//  bool lockMutex();
-
-//  void unlockMutex();
 
   /* --- collision check operations --- */
   /*! Test for collision with other VoxelMap
@@ -158,14 +117,7 @@ public:
   template< class OtherVoxel, class Collider>
   bool collisionCheck(TemplateVoxelMap<OtherVoxel>* other, Collider collider);
 
-//  __host__
-//  bool collisionCheckIndices(uint8_t threshold, uint32_t* index_list, uint32_t index_size);
 
-//  __host__
-//  uint64_t collisionCheckIndicesBitmap(uint8_t threshold,
-//      uint32_t* index_list, uint32_t index_size, uint64_t* bitmap_list, int64_t offset_x, int64_t offset_y);
-//
-//
 //  __host__
 //  bool collisionCheckAlternative(const uint8_t threshold, VoxelMap* other,
 //          const uint8_t other_threshold, uint32_t loop_size);
@@ -179,34 +131,6 @@ public:
 //  __host__
 //  bool collisionCheckBoundingBox(uint8_t threshold, VoxelMap* other, uint8_t other_threshold,
 //                        Vector3ui bounding_box_start, Vector3ui bounding_box_end);
-
-  /* ======== some functions for self testing ======== */
-
-//  __host__
-//  bool triggerVoxelMapCollisionTestNoCollision(uint32_t num_data_points, TemplateVoxelMap<OtherVoxel>* other);
-//  __host__
-//  bool triggerVoxelMapCollisionTestWithCollision(uint32_t num_data_points, TemplateVoxelMap<OtherVoxel>* other);
-//  __host__
-//  bool triggerVoxelMapAddresSchemeTest(uint32_t nr_of_tests);
-    /*==================================================*/
-//  __host__
-//   void insertBox(Vector3f cartesian_from, Vector3f cartesian_to,
-//                  BitVoxelMeaning voxelmeaning, uint8_t occupancy = 255);
-
-//   __host__
-//   void insertBoxByIndices(Vector3ui indices_from, Vector3ui indices_to,
-//                           BitVoxelMeaning voxelmeaning, uint8_t occupancy = 255);
-
-//   __host__
-//   float getVoxelSideLength();
-
-//   __host__
-//   void copyVoxelVectorToDevice(uint32_t index_list, uint32_t size, uint32_t* dev_voxel_list);
-
-//   __host__
-//   void insertVoxelVector(uint32_t* dev_voxel_list, uint32_t size, bool with_bitvector, uint64_t mask);
-
-//   void insertBitmapByIndices(uint32_t size, uint32_t* index_list, uint64_t* bitmaps);
 
 
   // ------ BEGIN Global API functions ------
@@ -223,7 +147,6 @@ public:
    */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, BitVoxelMeaning voxel_meaning);
 
-  //virtual size_t collideWith(const GpuVoxelsMapSharedPtr other, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map. Each pointcloud
    * inside the MetaPointCloud will get it's own voxel meaning as given in the voxel_meanings
@@ -233,10 +156,6 @@ public:
    * @param voxel_meanings Vector with voxel meanings
    */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings);
-
-  //virtual size_t collideWithTypes(const GpuVoxelsMapSharedPtr other, BitVectorVoxel&  meanings_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i()) = 0;
-
-  //virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3i &offset = Vector3i());
 
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset = Vector3i(), const BitVoxelMeaning* new_meaning = NULL);
@@ -275,37 +194,7 @@ public:
     */
    void transformSensorData();
 
-//   __host__
-//   uint32_t getUpdateCounter();
-//   // debugging.. todo: make this private again!
-//   void increaseUpdateCounter();
    // ------------------- END of Env Map specific functions -------------------
-
-   // ------------------- BEGIN Robot Map specific functions -------------------
-//   __host__
-//   void insertData(const Vector3f* points, const uint32_t num_points);
-
-//   /*! Insert robot configuration. May check for self collision. See
-//    *  also setSelfCollisionDependencies().
-//    *  Returns FALSE if there is a collision
-//    */
-//   __host__
-//   bool insertRobotConfiguration(const MetaPointCloud *robot_links,
-//                            bool with_self_collision_test);
-
-
-//   __host__
-//   void insertConfigurationOverwritingSensorData(const MetaPointCloud *robot_links,
-//                                                 VoxelMap* env_map);
-//
-//   __host__
-//   void insertSweptVolumeConfiguration(uint32_t kinematic_chain_size, uint32_t* point_cloud_sizes,
-//                                       uint32_t* dev_point_cloud_sizes, Vector3f** dev_point_clouds,
-//                                       uint8_t swept_volume_index);
-//   __host__
-//   void removeSweptVolumeConfiguration(uint32_t kinematic_chain_size, uint32_t* point_cloud_sizes,
-//                                       uint32_t* dev_point_cloud_sizes, Vector3f** dev_point_clouds,
-//                                       uint8_t swept_volume_index);
 
 
 //   /*! Model kinematic links that may not be entered into VoxelMap without
@@ -333,24 +222,7 @@ public:
 //         links_to_enable_check = (3, 4, 5)
 //
 //         IMPORTANT: start to count with 0 and pay attention to correct order!       */
-//   __host__
-//   void setSelfCollisionDependencies(std::vector<uint32_t>& links_to_enable_check);
-//
-//   __host__
-//   const std::vector<uint32_t>& getSelfCollisionDependencies() const
-//   {
-//     return m_links_to_enable_selfcol_check;
-//   }
 
-//   __host__
-//   void clearBitvector(uint8_t bit_number);
-
-//   __host__
-//   void insertConfigurationIntoBitVector(uint32_t kinematic_chain_size, uint32_t* point_cloud_sizes,
-//                                         uint32_t* dev_point_cloud_sizes, Vector3f** dev_point_clouds,
-//                                         bool with_self_collision_test, const uint8_t bit_number);
-
-   // ------------------- END of Robot Map specific functions -------------------
 
 protected:
 
@@ -385,6 +257,11 @@ protected:
   /*! VoxelMap data on device.
    *  storage format is: index = z * dim.x * dim.y + y * dim.x + x  */
   Voxel* m_dev_data;
+  
+  /*! This is used by insertion kernels to indicate,
+   * if points were outside map dimensions 
+   * and could not be inserted */
+  bool* m_dev_points_outside_map;
 
   /* some variables are mirrored on device to reduce
    * copy overhead when access from kernels is necessary  */
@@ -394,9 +271,6 @@ protected:
 
   //! result array for collision check with counter on device
   uint16_t* m_dev_collision_check_results_counter;
-
-  //!  storage for measured data
-  std::vector<float> m_measured_data;
 
   // ------------------- BEGIN Env Map specific: -------------------
   /* ======== Variables with content on host ======== */
@@ -420,27 +294,9 @@ protected:
   //! device array for transformed sensor data
   Vector3f* m_dev_transformed_sensor_data;
 
-  // ------------------- BEGIN Env map specific: -------------------
-  uint32_t m_update_counter;
-  // ------------------- END Env map specific -------------------
-
-  // ------------------- BEGIN Robot map specific: -------------------
-  uint32_t m_blocks_robot_operations;
-  uint32_t m_threads_robot_operations;
-
   // array for point cloud data
   Vector3f* m_dev_point_data;
 
-  // ----- self collision checking -----
-  std::vector<uint32_t> m_links_to_enable_selfcol_check;
-  bool m_selfcol_dependency_set;
-
-  bool m_self_collision;
-  bool* m_dev_self_collision;
-
-//  void syncSelfCollisionInfoToHost();
-//  void syncSelfCollisionInfoToDevice();
-  // ------------------- END Robot map specific -------------------
 };
 
 } // end of namespace voxelmap

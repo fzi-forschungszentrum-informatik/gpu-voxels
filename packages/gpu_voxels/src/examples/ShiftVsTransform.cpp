@@ -35,6 +35,7 @@
 
 #include <gpu_voxels/GpuVoxels.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
+#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 
 using namespace gpu_voxels;
@@ -70,7 +71,7 @@ int main(int argc, char* argv[])
 
 
   // load Voxellist
-  gvl->insertPointcloudFromFile("myObjectVoxellist", "/schunk_svh/f20.binvox", true,
+  gvl->insertPointCloudFromFile("myObjectVoxellist", "/schunk_svh/f20.binvox", true,
                                 eBVM_OCCUPIED, true, Vector3f(0.06, 0.05, 0.01), 1.0);
   std::cout << "List generated" << std::endl;
 
@@ -113,7 +114,7 @@ int main(int argc, char* argv[])
 
 
   //----- insert map 100 times, calculate collision with offset
-  Vector3ui offset;
+  Vector3i offset;
   clock_t clock_o_begin = clock();
   for (size_t i = 0; i < 100; i++)
   {

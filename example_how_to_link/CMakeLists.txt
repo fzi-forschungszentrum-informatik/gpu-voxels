@@ -12,26 +12,18 @@ FIND_PACKAGE(icl_core REQUIRED )
 FIND_PACKAGE(gpu_voxels REQUIRED)
 FIND_PACKAGE(Boost COMPONENTS system REQUIRED)
 
-# Also we have to set some Environment definitions required for our base libs:
-IF(WIN32)
-  add_definitions("-D_SYSTEM_WIN32_")
-ENDIF(WIN32)
-
-IF(UNIX)
-  IF(NOT APPLE)
-    add_definitions("-D_SYSTEM_LINUX_" "-D_SYSTEM_POSIX_")
-  ELSE()
-    add_definitions("-D_SYSTEM_DARWIN_" "-D_SYSTEM_POSIX_")
-  ENDIF(NOT APPLE)
-ENDIF(UNIX)
-
-
 # This is a quirk and should be removed in upcoming versions
 # If you built GPU Voxels without ROS support, remove this.
 FIND_PACKAGE(orocos_kdl REQUIRED)
 
 # A little debug info:
 MESSAGE(STATUS "GVL include dirs are: ${gpu_voxels_INCLUDE_DIRS}")
+
+# Also we have to inherit some Environment definitions required for our base libs:
+add_definitions(
+  ${icl_core_DEFINITIONS}
+  ${gpu_voxels_DEFINITIONS}
+)
 
 
 # Create a library that uses GPU Voxels:

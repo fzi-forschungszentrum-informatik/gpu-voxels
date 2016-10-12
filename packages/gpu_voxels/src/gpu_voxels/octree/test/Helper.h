@@ -72,7 +72,7 @@ bool buildOctree(NTree<branching_factor, level_count, InnerNode, LeafNode>* tree
                  float additional_scaling = 1.0f, bool free_bounding_box = false, Vector3i offset = Vector3i(0, 0, 0))
 {
   std::size_t num_voxel = pow(branching_factor, level_count - 1);
-  gpu_voxels::cuPrintDeviceMemoryInfo();
+  std::cout << gpu_voxels::getDeviceMemoryInfo();
 
   // thrust::device_std::std::vector<voxel_id> voxel;
 
@@ -144,7 +144,7 @@ bool buildOctree(NTree<branching_factor, level_count, InnerNode, LeafNode>* tree
 
   //tree->print2();
 
-  gpu_voxels::cuPrintDeviceMemoryInfo();
+  std::cout << gpu_voxels::getDeviceMemoryInfo();
 
   printf("AllocOnnerNodes: %u    AllocLeafNodes: %u\n", build_result.o->allocInnerNodes,
          build_result.o->allocLeafNodes);

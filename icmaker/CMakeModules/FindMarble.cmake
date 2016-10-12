@@ -30,6 +30,7 @@ include(PrintLibraryStatus)
 include(LibFindMacros)
 
 libfind_lib_with_pkg_config(Marble marble
+  HINTS /home/$ENV{USER}/marble-stable/export /home/$ENV{USER}/marble/export
   HEADERS marble/MarbleMap.h
   LIBRARIES marblewidget
   )

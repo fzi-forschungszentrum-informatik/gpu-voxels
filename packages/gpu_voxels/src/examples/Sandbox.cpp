@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
   Vector3f corner3_max;
 
   // We load the model of a coordinate system.
-  if (!gvl->insertPointcloudFromFile("myCoordinateSystemMap", "coordinate_system_100.binvox", true,
+  if (!gvl->insertPointCloudFromFile("myCoordinateSystemMap", "coordinate_system_100.binvox", true,
                                      eBVM_OCCUPIED, true, Vector3f(0, 0, 0),0.5))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);

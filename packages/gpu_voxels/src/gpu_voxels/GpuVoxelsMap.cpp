@@ -22,6 +22,7 @@
 //----------------------------------------------------------------------
 
 #include "GpuVoxelsMap.h"
+#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 
 namespace gpu_voxels {
 
@@ -42,13 +43,13 @@ void GpuVoxelsMap::lockSelf(const std::string& function_name) const
 
   while (!locked_this)
   {
-    locked_this = m_mutex.try_lock();
+    locked_this = m_mutex.try_lock_for(boost::chrono::milliseconds(5));
     if(!locked_this)
     {
       counter++;
-      if(counter > 50)
+      if(counter > 40)
       {
-        LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock self since 50 trials!" << endl);
+        LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock self since 40 trials (5 ms each)!" << endl);
         counter = 0;
       }
       boost::this_thread::yield();
@@ -93,27 +94,27 @@ void GpuVoxelsMap::lockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, 
     // lock mutexes
     while (!locked_map1)
     {
-      locked_map1 = map1->m_mutex.try_lock();
+      locked_map1 = map1->m_mutex.try_lock_for(boost::chrono::milliseconds(5));
       m1_counter++;
       if(!locked_map1)
       {
-        if(m1_counter >= 50)
+        if(m1_counter >= 40)
         {
-          LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock map1 map since 50 trials!" << endl);
+          LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock map1 map since 40 trials (5 ms each)!" << endl);
           m1_counter = 0;
         }
         boost::this_thread::yield();
       }
     }
-    while (!locked_map2 && (m2_counter < 50))
+    while (!locked_map2 && (m2_counter < 40))
     {
-      locked_map2 = map2->m_mutex.try_lock();
+      locked_map2 = map2->m_mutex.try_lock_for(boost::chrono::milliseconds(5));
       if(!locked_map2) boost::this_thread::yield();
       m2_counter++;
     }
     if (!locked_map2)
     {
-      LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock map2 map since 50 trials!" << endl);
+      LOGGING_WARNING_C(Gpu_Voxels_Map, GpuVoxelsMap, function_name << ": Could not lock map2 map since 40 trials (5 ms each)!" << endl);
       m2_counter = 0;
       map1->m_mutex.unlock();
       boost::this_thread::yield();
@@ -124,7 +125,7 @@ void GpuVoxelsMap::lockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, 
 #endif
 }
 
-bool GpuVoxelsMap::insertPointcloudFromFile(const std::string path, const bool use_model_path, const BitVoxelMeaning voxel_meaning,
+bool GpuVoxelsMap::insertPointCloudFromFile(const std::string path, const bool use_model_path, const BitVoxelMeaning voxel_meaning,
                                             const bool shift_to_zero, const Vector3f &offset_XYZ, const float scaling)
 {
   //load the points into the vector

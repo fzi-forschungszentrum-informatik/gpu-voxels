@@ -51,11 +51,14 @@ bool cuGetNrOfDevices(int* nr_of_devices);
 //! Gives information on available CUDA devices
 bool cuGetDeviceInfo(cudaDeviceProp* device_properties, int nr_of_devices);
 
+//! Returns a string with technical information about all devices
+std::string getDeviceInfos();
+
 //! Checks if Compute Capability 2.5 or greater is available. WARNING: This sets caching behaviour!
 bool cuTestAndInitDevice();
 
-//! Prints Memory info and usage
-void cuPrintDeviceMemoryInfo();
+//! Returns a string with Memory info and usage
+std::string getDeviceMemoryInfo();
 
 /* Helper functions that can be used for debugging
    surround all functions with HANDLE_CUDA_ERROR(     ) */

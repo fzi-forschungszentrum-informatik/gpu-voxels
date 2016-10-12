@@ -21,21 +21,39 @@
  */
 //----------------------------------------------------------------------
 
+#include "gpu_voxels/helpers/common_defines.h"
 #include "gpu_voxels/helpers/PointcloudFileHandler.h"
+
+#ifdef _BUILD_GVL_WITH_PCL_SUPPORT_
+  #include "gpu_voxels/helpers/PcdFileReader.h"
+#endif
+#include "gpu_voxels/helpers/BinvoxFileReader.h"
+#include "gpu_voxels/helpers/XyzFileReader.h"
 
 namespace gpu_voxels {
 namespace file_handling {
 
-// Global static pointer used to ensure a single instance of the class.
-PointcloudFileHandler* PointcloudFileHandler::m_instance = NULL;
-
 
 PointcloudFileHandler* PointcloudFileHandler::Instance()
 {
-  if(!m_instance) // Only allow one instance of class to be generated.
-    m_instance = new PointcloudFileHandler;
+  static PointcloudFileHandler instance;
+  return &instance;
+}
 
-  return m_instance;
+PointcloudFileHandler::PointcloudFileHandler()
+{
+  xyz_reader = new XyzFileReader();
+  binvox_reader = new BinvoxFileReader();
+#ifdef _BUILD_GVL_WITH_PCL_SUPPORT_
+  pcd_reader = new PcdFileReader();
+#endif
+}
+
+PointcloudFileHandler::~PointcloudFileHandler()
+{
+  if(xyz_reader) delete xyz_reader;
+  if(binvox_reader) delete binvox_reader;
+  if(pcd_reader) delete pcd_reader;
 }
 
 /*!
@@ -52,12 +70,7 @@ bool PointcloudFileHandler::loadPointCloud(const std::string _path, const bool u
   std::string path;
 
   // if param is true, prepend the environment variable GPU_VOXELS_MODEL_PATH
-  if(use_model_path)
-  {
-    path = (getGpuVoxelsPath() / boost::filesystem::path(_path)).string();
-  }else{
-    path = _path;
-  }
+  path = (getGpuVoxelsPath(use_model_path) / boost::filesystem::path(_path)).string();
 
   LOGGING_DEBUG_C(
       Gpu_voxels_helpers,
@@ -68,7 +81,7 @@ bool PointcloudFileHandler::loadPointCloud(const std::string _path, const bool u
   std::size_t found = path.find(std::string("xyz"));
   if (found!=std::string::npos)
   {
-    if (!xyz_reader.readPointCloud(path, points))
+    if (!xyz_reader->readPointCloud(path, points))
     {
       return false;
     }
@@ -77,16 +90,24 @@ bool PointcloudFileHandler::loadPointCloud(const std::string _path, const bool u
     std::size_t found = path.find(std::string("pcd"));
     if (found!=std::string::npos)
     {
-      if (!pcd_reader.readPointCloud(path, points))
+#ifdef _BUILD_GVL_WITH_PCL_SUPPORT_
+      if (!pcd_reader->readPointCloud(path, points))
       {
         return false;
       }
+#else
+      LOGGING_ERROR_C(
+          Gpu_voxels_helpers,
+          GpuVoxelsMap,
+          "Your GPU-Voxels was built without PCD support!" << endl);
+      return false;
+#endif
     }else{
       // is the file a binvox file?
       std::size_t found = path.find(std::string("binvox"));
       if (found!=std::string::npos)
       {
-        if (!binvox_reader.readPointCloud(path, points))
+        if (!binvox_reader->readPointCloud(path, points))
         {
           return false;
         }
@@ -168,20 +189,6 @@ void PointcloudFileHandler::shiftPointCloudToZero(std::vector<Vector3f> &points)
     points[i].y -= min_xyz.y;
     points[i].z -= min_xyz.z;
   }
-}
-
-
-boost::filesystem::path getGpuVoxelsPath()
-{
-  char const* tmp = std::getenv("GPU_VOXELS_MODEL_PATH");
-  if (tmp == NULL)
-  {
-    LOGGING_ERROR_C(
-        Gpu_voxels_helpers,
-        PointcloudFileHandler,
-        "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
-  }
-  return boost::filesystem::path(tmp);
 }
 
 }  // end of ns

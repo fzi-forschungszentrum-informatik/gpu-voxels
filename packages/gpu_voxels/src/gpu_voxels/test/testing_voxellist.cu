@@ -22,10 +22,12 @@
 //----------------------------------------------------------------------
 
 #include <gpu_voxels/voxellist/BitVoxelList.h>
+#include <gpu_voxels/voxelmap/ProbVoxelMap.h>
 #include <gpu_voxels/voxelmap/VoxelMap.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/helpers/GeometryGeneration.h>
+#include <gpu_voxels/test/testing_fixtures.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -34,280 +36,514 @@ using namespace voxellist;
 using namespace voxelmap;
 using namespace geometry_generation;
 
-BOOST_AUTO_TEST_SUITE(voxellists)
+
+BOOST_FIXTURE_TEST_SUITE(voxellists, ArgsFixture)
+
 
 BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap)
 {
-  Vector3ui dim(103, 123, 105);
-  float side_length = 1.f;
+  PERF_MON_START("collide_bitvoxellist_with_prob_voxelmap");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    float side_length = 1.f;
 
-  BitVectorVoxelList* list = new BitVectorVoxelList(dim, side_length, MT_BITVECTOR_VOXELLIST);
+    BitVectorVoxelList* list = new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST);
 
-  Vector3f b1_min(1.1,1.1,1.1);
-  Vector3f b1_max(3.9,3.9,3.9);
-  Vector3f b2_min(2.1,2.1,2.1);
-  Vector3f b2_max(4.9,4.9,4.9);
+    Vector3f b1_min(1.1,1.1,1.1);
+    Vector3f b1_max(3.9,3.9,3.9);
+    Vector3f b2_min(2.1,2.1,2.1);
+    Vector3f b2_max(4.9,4.9,4.9);
 
-  std::vector<BitVoxelMeaning> voxel_meanings;
-  voxel_meanings.push_back(BitVoxelMeaning(11));
-  voxel_meanings.push_back(BitVoxelMeaning(12));
+    std::vector<BitVoxelMeaning> voxel_meanings;
+    voxel_meanings.push_back(BitVoxelMeaning(11));
+    voxel_meanings.push_back(BitVoxelMeaning(12));
 
-  std::vector<std::vector<Vector3f> > box_clouds;
-  float delta = 0.1;
+    std::vector<std::vector<Vector3f> > box_clouds;
+    float delta = 0.1;
 
-  box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
-  box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
 
-  MetaPointCloud boxes(box_clouds);
-  boxes.syncToDevice();
+    MetaPointCloud boxes(box_clouds);
+    boxes.syncToDevice();
 
-  list->insertMetaPointCloud(boxes, voxel_meanings);
+    list->insertMetaPointCloud(boxes, voxel_meanings);
 
-  GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP));
-  map_2->insertMetaPointCloud(boxes, eBVM_OCCUPIED);
+    GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(Vector3ui(dimX, dimY, dimZ), side_length, MT_PROBAB_VOXELMAP));
+    map_2->insertMetaPointCloud(boxes, eBVM_OCCUPIED);
 
-  size_t num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0);
-  BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
-
+    size_t num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0);
+    BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("collide_bitvoxellist_with_prob_voxelmap", "collide_bitvoxellist_with_prob_voxelmap", "voxellists");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap_shifting)
 {
-  Vector3ui dim(103, 123, 105);
-  float side_length = 1.f;
-
-  BitVectorVoxelList* list = new BitVectorVoxelList(dim, side_length, MT_BITVECTOR_VOXELLIST);
-
-  Vector3f b1_min(1.1,1.1,1.1);
-  Vector3f b1_max(3.9,3.9,3.9);
-
-  std::vector<std::vector<Vector3f> > box_cloud;
-  float delta = 0.1;
-  box_cloud.push_back(createBoxOfPoints(b1_min, b1_max, delta));
-
-  MetaPointCloud box(box_cloud);
-  box.syncToDevice();
-
-  list->insertMetaPointCloud(box, eBVM_OCCUPIED);
-
-  GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP));
-
-  size_t num_colls;
-  map_2->insertMetaPointCloud(box, eBVM_OCCUPIED);
-
-  for(float shift = 0.0; shift < 4.0; shift += 0.5)
+  PERF_MON_START("collide_bitvoxellist_with_prob_voxelmap_shifting");
+  for(int i = 0; i < iterationCount; i++)
   {
-    num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0, Vector3ui(shift, 0,0));
-    if(shift < 1.0)
-      BOOST_CHECK_MESSAGE(num_colls == 27, "Number of Collisions == 27");
-    else if(shift < 2.0)
-      BOOST_CHECK_MESSAGE(num_colls == 18, "Number of Collisions == 18");
-    else if(shift < 3.0)
-      BOOST_CHECK_MESSAGE(num_colls == 9, "Number of Collisions == 9");
-    else
-      BOOST_CHECK_MESSAGE(num_colls == 0, "Number of Collisions == 0");
+    float side_length = 1.f;
+
+    BitVectorVoxelList* list = new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST);
+
+    Vector3f b1_min(1.1,1.1,1.1);
+    Vector3f b1_max(3.9,3.9,3.9);
+
+    std::vector<std::vector<Vector3f> > box_cloud;
+    float delta = 0.1;
+    box_cloud.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+
+    MetaPointCloud box(box_cloud);
+    box.syncToDevice();
+
+    list->insertMetaPointCloud(box, eBVM_OCCUPIED);
+
+    GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(Vector3ui(dimX, dimY, dimZ), side_length, MT_PROBAB_VOXELMAP));
+
+    size_t num_colls;
+    map_2->insertMetaPointCloud(box, eBVM_OCCUPIED);
+
+    for(float shift = 0.0; shift < 4.0; shift += 0.5)
+    {
+      num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0, Vector3i(shift, 0,0));
+      if(shift < 1.0)
+        BOOST_CHECK_MESSAGE(num_colls == 27, "Number of Collisions == 27");
+      else if(shift < 2.0)
+        BOOST_CHECK_MESSAGE(num_colls == 18, "Number of Collisions == 18");
+      else if(shift < 3.0)
+        BOOST_CHECK_MESSAGE(num_colls == 9, "Number of Collisions == 9");
+      else
+        BOOST_CHECK_MESSAGE(num_colls == 0, "Number of Collisions == 0");
+    }
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("collide_bitvoxellist_with_prob_voxelmap_shifting", "collide_bitvoxellist_with_prob_voxelmap_shifting", "voxellists");
   }
 }
 
 
 BOOST_AUTO_TEST_CASE(bitvoxellist_insert_metapointcloud)
 {
-  // Generate two boxes that each occupie 27 Voxel ==> 54 Voxels.
-  // They overlap each other by 8 Voxels. ==> 46 Voxels should remain in the list.
-  // The 8 Voxels that overlap must have set bits of both dense pointcloud meanings!
-
-  BitVectorVoxelList* list = new BitVectorVoxelList(
-        Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
-
-  Vector3f b1_min(1.1,1.1,1.1);
-  Vector3f b1_max(3.9,3.9,3.9);
-  Vector3f b2_min(2.1,2.1,2.1);
-  Vector3f b2_max(4.9,4.9,4.9);
-
-  std::vector<BitVoxelMeaning> voxel_meanings;
-  voxel_meanings.push_back(BitVoxelMeaning(11));
-  voxel_meanings.push_back(BitVoxelMeaning(12));
-
-  std::vector<std::vector<Vector3f> > box_clouds;
-  float delta = 0.1;
-
-  box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
-  box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
-
-  MetaPointCloud boxes(box_clouds);
-  boxes.syncToDevice();
-
-  list->insertMetaPointCloud(boxes, voxel_meanings);
-
-  thrust::device_vector<Cube>* d_cubes = NULL;
-  list->extractCubes(&d_cubes);
-  thrust::host_vector<Cube> h_cubes = *d_cubes;
-
-  BOOST_CHECK_MESSAGE(h_cubes.size() == 46, "Number of reduced cubes == 46");
-
-  BitVector<BIT_VECTOR_LENGTH> ref_bv;
-  ref_bv.setBit(11);
-  ref_bv.setBit(12);
-
-  size_t num_voxels_with_both_bits = 0;
-  for(size_t i = 0; i < h_cubes.size(); i++)
+  PERF_MON_START("bitvoxellist_insert_metapointcloud");
+  for(int i = 0; i < iterationCount; i++)
   {
-    if(h_cubes[i].m_type_vector == ref_bv)
+    // Generate two boxes that each occupie 27 Voxel ==> 54 Voxels.
+    // They overlap each other by 8 Voxels. ==> 46 Voxels should remain in the list.
+    // The 8 Voxels that overlap must have set bits of both dense pointcloud meanings!
+
+    BitVectorVoxelList* list = new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST);
+
+    Vector3f b1_min(1.1,1.1,1.1);
+    Vector3f b1_max(3.9,3.9,3.9);
+    Vector3f b2_min(2.1,2.1,2.1);
+    Vector3f b2_max(4.9,4.9,4.9);
+
+    std::vector<BitVoxelMeaning> voxel_meanings;
+    voxel_meanings.push_back(BitVoxelMeaning(11));
+    voxel_meanings.push_back(BitVoxelMeaning(12));
+
+    std::vector<std::vector<Vector3f> > box_clouds;
+    float delta = 0.1;
+
+    box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+
+    MetaPointCloud boxes(box_clouds);
+    boxes.syncToDevice();
+
+    list->insertMetaPointCloud(boxes, voxel_meanings);
+
+    thrust::device_vector<Cube>* d_cubes = NULL;
+    list->extractCubes(&d_cubes);
+    thrust::host_vector<Cube> h_cubes = *d_cubes;
+
+    BOOST_CHECK_MESSAGE(h_cubes.size() == 46, "Number of reduced cubes == 46");
+
+    BitVector<BIT_VECTOR_LENGTH> ref_bv;
+    ref_bv.setBit(11);
+    ref_bv.setBit(12);
+
+    size_t num_voxels_with_both_bits = 0;
+    for(size_t i = 0; i < h_cubes.size(); i++)
     {
-      num_voxels_with_both_bits++;
-      //std::cout << "Cube[" << i << "] bitvector: " << h_cubes[i].m_type_vector << std::endl;
-      //std::cout << "Cube[" << i << "] position: " << h_cubes[i].m_position << std::endl;
-      bool position_wrong = (h_cubes[i].m_position.x < 1.9 || h_cubes[i].m_position.y < 1.9 || h_cubes[i].m_position.z < 1.9 ||
-         h_cubes[i].m_position.x > 3.1 || h_cubes[i].m_position.y > 3.1 || h_cubes[i].m_position.z > 3.1);
-      BOOST_CHECK_MESSAGE(!position_wrong, "Pose of merged voxel-vector in center");
+      if(h_cubes[i].m_type_vector == ref_bv)
+      {
+        num_voxels_with_both_bits++;
+        //std::cout << "Cube[" << i << "] bitvector: " << h_cubes[i].m_type_vector << std::endl;
+        //std::cout << "Cube[" << i << "] position: " << h_cubes[i].m_position << std::endl;
+        bool position_wrong = (h_cubes[i].m_position.x < 1.9 || h_cubes[i].m_position.y < 1.9 || h_cubes[i].m_position.z < 1.9 ||
+                               h_cubes[i].m_position.x > 3.1 || h_cubes[i].m_position.y > 3.1 || h_cubes[i].m_position.z > 3.1);
+        BOOST_CHECK_MESSAGE(!position_wrong, "Pose of merged voxel-vector in center");
+      }
     }
+    BOOST_CHECK_MESSAGE(num_voxels_with_both_bits == 8, "Detect 8 overlapping voxels.");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_insert_metapointcloud", "bitvoxellist_insert_metapointcloud", "voxellists");
   }
-  BOOST_CHECK_MESSAGE(num_voxels_with_both_bits == 8, "Detect 8 overlapping voxels.");
 }
+
+BOOST_AUTO_TEST_CASE(bitvoxellist_findMatchingVoxels)
+{
+  PERF_MON_START("bitvoxellist_findMatchingVoxels");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    float side_length = 0.01;
+
+    //create lists
+    GpuVoxelsMapSharedPtr voxellist1_shrd_ptr(new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST));
+    GpuVoxelsMapSharedPtr voxellist2_shrd_ptr(new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST));
+
+    //points which are not colliding to bloat the lists
+    std::vector<Vector3f> box1 = createBoxOfPoints(Vector3f(0.1, 0.1, 5.1), Vector3f(4.9, 4.9, 9.9), 0.02f);
+    std::vector<Vector3f> box2 = createBoxOfPoints(Vector3f(5.1, 5.1, 10.1), Vector3f(9.9, 9.9, 14.9), 0.3f);
+
+    //points actually participating in collision
+    std::vector<Vector3f> collisionPoints1;
+    for(int j = 0; j < 40; j++)
+    {
+      collisionPoints1.push_back(Vector3f(j / 40.0 * 5.0, 1.0, 1.0));
+    }
+    std::vector<Vector3f> collisionPoints2;
+    for(int j = 0; j < 30; j++)
+    {
+      collisionPoints2.push_back(Vector3f(j / 30.0 * 5.0, 2.0, 1.0));
+    }
+    std::vector<Vector3f> collisionPoints3;
+    for(int j = 0; j < 20; j++)
+    {
+      collisionPoints3.push_back(Vector3f(j / 20.0 * 5.0, 3.0, 1.0));
+    }
+
+    //insert ==> voxellist1_shrd_ptr will be the list with more entries
+    voxellist1_shrd_ptr->insertPointCloud(box1, BitVoxelMeaning(10));
+    voxellist1_shrd_ptr->insertPointCloud(collisionPoints1, BitVoxelMeaning(11));
+    voxellist1_shrd_ptr->insertPointCloud(collisionPoints2, BitVoxelMeaning(12));
+    voxellist1_shrd_ptr->insertPointCloud(collisionPoints3, BitVoxelMeaning(13));
+    voxellist2_shrd_ptr->insertPointCloud(box2, BitVoxelMeaning(20));
+    voxellist2_shrd_ptr->insertPointCloud(collisionPoints1, BitVoxelMeaning(21));
+    voxellist2_shrd_ptr->insertPointCloud(collisionPoints2, BitVoxelMeaning(22));
+    voxellist2_shrd_ptr->insertPointCloud(collisionPoints3, BitVoxelMeaning(23));
+
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_findMatchingVoxels", "bitvoxellist_findMatchingVoxels::data_generation", "voxellists");
+
+    // Now we collide the lists in different orders and verify the result.
+    // The collision checker internally swaps lists due to performance reasons.
+    // So we test for if the output contains data from the given input list:
+
+    //first collide list1 with list2
+    size_t num_coll = 0;
+
+    std::vector<size_t> collisions_per_meaning(BIT_VECTOR_LENGTH, 0);
+    num_coll = voxellist1_shrd_ptr->as<BitVectorVoxelList>()->collideCountingPerMeaning(voxellist2_shrd_ptr, collisions_per_meaning);
+    BOOST_CHECK(num_coll == 90);
+    BOOST_CHECK(collisions_per_meaning[11] == 40 && collisions_per_meaning[12] == 30 && collisions_per_meaning[13] == 20);
+    BOOST_CHECK(collisions_per_meaning[21] == 0 && collisions_per_meaning[22] == 0 && collisions_per_meaning[23] == 0);
+    BOOST_CHECK(collisions_per_meaning[10] == 0 && collisions_per_meaning[20] == 0);
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_findMatchingVoxels", "bitvoxellist_findMatchingVoxels::collision", "voxellists");
+
+    //then collide list2 with list1
+    collisions_per_meaning.assign(BIT_VECTOR_LENGTH, 0);
+    num_coll = voxellist2_shrd_ptr->as<BitVectorVoxelList>()->collideCountingPerMeaning(voxellist1_shrd_ptr, collisions_per_meaning);
+    BOOST_CHECK(num_coll == 90);
+    BOOST_CHECK(collisions_per_meaning[21] == 40 && collisions_per_meaning[22] == 30 && collisions_per_meaning[23] == 20);
+    BOOST_CHECK(collisions_per_meaning[11] == 0 && collisions_per_meaning[12] == 0 && collisions_per_meaning[13] == 0);
+    BOOST_CHECK(collisions_per_meaning[10] == 0 && collisions_per_meaning[20] == 0);
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_findMatchingVoxels", "bitvoxellist_findMatchingVoxels::collisionReverse", "voxellists");
+  }
+}
+
 
 BOOST_AUTO_TEST_CASE(bitvoxellist_bitshift_collision)
 {
-  float side_length = 1.f;
-  BitVectorVoxelList map_1(Vector3ui(100, 100, 100), side_length, MT_BITVECTOR_VOXELLIST);
-  GpuVoxelsMapSharedPtr map_2(new BitVectorVoxelList(Vector3ui(100, 100, 100), side_length, MT_BITVECTOR_VOXELLIST));
-  BitVectorVoxelList* map2_base_ptr = dynamic_cast<BitVectorVoxelList*>(map_2.get());
-
-  std::vector<Vector3f> points;
-  points.push_back(Vector3f(0.3,0.3,0.3));
-
-  uint32_t shift_size = 0;
-  const uint32_t shift_start = 50;
-
-  const uint32_t type_int = eBVM_SWEPT_VOLUME_START + shift_start;
-  const BitVoxelMeaning type_2 = BitVoxelMeaning(type_int);
-
-  while (shift_size < shift_start + eBVM_SWEPT_VOLUME_START - 5)
+  PERF_MON_START("bitvoxellist_bitshift_collision");
+  for(int i = 0; i < iterationCount; i++)
   {
-    map_1.clearMap();
-    map_2->clearMap();
+    float side_length = 1.f;
+    BitVectorVoxelList map_1(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST);
+    GpuVoxelsMapSharedPtr map_2(new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST));
+    BitVectorVoxelList* map2_base_ptr = dynamic_cast<BitVectorVoxelList*>(map_2.get());
 
-    map_2->insertPointCloud(points, type_2);
-    const BitVoxelMeaning type_1 = BitVoxelMeaning(type_int - shift_size);
-    map_1.insertPointCloud(points, type_1);
+    std::vector<Vector3f> points;
+    points.push_back(Vector3f(0.3,0.3,0.3));
 
-    map2_base_ptr->shiftLeftSweptVolumeIDs(shift_size);
+    uint32_t shift_size = 0;
+    const uint32_t shift_start = 50;
 
-    size_t num_collisions = 0;
-    BitVectorVoxel types_voxel;
-    size_t window_size = 1;
+    const uint32_t type_int = eBVM_SWEPT_VOLUME_START + shift_start;
+    const BitVoxelMeaning type_2 = BitVoxelMeaning(type_int);
 
-    num_collisions = map_1.collideWithBitcheck(map_2->as<voxellist::BitVectorVoxelList>(), window_size);
-
-    if (shift_size <= shift_start)
+    while (shift_size < shift_start + eBVM_SWEPT_VOLUME_START - 5)
     {
-      BOOST_CHECK(num_collisions == 1);
+      map_1.clearMap();
+      map_2->clearMap();
+
+      map_2->insertPointCloud(points, type_2);
+      const BitVoxelMeaning type_1 = BitVoxelMeaning(type_int - shift_size);
+      map_1.insertPointCloud(points, type_1);
+
+      map2_base_ptr->shiftLeftSweptVolumeIDs(shift_size);
+
+      size_t num_collisions = 0;
+      BitVectorVoxel types_voxel;
+      size_t window_size = 1;
+
+      num_collisions = map_1.collideWithBitcheck(map_2->as<voxellist::BitVectorVoxelList>(), window_size);
+
+      if (shift_size <= shift_start)
+      {
+        BOOST_CHECK(num_collisions == 1);
+      }
+      else
+      {
+        BOOST_CHECK(num_collisions == 0);
+      }
+      shift_size++;
     }
-    else
-    {
-      BOOST_CHECK(num_collisions == 0);
-    }
-    shift_size++;
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_bitshift_collision", "bitvoxellist_bitshift_collision", "voxellists");
   }
 }
 
 BOOST_AUTO_TEST_CASE(voxellist_equals_function)
 {
-  BitVectorVoxelList list1( Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
-  BitVectorVoxelList list2(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+  PERF_MON_START("voxellist_equals_function");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    BitVectorVoxelList list1(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST);
+    BitVectorVoxelList list2(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST);
 
-  Vector3f b1_min(1.1,1.1,1.1);
-  Vector3f b1_max(3.9,3.9,3.9);
-  Vector3f b2_min(2.1,2.1,2.1);
-  Vector3f b2_max(4.9,4.9,4.9);
+    Vector3f b1_min(1.1,1.1,1.1);
+    Vector3f b1_max(3.9,3.9,3.9);
+    Vector3f b2_min(2.1,2.1,2.1);
+    Vector3f b2_max(4.9,4.9,4.9);
 
-  std::vector<BitVoxelMeaning> voxel_meanings;
-  voxel_meanings.push_back(BitVoxelMeaning(11));
-  voxel_meanings.push_back(BitVoxelMeaning(12));
+    std::vector<BitVoxelMeaning> voxel_meanings;
+    voxel_meanings.push_back(BitVoxelMeaning(11));
+    voxel_meanings.push_back(BitVoxelMeaning(12));
 
-  std::vector<std::vector<Vector3f> > box_clouds;
-  float delta = 0.1;
+    std::vector<std::vector<Vector3f> > box_clouds;
+    float delta = 0.1;
 
-  box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
-  box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
 
-  MetaPointCloud boxes(box_clouds);
-  boxes.syncToDevice();
+    MetaPointCloud boxes(box_clouds);
+    boxes.syncToDevice();
 
-  std::vector<Vector3f> outliers;
-  outliers.push_back(Vector3f(9.22, 9.22, 9.22));
+    std::vector<Vector3f> outliers;
+    outliers.push_back(Vector3f(9.22, 9.22, 9.22));
 
-  list1.insertMetaPointCloud(boxes, voxel_meanings);
-  list2.insertMetaPointCloud(boxes, voxel_meanings);
-  BOOST_CHECK_MESSAGE(list1.equals(list2), "Lists are equal.");
+    list1.insertMetaPointCloud(boxes, voxel_meanings);
+    list2.insertMetaPointCloud(boxes, voxel_meanings);
+    BOOST_CHECK_MESSAGE(list1.equals(list2), "Lists are equal.");
 
-  list1.insertPointCloud(outliers, BitVoxelMeaning(11));
-  list2.insertPointCloud(outliers, BitVoxelMeaning(12));
-  BOOST_CHECK_MESSAGE(!list1.equals(list2), "Lists differ.");
+    list1.insertPointCloud(outliers, BitVoxelMeaning(11));
+    list2.insertPointCloud(outliers, BitVoxelMeaning(12));
+    BOOST_CHECK_MESSAGE(!list1.equals(list2), "Lists differ.");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("voxellist_equals_function", "voxellist_equals_function", "voxellists");
+  }
 }
 
 
 BOOST_AUTO_TEST_CASE(voxellist_disk_io)
 {
-  BitVectorVoxelList list( Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+  PERF_MON_START("voxellist_disk_io");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    BitVectorVoxelList list(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST);
 
-  Vector3f b1_min(1.1,1.1,1.1);
-  Vector3f b1_max(3.9,3.9,3.9);
-  Vector3f b2_min(2.1,2.1,2.1);
-  Vector3f b2_max(4.9,4.9,4.9);
+    Vector3f b1_min(1.1,1.1,1.1);
+    Vector3f b1_max(3.9,3.9,3.9);
+    Vector3f b2_min(2.1,2.1,2.1);
+    Vector3f b2_max(4.9,4.9,4.9);
 
-  std::vector<BitVoxelMeaning> voxel_meanings;
-  voxel_meanings.push_back(BitVoxelMeaning(11));
-  voxel_meanings.push_back(BitVoxelMeaning(12));
+    std::vector<BitVoxelMeaning> voxel_meanings;
+    voxel_meanings.push_back(BitVoxelMeaning(11));
+    voxel_meanings.push_back(BitVoxelMeaning(12));
 
-  std::vector<std::vector<Vector3f> > box_clouds;
-  float delta = 0.1;
+    std::vector<std::vector<Vector3f> > box_clouds;
+    float delta = 0.1;
 
-  box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
-  box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
 
-  MetaPointCloud boxes(box_clouds);
-  boxes.syncToDevice();
+    MetaPointCloud boxes(box_clouds);
+    boxes.syncToDevice();
 
-  list.insertMetaPointCloud(boxes, voxel_meanings);
+    list.insertMetaPointCloud(boxes, voxel_meanings);
 
-  list.writeToDisk("temp_list.lst");
+    list.writeToDisk("temp_list.lst");
 
-  BitVectorVoxelList list2(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+    BitVectorVoxelList list2(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST);
 
-  list2.readFromDisk("temp_list.lst");
+    list2.readFromDisk("temp_list.lst");
 
-  BOOST_CHECK_MESSAGE(list.equals(list2), "List from Disk equals original list.");
+    BOOST_CHECK_MESSAGE(list.equals(list2), "List from Disk equals original list.");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("voxellist_disk_io", "voxellist_disk_io", "voxellists");
+  }
 }
 
 
 BOOST_AUTO_TEST_CASE(bitvoxellist_subtract)
 {
-  // Generate two boxes that each occupie 27 Voxel.
-  // They overlap each other by 8 Voxels. Subtract them. ==> 19 Voxels should remain in the list.
-  BitVectorVoxelList list1(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
-  BitVectorVoxelList list2(Vector3ui(100, 100, 100), 1, MT_BITVECTOR_VOXELLIST);
+  PERF_MON_START("bitvoxellist_subtract");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    // Generate two boxes that each occupie 27 Voxel.
+    // They overlap each other by 8 Voxels. Subtract them. ==> 19 Voxels should remain in the list.
+    BitVectorVoxelList list1(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST);
+    BitVectorVoxelList list2(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST);
 
-  Vector3f b1_min(1.1,1.1,1.1);
-  Vector3f b1_max(3.9,3.9,3.9);
-  Vector3f b2_min(2.1,2.1,2.1);
-  Vector3f b2_max(4.9,4.9,4.9);
+    Vector3f b1_min(1.1,1.1,1.1);
+    Vector3f b1_max(3.9,3.9,3.9);
+    Vector3f b2_min(2.1,2.1,2.1);
+    Vector3f b2_max(4.9,4.9,4.9);
 
-  float delta = 0.1;
-  std::vector<Vector3f> box_cloud1 = createBoxOfPoints(b1_min, b1_max, delta);
-  std::vector<Vector3f> box_cloud2 = createBoxOfPoints(b2_min, b2_max, delta);
+    float delta = 0.1;
+    std::vector<Vector3f> box_cloud1 = createBoxOfPoints(b1_min, b1_max, delta);
+    std::vector<Vector3f> box_cloud2 = createBoxOfPoints(b2_min, b2_max, delta);
 
-  list1.insertPointCloud(box_cloud1, BitVoxelMeaning(11));
-  list2.insertPointCloud(box_cloud2, BitVoxelMeaning(12));
+    list1.insertPointCloud(box_cloud1, BitVoxelMeaning(11));
+    list2.insertPointCloud(box_cloud2, BitVoxelMeaning(12));
 
-  list1.subtract(&list2, Vector3f());
+    list1.subtract(&list2, Vector3f());
 
-  thrust::device_vector<Cube>* d_cubes = NULL;
-  list1.extractCubes(&d_cubes);
-  thrust::host_vector<Cube> h_cubes = *d_cubes;
+    thrust::device_vector<Cube>* d_cubes = NULL;
+    list1.extractCubes(&d_cubes);
+    thrust::host_vector<Cube> h_cubes = *d_cubes;
 
-  BOOST_CHECK_MESSAGE(h_cubes.size() == 19, "Number of cubes after subtract == 19");
-
+    BOOST_CHECK_MESSAGE(h_cubes.size() == 19, "Number of cubes after subtract == 19");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_subtract", "bitvoxellist_subtract", "voxellists");
+  }
 }
+
+
+
+BOOST_AUTO_TEST_CASE(bitmasked_collision)
+{
+  PERF_MON_START("bitmasked_collision");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    /*
+   *    Generate three boxes that each occupie 64 Voxel. They lie along the X-axis next to each other and overlap with their neighbour by 16 Voxels.
+   *    Generate another bigger box that intersects with the three smaller boxes about 2 rows on the Y-axis (72 Voxels intersecting).
+   *
+   *
+   *       Voxellist:                     Voxelmap:
+   *       / = Type 1                     o = Occupied
+   *       \ = Type 2
+   *       X = Type 1&2
+   *    y                              y
+   *    ^                              ^
+   *    |                              |
+   *    |  ---------------             |
+   *    |  |/|/|X|\|X|/|/|             |
+   *    |  ---------------             |
+   *    |  |/|/|X|\|X|/|/|             |
+   *    |  ---------------             |  ---------------
+   *    |  |/|/|X|\|X|/|/|             |  |o|o|o|o|o|o|o|
+   *    |  ---------------             |  ---------------
+   *    |                              |  |o|o|o|o|o|o|o|
+   *    |                              |  ---------------
+   *    |                              |  |o|o|o|o|o|o|o|
+   *    |                              |  ---------------
+   *    ----------------------> x      ----------------------> x
+   *
+   */
+
+    // ==> To get some more CUDA Blocks involved,
+    // we have to scale down the voxelsize to 1/4 ==> Voxels in collision * 64
+    BitVectorVoxelList list(Vector3ui(dimX, dimY, dimZ), 0.025, MT_BITVECTOR_VOXELLIST);
+    ProbVoxelMap map(Vector3ui(dimX, dimY, dimZ), 0.025, MT_PROBAB_VOXELMAP);
+
+    float delta = 0.005;
+    Vector3f b_min(0.111,0.111,0.111);
+    Vector3f b_max(0.799,0.399,0.399);
+    std::vector<Vector3f> box_cloud = createBoxOfPoints(b_min, b_max, delta);
+    map.insertPointCloud(box_cloud, gpu_voxels::eBVM_OCCUPIED);
+
+    b_min = Vector3f(0.111,0.311,0.111);
+    b_max = Vector3f(0.399,0.599,0.399);
+    box_cloud = createBoxOfPoints(b_min, b_max, delta);
+    list.insertPointCloud(box_cloud, gpu_voxels::BitVoxelMeaning(34));
+
+    b_min = Vector3f(0.311,0.311,0.111);
+    b_max = Vector3f(0.599,0.599,0.399);
+    box_cloud = createBoxOfPoints(b_min, b_max, delta);
+    list.insertPointCloud(box_cloud, gpu_voxels::BitVoxelMeaning(63));
+
+    b_min = Vector3f(0.511,0.311,0.111);
+    b_max = Vector3f(0.799,0.599,0.399);
+    box_cloud = createBoxOfPoints(b_min, b_max, delta);
+    list.insertPointCloud(box_cloud, gpu_voxels::BitVoxelMeaning(102));
+
+    size_t num_colls;
+    BitVectorVoxel types_to_check;
+
+    // No offset given:
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f);
+    BOOST_CHECK_MESSAGE(num_colls == 0, "Zero collisions expected");
+
+    types_to_check.bitVector().setBit(33);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f);
+    BOOST_CHECK_MESSAGE(num_colls == 0, "Zero collisions expected");
+
+    types_to_check.bitVector().setBit(34);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f);
+    BOOST_CHECK_MESSAGE(num_colls == 9*64, "9*64 collisions expected");
+
+    types_to_check.bitVector().setBit(63);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f);
+    BOOST_CHECK_MESSAGE(num_colls == 15*64, "15*64 collisions expected");
+
+    types_to_check.bitVector().setBit(102);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f);
+    BOOST_CHECK_MESSAGE(num_colls == 21*64, "21*64 collisions expected");
+
+    // Offset shifting List on Y-Axis into Map:
+    Vector3i offset(0,-4,0);
+    types_to_check.bitVector().clear();
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 0, "Shift (0 -4 0): Zero collisions expected");
+
+    types_to_check.bitVector().setBit(33);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 0, "Shift (0 -4 0): Zero collisions expected");
+
+    types_to_check.bitVector().setBit(34);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 18*64, "Shift (0 -4 0): 18*64 collisions expected");
+
+    types_to_check.bitVector().setBit(63);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 30*64, "Shift (0 -4 0): 30*64 collisions expected");
+
+    types_to_check.bitVector().setBit(102);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 42*64, "Shift (0 -4 0): 42*64 collisions expected");
+
+    // Offset shifting List on Y-Axis into Map and on Z out of map
+    offset = Vector3i(0,-4,-4);
+    types_to_check.bitVector().clear();
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 0, "Shift (0 -4 -4): Zero collisions expected");
+
+    types_to_check.bitVector().setBit(33);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 0, "Shift (0 -4 -4): Zero collisions expected");
+
+    types_to_check.bitVector().setBit(34);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 12*64, "Shift (0 -4 -4): 12*64 collisions expected");
+
+    types_to_check.bitVector().setBit(63);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 20*64, "Shift (0 -4 -4): 24*64 collisions expected");
+
+    types_to_check.bitVector().setBit(102);
+    num_colls = list.collideWithTypeMask(&map, types_to_check, 1.0f, offset);
+    BOOST_CHECK_MESSAGE(num_colls == 28*64, "Shift (0 -4 -4): 36*64 collisions expected");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitmasked_collision", "bitmasked_collision", "voxellists");
+  }
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

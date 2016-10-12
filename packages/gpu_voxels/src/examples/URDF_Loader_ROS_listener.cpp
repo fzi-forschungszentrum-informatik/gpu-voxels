@@ -80,7 +80,7 @@ void obstaclePoseCallback(const geometry_msgs::Pose::ConstPtr& msg)
   object_position.y = msg->position.y;
   object_position.z = msg->position.z;
 
-  gvl->insertPointcloudFromFile("myObjectVoxelmap", "hals_vereinfacht.binvox", true,
+  gvl->insertPointCloudFromFile("myObjectVoxelmap", "hals_vereinfacht.binvox", true,
                                 eBVM_OCCUPIED, false, object_position, 0.3);
 }
 
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
   ros::Subscriber sub2 = n.subscribe("obstacle_pose", 1, obstaclePoseCallback);
 
   // A an obstacle that can be moved with the ROS callback
-  gvl->insertPointcloudFromFile("myObjectVoxelmap", "hals_vereinfacht.binvox", true,
+  gvl->insertPointCloudFromFile("myObjectVoxelmap", "hals_vereinfacht.binvox", true,
                                 eBVM_OCCUPIED, false, object_position, 0.3);
   // update the robot joints:
   gvl->setRobotConfiguration("myUrdfRobot", myRobotJointValues);

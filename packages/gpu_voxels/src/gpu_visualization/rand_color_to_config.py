@@ -28,8 +28,8 @@ print no_steps
 f = open('random_colors.txt', 'w')
 
 for i in range(no_steps):
-    #We start with ID 10, as this is SWEPT_VOLUME_START
-    type_id = 10+i
+    #We start with ID 4, as this is SWEPT_VOLUME_START
+    type_id = 4+i
     f.write('<type_{}>\n  <rgba>\n    <r> {} </r>\n    <g> {} </g>\n    <b> {} </b>\n  </rgba>\n</type_{}>\n'.format(type_id, np.random.random(), np.random.random(), np.random.random(), type_id))
 
 print 'written random_colors.txt to file...\n'

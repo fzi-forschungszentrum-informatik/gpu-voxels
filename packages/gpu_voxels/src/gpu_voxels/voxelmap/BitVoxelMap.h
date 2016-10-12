@@ -41,7 +41,7 @@ public:
   typedef BitVoxel<length> Voxel;
   typedef TemplateVoxelMap<Voxel> Base;
 
-  BitVoxelMap(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z, const float voxel_side_length, const MapType map_type);
+  BitVoxelMap(const Vector3ui dim, const float voxel_side_length, const MapType map_type);
   BitVoxelMap(Voxel* dev_data, const Vector3ui dim, const float voxel_side_length, const MapType map_type);
 
   virtual ~BitVoxelMap();

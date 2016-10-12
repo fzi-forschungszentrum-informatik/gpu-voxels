@@ -467,7 +467,7 @@ public:
       c.m_position = c.m_position - Vector3ui(VISUALIZER_SHIFT_X, VISUALIZER_SHIFT_Y, VISUALIZER_SHIFT_Z);
       c.m_side_length = getVoxelSideLength<branching_factor>(x.m_level);
       c.m_type_vector.setBit(statusToBitVoxelMeaning(m_mapping_lookup, x.m_basic_data.m_status));
-      //      if (c.m_type != gpu_voxels::eBVM_OCCUPIED && c.m_type != gpu_voxels::eVT_SWEPT_VOLUME_END && c.m_type != gpu_voxels::eVT_UNDEFINED)
+      //      if (c.m_type != gpu_voxels::eBVM_OCCUPIED && c.m_type != gpu_voxels::BVM_SWEPT_VOLUME_END && c.m_type != gpu_voxels::BVM_UNDEFINED)
       //        printf("Type %u Status %u\n", c.m_type, x.m_basic_data.m_status);
       return c;
     }
@@ -487,7 +487,7 @@ public:
       else if (x.m_basic_data.m_occupancy < THRESHOLD_OCCUPANCY)
         status |= ns_FREE;
       c.m_type_vector.setBit(statusToBitVoxelMeaning(m_mapping_lookup, status));
-      //      if (c.m_type != gpu_voxels::eBVM_OCCUPIED && c.m_type != gpu_voxels::eVT_SWEPT_VOLUME_END && c.m_type != gpu_voxels::eVT_UNDEFINED)
+      //      if (c.m_type != gpu_voxels::eBVM_OCCUPIED && c.m_type != gpu_voxels::BVM_SWEPT_VOLUME_END && c.m_type != gpu_voxels::BVM_UNDEFINED)
       //        printf("Type %u Status %u\n", c.m_type, x.m_basic_data.m_status);
       return c;
     }

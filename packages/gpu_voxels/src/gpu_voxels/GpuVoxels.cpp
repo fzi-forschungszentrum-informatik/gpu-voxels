@@ -23,13 +23,15 @@
 #include "GpuVoxels.h"
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 #include <gpu_voxels/helpers/GeometryGeneration.h>
+#include <gpu_voxels/vis_interface/VisVoxelMap.h>
+#include <gpu_voxels/vis_interface/VisTemplateVoxelList.h>
+#include <gpu_voxels/vis_interface/VisPrimitiveArray.h>
+#include <gpu_voxels/octree/VisNTree.h>
 
 namespace gpu_voxels {
 
 GpuVoxels::GpuVoxels()
-  :m_dim_x(0)
-  ,m_dim_y(0)
-  ,m_dim_z(0)
+  :m_dim(0)
   ,m_voxel_side_length(0)
 {
   // Check for valid GPU:
@@ -49,11 +51,11 @@ GpuVoxels::~GpuVoxels()
 
 void GpuVoxels::initialize(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z, const float voxel_side_length)
 {
-  if(m_dim_x == 0 || m_dim_y == 0|| m_dim_z == 0 || m_voxel_side_length == 0)
+  if(m_dim.x == 0 || m_dim.y == 0|| m_dim.z == 0 || m_voxel_side_length == 0)
   {
-    m_dim_x = dim_x;
-    m_dim_y = dim_y;
-    m_dim_z = dim_z;
+    m_dim.x = dim_x;
+    m_dim.y = dim_y;
+    m_dim.z = dim_z;
     m_voxel_side_length = voxel_side_length;
   }
   else
@@ -152,7 +154,7 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
   {
     case MT_PROBAB_VOXELMAP:
     {
-      voxelmap::ProbVoxelMap* orig_map = new voxelmap::ProbVoxelMap(m_dim_x, m_dim_y, m_dim_z, m_voxel_side_length, MT_PROBAB_VOXELMAP);
+      voxelmap::ProbVoxelMap* orig_map = new voxelmap::ProbVoxelMap(m_dim, m_voxel_side_length, MT_PROBAB_VOXELMAP);
       VisVoxelMap* vis_map = new VisVoxelMap(orig_map, map_name);
       map_shared_ptr = GpuVoxelsMapSharedPtr(orig_map);
       vis_map_shared_ptr = VisProviderSharedPtr(vis_map);
@@ -161,7 +163,7 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
 
     case MT_BITVECTOR_VOXELLIST:
     {
-      voxellist::BitVectorVoxelList* orig_list = new voxellist::BitVectorVoxelList(Vector3ui(m_dim_x, m_dim_y, m_dim_z), m_voxel_side_length, MT_BITVECTOR_VOXELLIST);
+      voxellist::BitVectorVoxelList* orig_list = new voxellist::BitVectorVoxelList(m_dim, m_voxel_side_length, MT_BITVECTOR_VOXELLIST);
       VisTemplateVoxelList<BitVectorVoxel, uint32_t>* vis_list = new VisTemplateVoxelList<BitVectorVoxel, uint32_t>(orig_list, map_name);
       map_shared_ptr = GpuVoxelsMapSharedPtr(orig_list);
       vis_map_shared_ptr = VisProviderSharedPtr(vis_list);
@@ -187,8 +189,7 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
     case MT_BITVECTOR_VOXELMAP:
     {
       // todo move code to correct type e.g. MT_BITVECTOR_VOXELMAP
-      voxelmap::BitVectorVoxelMap* orig_map = new voxelmap::BitVectorVoxelMap(m_dim_x, m_dim_y, m_dim_z,
-                                                                              m_voxel_side_length, MT_BITVECTOR_VOXELMAP);
+      voxelmap::BitVectorVoxelMap* orig_map = new voxelmap::BitVectorVoxelMap(m_dim, m_voxel_side_length, MT_BITVECTOR_VOXELMAP);
       VisVoxelMap* vis_map = new VisVoxelMap(orig_map, map_name);
 
       map_shared_ptr = GpuVoxelsMapSharedPtr(orig_map);
@@ -216,6 +217,16 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
     {
       LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
       return false;
+    }
+
+    case MT_DISTANCE_VOXELMAP:
+    {
+      voxelmap::DistanceVoxelMap* orig_map = new voxelmap::DistanceVoxelMap(m_dim, m_voxel_side_length, MT_DISTANCE_VOXELMAP);
+      VisVoxelMap* vis_map = new VisVoxelMap(orig_map, map_name);
+
+      map_shared_ptr = GpuVoxelsMapSharedPtr(orig_map);
+      vis_map_shared_ptr = VisProviderSharedPtr(vis_map);
+      break;
     }
 
     default:
@@ -315,6 +326,7 @@ bool GpuVoxels::addRobot(const std::string &robot_name, const std::vector<std::s
 
 }
 
+#ifdef _BUILD_GVL_WITH_URDF_SUPPORT_
 bool GpuVoxels::addRobot(const std::string &robot_name, const std::string &path_to_urdf_file, const bool use_model_path)
 {
   // check if robot with same name already exists
@@ -331,6 +343,7 @@ bool GpuVoxels::addRobot(const std::string &robot_name, const std::string &path_
 
   return true;
 }
+#endif
 
 bool GpuVoxels::updateRobotPart(std::string robot_name, const std::string &link_name, const std::vector<Vector3f> pointcloud)
 {
@@ -370,7 +383,7 @@ bool GpuVoxels::getRobotConfiguration(const std::string& robot_name, robot::Join
   return true;
 }
 
-bool GpuVoxels::insertPointcloudFromFile(const std::string map_name, const std::string path,
+bool GpuVoxels::insertPointCloudFromFile(const std::string map_name, const std::string path,
                                          const bool use_model_path, const BitVoxelMeaning voxel_meaning,
                                          const bool shift_to_zero, const Vector3f &offset_XYZ, const float scaling)
 {
@@ -381,9 +394,65 @@ bool GpuVoxels::insertPointcloudFromFile(const std::string map_name, const std::
     return false;
   }
 
-  return map_it->second.map_shared_ptr->insertPointcloudFromFile(path, use_model_path, voxel_meaning,
+  return map_it->second.map_shared_ptr->insertPointCloudFromFile(path, use_model_path, voxel_meaning,
                                                                  shift_to_zero, offset_XYZ, scaling);
 
+}
+
+bool GpuVoxels::insertPointCloudIntoMap(const PointCloud &cloud, std::string map_name, const BitVoxelMeaning voxel_meaning)
+{
+  ManagedMapsIterator map_it = m_managed_maps.find(map_name);
+  if (map_it == m_managed_maps.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find map '" << map_name << "'" << endl);
+    return false;
+  }
+
+  map_it->second.map_shared_ptr->insertPointCloud(cloud, voxel_meaning);
+
+  return true;
+}
+
+bool GpuVoxels::insertPointCloudIntoMap(const std::vector<Vector3f> &cloud, std::string map_name, const BitVoxelMeaning voxel_meaning)
+{
+  ManagedMapsIterator map_it = m_managed_maps.find(map_name);
+  if (map_it == m_managed_maps.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find map '" << map_name << "'" << endl);
+    return false;
+  }
+
+  map_it->second.map_shared_ptr->insertPointCloud(cloud, voxel_meaning);
+
+  return true;
+}
+
+bool GpuVoxels::insertMetaPointCloudIntoMap(const MetaPointCloud &cloud, std::string map_name, const std::vector<BitVoxelMeaning>& voxel_meanings)
+{
+  ManagedMapsIterator map_it = m_managed_maps.find(map_name);
+  if (map_it == m_managed_maps.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find map '" << map_name << "'" << endl);
+    return false;
+  }
+
+  map_it->second.map_shared_ptr->insertMetaPointCloud(cloud, voxel_meanings);
+
+  return true;
+}
+
+bool GpuVoxels::insertMetaPointCloudIntoMap(const MetaPointCloud &cloud, std::string map_name, const BitVoxelMeaning voxel_meaning)
+{
+  ManagedMapsIterator map_it = m_managed_maps.find(map_name);
+  if (map_it == m_managed_maps.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find map '" << map_name << "'" << endl);
+    return false;
+  }
+
+  map_it->second.map_shared_ptr->insertMetaPointCloud(cloud, voxel_meaning);
+
+  return true;
 }
 
 bool GpuVoxels::insertRobotIntoMap(std::string robot_name, std::string map_name, const BitVoxelMeaning voxel_meaning)
@@ -483,9 +552,14 @@ VisProvider* GpuVoxels::getVisualization(const std::string &map_name)
 
 void GpuVoxels::getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z)
 {
-  dim_x = m_dim_x;
-  dim_y = m_dim_y;
-  dim_z = m_dim_z;
+  dim_x = m_dim.x;
+  dim_y = m_dim.y;
+  dim_z = m_dim.z;
+}
+
+void GpuVoxels::getDimensions(Vector3ui &dim)
+{
+  dim = m_dim;
 }
 
 void GpuVoxels::getVoxelSideLength(float& voxel_side_length)

@@ -1,0 +1,1612 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  If the color is not specified by a word, the RGBA-values will be used instead.
+  The RGBA-values should be between 0 and 1.
+  Currently supported colors are: black, white, red, green, blue, gray, yellow, cyan, magenta
+  To get a darker version of the color add "dark" infront of the name
+  (e.g. dark blue), that doesn't work with black or white.
+-->
+
+<visualizer_context>
+
+<background>
+      <rgba>
+        <r> 0.9 </r>
+        <g> 0.9 </g>
+        <b> 0.9 </b>
+      </rgba>
+</background>
+
+
+<!--The parameter for the voxel map 0-->
+<pbaDistanceVoxmapVisual>
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
+  <occupancy_threshold> 1 </occupancy_threshold>
+  <type_20>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_20>
+  <type_34>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_34>
+  <type_48>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_48>
+  <type_62>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_62>
+  <type_76>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_76>
+  <type_90>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_90>
+  <type_104>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_104>
+  <type_118>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_118>
+  <type_132>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_132>
+  <type_146>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_146>
+  <type_160>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_160>
+  <type_174>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_174>
+  <type_188>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_188>
+  <type_202>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_202>
+  <type_21>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_21>
+  <type_35>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_35>
+  <type_49>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_49>
+  <type_63>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_63>
+  <type_77>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_77>
+  <type_91>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_91>
+  <type_105>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_105>
+  <type_119>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_119>
+  <type_133>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_133>
+  <type_147>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_147>
+  <type_161>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_161>
+  <type_175>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_175>
+  <type_189>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_189>
+  <type_203>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.0769230769231 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_203>
+  <type_22>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_22>
+  <type_36>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_36>
+  <type_50>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_50>
+  <type_64>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_64>
+  <type_78>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_78>
+  <type_92>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_92>
+  <type_106>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_106>
+  <type_120>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_120>
+  <type_134>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_134>
+  <type_148>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_148>
+  <type_162>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_162>
+  <type_176>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_176>
+  <type_190>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_190>
+  <type_204>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.153846153846 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_204>
+  <type_23>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_23>
+  <type_37>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_37>
+  <type_51>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_51>
+  <type_65>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_65>
+  <type_79>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_79>
+  <type_93>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_93>
+  <type_107>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_107>
+  <type_121>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_121>
+  <type_135>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_135>
+  <type_149>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_149>
+  <type_163>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_163>
+  <type_177>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_177>
+  <type_191>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_191>
+  <type_205>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.230769230769 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_205>
+  <type_24>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_24>
+  <type_38>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_38>
+  <type_52>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_52>
+  <type_66>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_66>
+  <type_80>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_80>
+  <type_94>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_94>
+  <type_108>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_108>
+  <type_122>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_122>
+  <type_136>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_136>
+  <type_150>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_150>
+  <type_164>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_164>
+  <type_178>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_178>
+  <type_192>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_192>
+  <type_206>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.307692307692 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_206>
+  <type_25>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_25>
+  <type_39>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_39>
+  <type_53>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_53>
+  <type_67>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_67>
+  <type_81>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_81>
+  <type_95>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_95>
+  <type_109>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_109>
+  <type_123>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_123>
+  <type_137>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_137>
+  <type_151>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_151>
+  <type_165>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_165>
+  <type_179>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_179>
+  <type_193>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_193>
+  <type_207>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.384615384615 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_207>
+  <type_26>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_26>
+  <type_40>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_40>
+  <type_54>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_54>
+  <type_68>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_68>
+  <type_82>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_82>
+  <type_96>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_96>
+  <type_110>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_110>
+  <type_124>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_124>
+  <type_138>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_138>
+  <type_152>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_152>
+  <type_166>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_166>
+  <type_180>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_180>
+  <type_194>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_194>
+  <type_208>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.461538461538 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_208>
+  <type_27>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_27>
+  <type_41>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_41>
+  <type_55>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_55>
+  <type_69>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_69>
+  <type_83>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_83>
+  <type_97>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_97>
+  <type_111>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_111>
+  <type_125>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_125>
+  <type_139>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_139>
+  <type_153>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_153>
+  <type_167>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_167>
+  <type_181>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_181>
+  <type_195>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_195>
+  <type_209>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.538461538462 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_209>
+  <type_28>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_28>
+  <type_42>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_42>
+  <type_56>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_56>
+  <type_70>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_70>
+  <type_84>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_84>
+  <type_98>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_98>
+  <type_112>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_112>
+  <type_126>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_126>
+  <type_140>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_140>
+  <type_154>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_154>
+  <type_168>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_168>
+  <type_182>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_182>
+  <type_196>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_196>
+  <type_210>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.615384615385 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_210>
+  <type_29>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_29>
+  <type_43>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_43>
+  <type_57>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_57>
+  <type_71>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_71>
+  <type_85>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_85>
+  <type_99>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_99>
+  <type_113>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_113>
+  <type_127>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_127>
+  <type_141>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_141>
+  <type_155>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_155>
+  <type_169>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_169>
+  <type_183>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_183>
+  <type_197>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_197>
+  <type_211>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.692307692308 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_211>
+  <type_30>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_30>
+  <type_44>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_44>
+  <type_58>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_58>
+  <type_72>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_72>
+  <type_86>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_86>
+  <type_100>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_100>
+  <type_114>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_114>
+  <type_128>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_128>
+  <type_142>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_142>
+  <type_156>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_156>
+  <type_170>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_170>
+  <type_184>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_184>
+  <type_198>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_198>
+  <type_212>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.769230769231 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_212>
+  <type_31>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_31>
+  <type_45>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_45>
+  <type_59>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_59>
+  <type_73>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_73>
+  <type_87>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_87>
+  <type_101>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_101>
+  <type_115>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_115>
+  <type_129>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_129>
+  <type_143>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_143>
+  <type_157>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_157>
+  <type_171>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_171>
+  <type_185>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_185>
+  <type_199>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_199>
+  <type_213>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.846153846154 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_213>
+  <type_32>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_32>
+  <type_46>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_46>
+  <type_60>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_60>
+  <type_74>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_74>
+  <type_88>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_88>
+  <type_102>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_102>
+  <type_116>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_116>
+  <type_130>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_130>
+  <type_144>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_144>
+  <type_158>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_158>
+  <type_172>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_172>
+  <type_186>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_186>
+  <type_200>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_200>
+  <type_214>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 0.923076923077 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_214>
+  <type_33>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.0 </b>
+    </rgba>
+  </type_33>
+  <type_47>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.0769230769231 </b>
+    </rgba>
+  </type_47>
+  <type_61>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.153846153846 </b>
+    </rgba>
+  </type_61>
+  <type_75>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.230769230769 </b>
+    </rgba>
+  </type_75>
+  <type_89>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.307692307692 </b>
+    </rgba>
+  </type_89>
+  <type_103>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.384615384615 </b>
+    </rgba>
+  </type_103>
+  <type_117>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.461538461538 </b>
+    </rgba>
+  </type_117>
+  <type_131>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.538461538462 </b>
+    </rgba>
+  </type_131>
+  <type_145>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.615384615385 </b>
+    </rgba>
+  </type_145>
+  <type_159>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.692307692308 </b>
+    </rgba>
+  </type_159>
+  <type_173>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.769230769231 </b>
+    </rgba>
+  </type_173>
+  <type_187>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.846153846154 </b>
+    </rgba>
+  </type_187>
+  <type_201>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 0.923076923077 </b>
+    </rgba>
+  </type_201>
+  <type_215>
+    <rgba>
+      <r> 0.0 </r>
+      <g> 1.0 </g>
+      <b> 1.0 </b>
+    </rgba>
+  </type_215>
+
+
+
+
+  <type_0>
+      <rgba>
+        <r> 0 </r>
+        <g> 0 </g>
+        <b> 1 </b>
+      </rgba>
+  </type_0>
+  <!-- type STATIC -->
+  <type_1>
+      <rgba>
+      <r> 1.0 </r>
+      <g> 1.0 </g>
+      <b> 0.0 </b>
+      </rgba>
+  </type_1>
+  <type_250>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.3 </b>
+      </rgba>
+  </type_250>
+</pbaDistanceVoxmapVisual>
+
+
+<intermediatePBAmap1>
+  <type_13>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.2 </b>
+      </rgba>
+  </type_13>
+  <type_12>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.1 </b>
+      </rgba>
+  </type_12>
+  <type_14>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.3 </b>
+      </rgba>
+  </type_14>
+</intermediatePBAmap1>
+
+
+<intermediatePBAmap2>
+  <type_13>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.2 </b>
+      </rgba>
+  </type_13>
+  <type_12>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.1 </b>
+      </rgba>
+  </type_12>
+  <type_14>
+    <rgba>
+      <r> 1.0 </r>
+      <g> 1.0 </g>
+      <b> 0.3 </b>
+    </rgba>
+  </type_14>
+</intermediatePBAmap2>
+
+
+<intermediatePBAmap3>
+  <type_13>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.2 </b>
+      </rgba>
+  </type_13>
+  <type_12>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.1 </b>
+      </rgba>
+  </type_12>
+  <type_14>
+      <rgba>
+        <r> 1.0 </r>
+        <g> 1.0 </g>
+        <b> 0.3 </b>
+      </rgba>
+  </type_14>
+</intermediatePBAmap3>
+
+
+<camera>
+  <!-- Free flight mode -->
+  <position>
+    <x> 38.4569 </x>
+    <y> 41.8827 </y>
+    <z> 32.2741 </z>
+  </position>
+  <horizontal_angle> 167.9 </horizontal_angle> <!-- given in Deg -->
+  <vertical_angle> -2.36676 </vertical_angle> <!-- given in Deg -->
+  <field_of_view> 60 </field_of_view> <!-- given in Deg -->
+  <!-- Orbit mode -->
+  <focus>
+    <x> 66.2778 </x>
+    <y> 194.318 </y>
+    <z> -29 </z>
+  </focus>
+  <window_width> 1600 </window_width>
+  <window_height> 1145 </window_height>
+</camera>
+
+
+<!-- pf nav cam nahe start
+<camera>
+  <position>
+    <x> 95.7411 </x>
+    <y> 26.0235 </y>
+    <z> 53.2741 </z>
+  </position>
+  <horizontal_angle> 180.264 </horizontal_angle> 
+  <vertical_angle> -11.1588 </vertical_angle> 
+  <field_of_view> 60 </field_of_view> 
+  
+  <focus>
+    <x> 123.562 </x>
+    <y> 178.459 </y>
+    <z> -8 </z>
+  </focus>
+  <window_width> 1600 </window_width>
+  <window_height> 1145 </window_height>
+</camera>
+-->
+
+<!--
+<camera>
+  <position>
+    <x> -36.5636 </x>
+    <y> 14.8804 </y>
+    <z> 25.7837 </z>
+  </position>
+  <horizontal_angle> 97.8267 </horizontal_angle> 
+  <vertical_angle> -7.57205 </vertical_angle> 
+  <field_of_view> 60 </field_of_view> 
+  <focus>
+    <x> 14.1515 </x>
+    <y> 119.229 </y>
+    <z> 0 </z>
+  </focus>
+  <window_width> 1600 </window_width>
+  <window_height> 1145 </window_height>
+</camera>
+-->
+
+
+<!-- some miscellaneous parameter-->
+<miscellaneous>
+  <interpolation_repeat> 500 </interpolation_repeat>   <!-- interpolation color repeats after x voxels -->
+  <min_view_dim> 200 </min_view_dim>
+
+  <min_xyz_value>   <!--minimal x,y,z value that will be drawn. Input will be treated as unsigned integer-->
+    <!--
+    <x> 0 </x>
+    <y> 0 </y>
+    <z> 32 </z>
+    -->
+    <!--
+    <x> 0 </x>
+    <y> 31 </y>
+    <z> 0 </z>
+    -->
+  </min_xyz_value>
+  <max_xyz_value>    <!--exclusive upper x,y,z boundary. Input will be treated as unsigned integer-->
+    <!--
+    <x> 0 </x>
+    <y> 0 </y>
+    <z> 33 </z>
+    -->
+    <!--
+    <x> -1 </x>
+    <y> 32 </y>
+    <z> -1 </z>
+    -->
+  </max_xyz_value>
+
+  <max_memory_usage> 0 </max_memory_usage>  <!--In MByte, 0 <=> no limit -->
+  <max_fps> 60 </max_fps>  <!--0 <=> no limit -->
+  <draw_edges_of_triangles> false </draw_edges_of_triangles>
+  <draw_filled_triangles> true </draw_filled_triangles>
+  <draw_whole_map> true </draw_whole_map> <!-- disables the view cutting -->
+  <grid_distance> 25 </grid_distance> <!-- the distance between two grid lines -->
+  <grid_height> 0 </grid_height> <!-- the height where the grid will be drawn -->
+  <grid_max_x> 500 </grid_max_x> <!-- the x dimension of the grid -->
+  <grid_max_y> 500 </grid_max_y> <!-- the y dimension of the grid -->
+  <grid_color> black </grid_color>
+  <unit_scale> 1 cm </unit_scale>
+</miscellaneous>
+
+</visualizer_context>
+
+
+
+

@@ -8,4 +8,3 @@ To clarify this:
 - The Build System (icmaker and according scripts) is distributed under BSD license
 - GPU-Voxels is distributed under the CDDL license
 - icl_core helber library is distributed under CDDL license
-- tiny_xml helper library is distributed under zlib/libpng license

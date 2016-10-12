@@ -32,63 +32,71 @@
 #include <gpu_voxels/octree/GvlNTree.h>
 #include <gpu_voxels/voxellist/BitVoxelList.h>
 #include <gpu_voxels/helpers/GeometryGeneration.h>
+#include <gpu_voxels/test/testing_fixtures.hpp>
 
 using namespace gpu_voxels;
 using namespace NTree;
 using namespace geometry_generation;
 
-BOOST_AUTO_TEST_SUITE(octree_collisions)
+
+BOOST_FIXTURE_TEST_SUITE(octree_collisions, ArgsFixture)
 
 BOOST_AUTO_TEST_CASE(octree_colliding_new_morton_voxellist)
 {
+  PERF_MON_START("octree_colliding_new_morton_voxellist");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    GvlNTreeDet* my_octree = new GvlNTreeDet(1, MT_BITVECTOR_OCTREE);
 
-  GvlNTreeDet* my_octree = new GvlNTreeDet(1, MT_BITVECTOR_OCTREE);
+    gpu_voxels::voxellist::BitVectorMortonVoxelList* my_voxellist = new gpu_voxels::voxellist::BitVectorMortonVoxelList(Vector3ui(100, 100, 100), 1.0, MT_BITVECTOR_VOXELLIST);
 
-  gpu_voxels::voxellist::BitVectorMortonVoxelList* my_voxellist = new gpu_voxels::voxellist::BitVectorMortonVoxelList(Vector3ui(100, 100, 100), 1.0, MT_BITVECTOR_VOXELLIST);
+    // Create two overlapping boxes with 6^3 = 216 overlapping voxels.
+    std::vector<Vector3f> boxpoints1 = createBoxOfPoints(Vector3f(20, 20, 20), Vector3f(30, 30, 30), 1.0);
+    std::vector<Vector3f> boxpoints2 = createBoxOfPoints(Vector3f(25, 25, 25), Vector3f(35, 35, 35), 1.0);
 
-  // Create two overlapping boxes with 6^3 = 216 overlapping voxels.
-  std::vector<Vector3f> boxpoints1 = createBoxOfPoints(Vector3f(20, 20, 20), Vector3f(30, 30, 30), 1.0);
-  std::vector<Vector3f> boxpoints2 = createBoxOfPoints(Vector3f(25, 25, 25), Vector3f(35, 35, 35), 1.0);
-
-  my_octree->insertPointCloud(boxpoints1, eBVM_OCCUPIED);
-  my_voxellist->insertPointCloud(boxpoints2, eBVM_OCCUPIED);
+    my_octree->insertPointCloud(boxpoints1, eBVM_OCCUPIED);
+    my_voxellist->insertPointCloud(boxpoints2, eBVM_OCCUPIED);
 
 
-  size_t num_colls;
+    size_t num_colls;
 
-  num_colls = my_octree->intersect_morton<true, false, false, BitVectorVoxel>(*my_voxellist);
+    num_colls = my_octree->intersect_morton<true, false, false, BitVectorVoxel>(*my_voxellist);
 
-  std::cout << "Num colls: " << num_colls << std::endl;
+    std::cout << "Num colls: " << num_colls << std::endl;
 
-  BOOST_CHECK_MESSAGE(num_colls == 216, "All collisions detected.");
-
+    BOOST_CHECK_MESSAGE(num_colls == 216, "All collisions detected.");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("octree_colliding_new_morton_voxellist", "octree_colliding_new_morton_voxellist", "octree_collisions");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(octree_colliding_regular_voxellist)
 {
+  PERF_MON_START("octree_colliding_regular_voxellist");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    GvlNTreeDet* my_octree = new GvlNTreeDet(1, MT_BITVECTOR_OCTREE);
 
-  GvlNTreeDet* my_octree = new GvlNTreeDet(1, MT_BITVECTOR_OCTREE);
-
-  gpu_voxels::voxellist::BitVectorVoxelList* my_voxellist = new gpu_voxels::voxellist::BitVectorVoxelList(Vector3ui(100, 100, 100), 1.0, MT_BITVECTOR_VOXELLIST);
-
-
-  // Create two overlapping boxes with 6^3 = 216 overlapping voxels.
-  std::vector<Vector3f> boxpoints1 = createBoxOfPoints(Vector3f(20, 20, 20), Vector3f(30, 30, 30), 1.0);
-  std::vector<Vector3f> boxpoints2 = createBoxOfPoints(Vector3f(25, 25, 25), Vector3f(35, 35, 35), 1.0);
-
-  my_octree->insertPointCloud(boxpoints1, eBVM_OCCUPIED);
-
-  my_voxellist->insertPointCloud(boxpoints2, eBVM_OCCUPIED);
+    gpu_voxels::voxellist::BitVectorVoxelList* my_voxellist = new gpu_voxels::voxellist::BitVectorVoxelList(Vector3ui(100, 100, 100), 1.0, MT_BITVECTOR_VOXELLIST);
 
 
-  size_t num_colls;
+    // Create two overlapping boxes with 6^3 = 216 overlapping voxels.
+    std::vector<Vector3f> boxpoints1 = createBoxOfPoints(Vector3f(20, 20, 20), Vector3f(30, 30, 30), 1.0);
+    std::vector<Vector3f> boxpoints2 = createBoxOfPoints(Vector3f(25, 25, 25), Vector3f(35, 35, 35), 1.0);
 
-  num_colls = my_octree->intersect_sparse<true, false, false, BitVectorVoxel>(*my_voxellist);
+    my_octree->insertPointCloud(boxpoints1, eBVM_OCCUPIED);
 
-  std::cout << "Num colls: " << num_colls << std::endl;
+    my_voxellist->insertPointCloud(boxpoints2, eBVM_OCCUPIED);
 
-  BOOST_CHECK_MESSAGE(num_colls == 216, "All collisions detected.");
 
+    size_t num_colls;
+
+    num_colls = my_octree->intersect_sparse<true, false, false, BitVectorVoxel>(*my_voxellist);
+
+    std::cout << "Num colls: " << num_colls << std::endl;
+
+    BOOST_CHECK_MESSAGE(num_colls == 216, "All collisions detected.");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("octree_colliding_regular_voxellist", "octree_colliding_regular_voxellist", "octree_collisions");
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

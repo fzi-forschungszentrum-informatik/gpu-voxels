@@ -48,10 +48,6 @@
 #include <gpu_voxels/GpuVoxelsMap.h>
 #include <gpu_voxels/ManagedMap.h>
 #include <gpu_voxels/ManagedPrimitiveArray.h>
-#include <gpu_voxels/vis_interface/VisVoxelMap.h>
-#include <gpu_voxels/vis_interface/VisTemplateVoxelList.h>
-#include <gpu_voxels/vis_interface/VisPrimitiveArray.h>
-#include <gpu_voxels/octree/VisNTree.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/helpers/PointCloud.h>
 #include <gpu_voxels/octree/Octree.h>
@@ -61,7 +57,11 @@
 
 
 #include <gpu_voxels/robot/robot_interface.h>
+
+#ifdef _IC_BUILDER_GPU_VOXELS_URDF_ROBOT_
 #include <gpu_voxels/robot/urdf_robot/urdf_robot.h>
+#endif
+
 #include <gpu_voxels/robot/dh_robot/KinematicLink.h>
 #include <gpu_voxels/robot/dh_robot/KinematicChain.h>
 
@@ -183,6 +183,7 @@ public:
                 const std::vector<robot::DHParameters> &dh_params,
                 const std::vector<std::string> &paths_to_pointclouds, const bool use_model_path);
 
+
   /*!
    * \brief addRobot Define a robot with its geometries and kinematic structure via DH parameter.
    * Important: \code link_names have to be the same as \code paths_to_pointclouds if the pointclouds
@@ -197,6 +198,7 @@ public:
                 const std::vector<robot::DHParameters> &dh_params,
                 const MetaPointCloud &pointclouds);
 
+#ifdef _BUILD_GVL_WITH_URDF_SUPPORT_
   /*!
    * \brief addRobot Define a robot with its geometries and kinematic structure via a ROS URDF file.
    * During parsing all meshses get replaced by pointclouds with the same name.
@@ -206,6 +208,7 @@ public:
    * \return true, if robot was added, false otherwise
    */
   bool addRobot(const std::string &robot_name, const std::string &path_to_urdf_file, const bool use_model_path);
+#endif
 
   /*!
    * \brief getRobot Returns the shared pointer to the robot
@@ -243,7 +246,7 @@ public:
   bool getRobotConfiguration(const std::string& robot_name, robot::JointValueMap &jointmap);
 
   /*!
-   * \brief insertPointcloudFromFile inserts a pointcloud from a file into the map
+   * \brief insertPointCloudFromFile inserts a pointcloud from a file into the map
    * The coordinates are interpreted as global coordinates
    * \param map_name Name of the map to insert the pointcloud
    * \param path filename (Must end in .xyz for XYZ files, .pcd for PCD files or .binvox for Binvox files)
@@ -252,10 +255,47 @@ public:
    * \param offset_XYZ if given, the map will be transformed by this XYZ offset. If shifting is active, this happens after the shifting.
    * \return true if succeeded, false otherwise
    */
-  bool insertPointcloudFromFile(const std::string map_name, const std::string path, const bool use_model_path,
+  bool insertPointCloudFromFile(const std::string map_name, const std::string path, const bool use_model_path,
                                 const BitVoxelMeaning voxel_meaning, const bool shift_to_zero = false,
                                 const Vector3f &offset_XYZ = Vector3f(), const float scaling = 1.0);
 
+  /*!
+   * @brief insertPointCloudIntoMap Inserts a PointCloud into the map.
+   * @param cloud The PointCloud to insert
+   * @param voxel_meaning Voxel meaning of all voxels
+   */
+  bool insertPointCloudIntoMap(const PointCloud &cloud, std::string map_name, 
+                               const BitVoxelMeaning voxel_meaning);
+  
+  /*!
+   * @brief insertPointCloudIntoMap Inserts a PointCloud into the map.
+   * @param cloud The PointCloud to insert
+   * @param voxel_meaning Voxel meaning of all voxels
+   */
+  bool insertPointCloudIntoMap(const std::vector<Vector3f> &cloud, std::string map_name,
+                               const BitVoxelMeaning voxel_meaning);
+  
+  /*!
+   * @brief insertMetaPointCloudIntoMap Inserts a MetaPointCloud into the map. Each pointcloud
+   * inside the MetaPointCloud will get it's own voxel meaning as given in the voxel_meanings
+   * parameter. The number of pointclouds in the MetaPointCloud and the size of voxel_meanings
+   * have to be identical.
+   * @param meta_point_cloud The MetaPointCloud to insert
+   * @param voxel_meanings Vector with voxel meanings of sub clouds
+   */
+  bool insertMetaPointCloudIntoMap(const MetaPointCloud &meta_point_cloud,
+                                   std::string map_name,
+                                   const std::vector<BitVoxelMeaning>& voxel_meanings);
+  
+  /*!
+   * @brief insertMetaPointCloudIntoMap Inserts a MetaPointCloud into the map.
+   * @param meta_point_cloud The MetaPointCloud to insert
+   * @param voxel_meaning Voxel meaning of all sub-clouds voxels
+   */
+  bool insertMetaPointCloudIntoMap(const MetaPointCloud &meta_point_cloud,
+                                   std::string map_name,
+                                   const BitVoxelMeaning voxel_meaning);
+  
   /*!
    * \brief insertRobotIntoMap Writes a robot with its current pose into a map
    * \param robot_name Name of the robot to use
@@ -322,6 +362,13 @@ public:
    * @return void
    */
   void getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z);
+  
+  /**
+   * @brief Gets the dimensions of voxel space
+   * @param dim [out] number of Voxels in each dimension
+   * @return void
+   */
+  void getDimensions(Vector3ui &dim);
 
   /**
    * @brief getVoxelSideLength Gets the sidelength of voxels
@@ -347,9 +394,7 @@ private:
   ManagedMaps m_managed_maps;
   ManagedRobots m_managed_robots;
   ManagedPrimitiveArrays m_managed_primitive_arrays;
-  uint32_t m_dim_x;
-  uint32_t m_dim_y;
-  uint32_t m_dim_z;
+  gpu_voxels::Vector3ui m_dim;
   float m_voxel_side_length;
 };
 

@@ -22,10 +22,10 @@ ICMAKER_ADD_HEADERS(
   common_defines.h
   cuda_handling.h
   cuda_handling.hpp
+  HeightMapLoader.h
   PointcloudFileHandler.h
   BinvoxFileReader.h
   FileReaderInterface.h
-  PcdFileReader.h
   XyzFileReader.h
   PointCloud.h
   MetaPointCloud.h
@@ -34,14 +34,15 @@ ICMAKER_ADD_HEADERS(
   MathHelpers.h
   GeometryGeneration.h
   CollisionInterfaces.h
+  stb_image.h
   )
 
 ICMAKER_ADD_SOURCES(
   GlobalLock.cpp
   cuda_datatypes.cpp
+  HeightMapLoader.cpp
   PointcloudFileHandler.cpp
   BinvoxFileReader.cpp
-  PcdFileReader.cpp
   XyzFileReader.cpp
   MathHelpers.cpp
   GeometryGeneration.cpp
@@ -62,9 +63,29 @@ ICMAKER_ADD_CUDA_FILES(
   BitVector.h
   )
 
+IF(PCL_FOUND)
+  ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_PCL_SUPPORT_)
+  ICMAKER_ADD_HEADERS(
+    PcdFileReader.h
+  )
+  ICMAKER_ADD_SOURCES(
+    PcdFileReader.cpp
+  )
+
+  IF(OpenNI_FOUND)
+    ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_KINECT_SUPPORT_)
+    ICMAKER_ADD_SOURCES(
+      Kinect.cpp
+    )
+    ICMAKER_ADD_HEADERS(
+      Kinect.h
+    )
+  ENDIF(OpenNI_FOUND)
+ENDIF(PCL_FOUND)
+
 # removing unknown pragma warnings due to OpenNI spam
 ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
-ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_HELPERS_)
 ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
 
 ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
@@ -76,11 +97,12 @@ ICMAKER_INTERNAL_DEPENDENCIES(EXPORT
 
 ICMAKER_EXTERNAL_DEPENDENCIES(EXPORT
   CUDA
-  PCL
+  Boost_FILESYSTEM
 )
 
 ICMAKER_DEPENDENCIES( OPTIONAL
   OpenNI
+  PCL
 )
 
 IF(ROS_FOUND)
@@ -94,20 +116,7 @@ IF(ROS_FOUND)
   ICMAKER_EXTERNAL_DEPENDENCIES(EXPORT
     ROS
   )
-
-
 ENDIF(ROS_FOUND)
-
-
-IF(OpenNI_FOUND)
-  ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_KINECT_SUPPORT_)
-  ICMAKER_ADD_SOURCES(
-    Kinect.cpp
-  )
-  ICMAKER_ADD_HEADERS(
-    Kinect.h
-  )
-ENDIF(OpenNI_FOUND)
 
 
 ICMAKER_BUILD_LIBRARY()

@@ -25,6 +25,9 @@
 
 #include "VoxelMapOperations.h"
 #include <gpu_voxels/voxel/BitVoxel.hpp>
+#include <gpu_voxels/voxel/DistanceVoxel.hpp>
+
+#include "VoxelMapOperationsPBA.hpp"
 
 namespace gpu_voxels {
 namespace voxelmap {
@@ -237,7 +240,8 @@ void kernelCollideVoxelMapsBitvector(BitVoxel<length>* voxelmap, const uint32_t 
 template<class Voxel>
 __global__
 void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui dimensions, const float voxel_side_length,
-                                  const Vector3f *points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning)
+                                  const Vector3f *points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning,
+                                  bool *points_outside_map)
 {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizePoints; i += blockDim.x * gridDim.x)
   {
@@ -251,8 +255,45 @@ void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui dimensions, c
     }
     else
     {
-      printf("Point (%u,%u,%u) is not in the range of the voxel map \n", points[i].x, points[i].y,
-             points[i].z);
+      if(points_outside_map) *points_outside_map = true;
+//       printf("Point (%u,%u,%u) is not in the range of the voxel map \n", points[i].x, points[i].y,
+//              points[i].z);
+    }
+  }
+}
+
+//DistanceVoxel specialization
+template<>
+__global__
+void kernelInsertGlobalPointCloud(DistanceVoxel* voxelmap, const Vector3ui dimensions, const float voxel_side_length,
+                                  const Vector3f* points, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning,
+                                  bool *points_outside_map)
+{
+
+  //debug
+//  if (blockIdx.x + threadIdx.x == 0) {
+//    printf("DEBUG: DistanceVoxelMap::insertPointCloud was called instead of the TemplateVoxelMap one\n");
+//    for (uint32_t i = 0; i < sizePoints; i += 1) {
+//      printf("DEBUG: point %u: %f %f %f\n", i, points[i].x, points[i].y, points[i].z);
+//    }
+//  }
+
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizePoints; i += blockDim.x * gridDim.x)
+  {
+    const Vector3ui uint_coords = mapToVoxels(voxel_side_length, points[i]);
+    //check if point is in the range of the voxel map
+    if ((uint_coords.x < dimensions.x) && (uint_coords.y < dimensions.y)
+        && (uint_coords.z < dimensions.z))
+    {
+      DistanceVoxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions,
+                                                             uint_coords.x, uint_coords.y, uint_coords.z)];
+      voxel->insert(uint_coords, voxel_meaning);
+    }
+    else
+    {
+      if(points_outside_map) *points_outside_map = true;
+//      printf("DistanceVoxel kernelInsertGlobalPointCloud: Point (%u,%u,%u) is not in the range of the voxel map \n",
+//             points[i].x, points[i].y, points[i].z);
     }
   }
 }
@@ -260,7 +301,8 @@ void kernelInsertGlobalPointCloud(Voxel* voxelmap, const Vector3ui dimensions, c
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
-                                BitVoxelMeaning voxel_meaning, const Vector3ui dimensions, const float voxel_side_length)
+                                BitVoxelMeaning voxel_meaning, const Vector3ui dimensions, const float voxel_side_length,
+                                bool *points_outside_map)
 {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < meta_point_cloud->accumulated_cloud_size;
       i += blockDim.x * gridDim.x)
@@ -288,18 +330,64 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
     }
     else
     {
-      printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
-             meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
-             meta_point_cloud->clouds_base_addresses[0][i].z);
+      if(points_outside_map) *points_outside_map = true;
+//       printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
+//              meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
+//              meta_point_cloud->clouds_base_addresses[0][i].z);
     }
   }
 }
+
+//DistanceVoxel specialization
+template<>
+__global__
+void kernelInsertMetaPointCloud(DistanceVoxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
+                                BitVoxelMeaning voxel_meaning, const Vector3ui dimensions, const float voxel_side_length,
+                                bool *points_outside_map)
+{
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < meta_point_cloud->accumulated_cloud_size;
+      i += blockDim.x * gridDim.x)
+  {
+    const Vector3ui uint_coordinates = mapToVoxels(voxel_side_length,
+                                                      meta_point_cloud->clouds_base_addresses[0][i]);
+
+//        printf("Point @(%f,%f,%f)\n",
+//               meta_point_cloud->clouds_base_addresses[0][i].x,
+//               meta_point_cloud->clouds_base_addresses[0][i].y,
+//               meta_point_cloud->clouds_base_addresses[0][i].z);
+
+    //check if point is in the range of the voxel map
+    if ((uint_coordinates.x < dimensions.x) && (uint_coordinates.y < dimensions.y)
+        && (uint_coordinates.z < dimensions.z))
+    {
+      DistanceVoxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions,
+                                                             uint_coordinates.x, uint_coordinates.y, uint_coordinates.z)];
+      voxel->insert(uint_coordinates, voxel_meaning);
+
+//        printf("Inserted Point @(%u,%u,%u) into the voxel map \n",
+//               integer_coordinates.x,
+//               integer_coordinates.y,
+//               integer_coordinates.z);
+
+    }
+    else
+    {
+      if(points_outside_map) *points_outside_map = true;
+//      printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
+//             meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
+//             meta_point_cloud->clouds_base_addresses[0][i].z);
+    }
+  }
+}
+
+//TODO: specialize every occurence of voxel->insert(meaning) for DistanceVoxel to use voxel->insert(integer_coordinates, meaning)
 
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
                                 BitVoxelMeaning* voxel_meanings, const Vector3ui dimensions,
-                                const float voxel_side_length)
+                                const float voxel_side_length,
+                                bool *points_outside_map)
 {
   u_int16_t sub_cloud = 0;
   u_int32_t sub_cloud_upper_bound = meta_point_cloud->cloud_sizes[sub_cloud];
@@ -339,9 +427,64 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
     }
     else
     {
-      printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
+      if(points_outside_map) *points_outside_map = true;
+//       printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
+//              meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
+//              meta_point_cloud->clouds_base_addresses[0][i].z);
+    }
+  }
+}
+
+//DistanceVoxel specialization
+template<>
+__global__
+void kernelInsertMetaPointCloud(DistanceVoxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
+                                BitVoxelMeaning* voxel_meanings, const Vector3ui dimensions,
+                                const float voxel_side_length, bool *points_outside_map)
+{
+  u_int16_t sub_cloud = 0;
+  u_int32_t sub_cloud_upper_bound = meta_point_cloud->cloud_sizes[sub_cloud];
+
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < meta_point_cloud->accumulated_cloud_size;
+      i += blockDim.x * gridDim.x)
+  {
+    // find out, to which sub_cloud our point belongs
+    while(i >= sub_cloud_upper_bound)
+    {
+      sub_cloud++;
+      sub_cloud_upper_bound += meta_point_cloud->cloud_sizes[sub_cloud];
+    }
+
+
+    const Vector3ui uint_coordinates = mapToVoxels(voxel_side_length,
+                                                      meta_point_cloud->clouds_base_addresses[0][i]);
+
+//        printf("Point @(%f,%f,%f)\n",
+//               meta_point_cloud->clouds_base_addresses[0][i].x,
+//               meta_point_cloud->clouds_base_addresses[0][i].y,
+//               meta_point_cloud->clouds_base_addresses[0][i].z);
+
+    //check if point is in the range of the voxel map
+    if ((uint_coordinates.x < dimensions.x) && (uint_coordinates.y < dimensions.y)
+        && (uint_coordinates.z < dimensions.z))
+    {
+      DistanceVoxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions,
+                                                             uint_coordinates.x, uint_coordinates.y, uint_coordinates.z)];
+      voxel->insert(uint_coordinates, voxel_meanings[sub_cloud]);
+
+//        printf("Inserted Point @(%u,%u,%u) with meaning %u into the voxel map \n",
+//               integer_coordinates.x,
+//               integer_coordinates.y,
+//               integer_coordinates.z,
+//               voxel_meanings[voxel_meaning_index]);
+
+    }
+    else
+    {
+      if(points_outside_map) *points_outside_map = true;
+      /* printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
              meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
-             meta_point_cloud->clouds_base_addresses[0][i].z);
+             meta_point_cloud->clouds_base_addresses[0][i].z); */
     }
   }
 }
@@ -479,6 +622,175 @@ void kernelShiftBitVector(BitVoxel<length>* voxelmap,
   }
 }
 
+/**
+ * cjuelg: jump flood distances, obstacle vectors
+ *
+ *
+ * algorithm:
+ *  calcNearestObstaclesJFA(VoxelMap, dim3, uint step_num (log(maxdim)..1))
+ *       set map[x,y,z]= min(pos+{-1,0,1}*{x,y,z})
+ */
+__global__
+void kernelJumpFlood3D(const DistanceVoxel * __restrict__ const voxels_input, DistanceVoxel* __restrict__ const voxels_output, const Vector3ui dims, const int32_t step_width){
+  const uint32_t numVoxels = dims.x*dims.y*dims.z;
+
+  //get linear address i
+  //repeat if grid.x*block.x < numVoxels
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < numVoxels; i += blockDim.x * gridDim.x)
+  {
+    //map to x,y,z
+    Vector3i pos;
+    pos.x = i % dims.x;
+    pos.y = (i / dims.x) % dims.y;
+    pos.z = (i / (dims.x*dims.y)) % dims.z;
+
+    //check if point is in the range of the voxel map
+    if ((pos.x < dims.x) && (pos.y < dims.y) && (pos.z < dims.z)) // should always be true
+    {      
+      DistanceVoxel min_voxel = voxels_input[i];
+
+      if (min_voxel.squaredObstacleDistance(pos) == PBA_OBSTACLE_DISTANCE) {
+        voxels_output[i] = min_voxel; // copy to buffer
+        continue; //no other obstacle can be closer
+      }
+
+      // load 26 "step-neighbors"; for each: if distance is smaller, save obstacle and distance; (reduction operation)
+      for (int x_step = -step_width; x_step <= step_width; x_step += step_width) {
+
+        const int x_check = pos.x + x_step;
+        if (x_check >= 0 && x_check < dims.x) { //don't leave map limits
+
+          for (int y_step = -step_width; y_step <= step_width; y_step += step_width) {
+
+            const int y_check = pos.y + y_step;
+            if (y_check >= 0 && y_check < dims.y) { //don't leave map limits
+
+              for (int z_step = -step_width; z_step <= step_width; z_step += step_width) {
+
+                const int z_check = pos.z + z_step;
+                if (z_check >= 0 && z_check < dims.z) { //don't leave map limits
+
+                  if ((x_step != 0) || (y_step != 0) || (z_step != 0)) { //don't compare center_voxel to self
+                    updateMinVoxel(voxels_input[getVoxelIndexSigned(dims, x_check, y_check, z_check)], min_voxel, pos);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      voxels_output[i] = min_voxel; //always update output array, even if min_voxel = voxels_input[i]
+    }
+    else
+    {
+      printf("(%i,%i,%i) is not in the range of the voxel map; SHOULD BE IMPOSSIBLE \n", pos.x, pos.y, pos.z);
+    }
+  }
+}
+
+/**
+ * cjuelg: brute force exact obstacle distances
+ *
+ * optimisation1: check against known obstacle list instead of all other voxels
+ * optimisation2: use shared memory to prefetch chunks of the obstacle list in parallel
+ * optimisation3: resolve bank conflicts by using threadIdx as offset?
+ */
+__global__
+void kernelExactDistances3D(DistanceVoxel* voxels, const Vector3ui dims, const float voxel_side_length,
+                            Vector3f* obstacles, const std::size_t num_obstacles){
+
+  extern __shared__ int dynamic_shared_mem[];
+  Vector3i* obstacle_cache = (Vector3i*)dynamic_shared_mem; //size: cMAX_THREADS_PER_BLOCK * sizeof(DistanceVoxel)
+
+  const uint32_t num_voxels = dims.x*dims.y*dims.z;
+
+  //get linear address i
+
+  if (gridDim.x * gridDim.y * blockDim.x < num_voxels)
+    printf("exactDifferences3D: Alert: grids and blocks don't span num_voxels!");
+
+
+  uint32_t voxel_idx = ((gridDim.x * blockIdx.y) + blockIdx.x) * blockDim.x + threadIdx.x;
+  if (voxel_idx >= num_voxels) return;
+  DistanceVoxel* pos_voxel = &voxels[voxel_idx];
+
+  Vector3i pos;
+  pos.x = voxel_idx % dims.x;
+  pos.y = (voxel_idx / dims.x) % dims.y;
+  pos.z = (voxel_idx / (dims.x*dims.y)) % dims.z;
+
+  int32_t min_distance = pos_voxel->squaredObstacleDistance(pos);
+  Vector3i min_obstacle;
+
+  for (uint obstacle_prefetch_offset = 0; obstacle_prefetch_offset < num_obstacles; obstacle_prefetch_offset += blockDim.x) {
+    uint obstacle_prefetch_idx = obstacle_prefetch_offset + threadIdx.x;
+
+    // prefetch
+    if (obstacle_prefetch_idx < num_obstacles) {
+      const Vector3i obstacle = mapToVoxelsSigned(voxel_side_length, obstacles[obstacle_prefetch_idx]);
+      obstacle_cache[threadIdx.x] = obstacle;
+    }
+    __syncthreads();
+
+    // update closest obstacle
+
+    //check if point is in the range of the voxel map
+    if ((pos.x < dims.x) && (pos.y < dims.y) && (pos.z < dims.z)) //always true?
+    {
+      if (min_distance != PBA_OBSTACLE_DISTANCE) { //else no other obstacle can be closer
+
+        //check for every obstacle whether it is the closest one to pos
+        for (uint s_obstacle_idx = 0; (s_obstacle_idx < cMAX_THREADS_PER_BLOCK) && (obstacle_prefetch_offset + s_obstacle_idx < num_obstacles); s_obstacle_idx++) {
+
+          //optimise: resolve bank conflicts by using threadIdx as offset?
+          //TODO: test optimisation, might even be slower (test using large obstacle count; with low obstacle count the kernel runs <2ms
+          //          int cache_size = min(blockDim.x, (uint)num_obstacles - obstacle_prefetch_offset);
+          //          const Vector3i obstacle_pos = obstacle_cache[(s_obstacle_idx + threadIdx.x ) % cache_size];
+          const Vector3i obstacle_pos = obstacle_cache[s_obstacle_idx];
+
+          //TODO: could perform sanity check, but: expensive, explodes number of memory accesses
+//            const DistanceVoxel* other_voxel = &voxels[getVoxelIndex(dims, obstacle_pos.x, obstacle_pos.y, obstacle_pos.z)];
+//            if (other_voxel->getDistance() != DISTANCE_OBSTACLE) {
+//              printf("ERROR: exactDistances3D: (pos: %i,%i,%i) given obstacle coordinates do not contain obstacle: (%u,%u,%u), %d\n", pos.x, pos.y, pos.z, obstacle_pos.x, obstacle_pos.y, obstacle_pos.z, other_voxel->getDistance());
+//            }
+          //            if (other_voxel != center_voxel && other_voxel->getDistance() == DISTANCE_OBSTACLE) {
+
+          if (obstacle_pos != pos) {
+            int32_t other_distance;
+            if (
+                  (obstacle_pos.x == PBA_UNINITIALISED_COORD)
+                  || (obstacle_pos.y == PBA_UNINITIALISED_COORD)
+                  || (obstacle_pos.z == PBA_UNINITIALISED_COORD)
+                  || (pos.x == PBA_UNINITIALISED_COORD)
+                  || (pos.y == PBA_UNINITIALISED_COORD)
+                  || (pos.z == PBA_UNINITIALISED_COORD)
+               )
+            {
+              other_distance = MAX_OBSTACLE_DISTANCE;
+
+            } else {  // never use PBA_UNINIT in calculations
+              const int dx = pos.x - obstacle_pos.x, dy = pos.y - obstacle_pos.y, dz = pos.z - obstacle_pos.z;
+              other_distance = (dx * dx) + (dy * dy) + (dz * dz); //squared distance
+
+              if (other_distance < min_distance) { //need to update minimum
+                min_distance = other_distance;
+                min_obstacle = obstacle_pos;
+              }
+            }
+          }
+        }
+      }
+    } else {
+      printf("(%i,%i,%i) is not in the range of the voxel map; SHOULD BE IMPOSSIBLE \n", pos.x, pos.y, pos.z);
+    }
+    __syncthreads();
+  }
+
+  if (min_distance < pos_voxel->squaredObstacleDistance(pos)) { //need to update pos_voxel
+    pos_voxel->setObstacle(min_obstacle);
+  }
+}
 
 } // end of namespace voxelmap
 } // end of namespace gpu_voxels

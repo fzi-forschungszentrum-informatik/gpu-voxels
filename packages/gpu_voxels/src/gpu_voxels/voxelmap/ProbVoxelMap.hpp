@@ -32,9 +32,8 @@
 namespace gpu_voxels {
 namespace voxelmap {
 
-ProbVoxelMap::ProbVoxelMap(const uint32_t dim_x, const uint32_t dim_y, const uint32_t dim_z,
-                           const float voxel_side_length, const MapType map_type) :
-    Base(dim_x, dim_y, dim_z, voxel_side_length, map_type)
+ProbVoxelMap::ProbVoxelMap(const Vector3ui dim, const float voxel_side_length, const MapType map_type) :
+    Base(dim, voxel_side_length, map_type)
 {
 
 }
@@ -74,7 +73,7 @@ void ProbVoxelMap::insertSensorData(const Vector3f* points, const bool enable_ra
   {
     // for debugging ray casting:
 //    uint32_t blocks, threads;
-//    m_math.computeLinearLoad(m_voxelmap_size, &blocks, &threads);
+//    computeLinearLoad(m_voxelmap_size, &blocks, &threads);
 //    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //    kernelClearVoxelMap<<<blocks, threads>>>(m_dev_data, m_voxelmap_size, eBVM_OCCUPIED);
     // ---

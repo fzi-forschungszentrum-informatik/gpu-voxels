@@ -18,7 +18,6 @@
 #include <boost/thread.hpp>
 
 #include <gpu_voxels/voxellist/AbstractVoxelList.h>
-#include <gpu_voxels/voxellist/kernels/VoxelListOperations.h>
 #include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/vis_interface/VisualizerInterface.h>
 
@@ -149,7 +148,7 @@ public:
    * @return Number of collisions
    */
   virtual size_t collideVoxellists(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3i &offset,
-                                   thrust::device_vector<bool>& collision_stencil, bool do_locking = true) const;
+                                   thrust::device_vector<bool>& collision_stencil) const;
 
   /**
    * @brief collisionCheckWithCollider
@@ -177,6 +176,11 @@ public:
    */
   template< class OtherVoxel, class OtherVoxelIDType>
   bool equals(const TemplateVoxelList<OtherVoxel, OtherVoxelIDType>& other) const;
+
+  /**
+   * @brief screendump Prints ALL elemets of the list to the screen
+   */
+  void screendump(bool with_voxel_content = true) const;
 
   struct VoxelToCube
   {
@@ -206,14 +210,11 @@ protected:
   //! result array for collision check with counter
   uint16_t* m_collision_check_results_counter;
 
-//  thrust::device_vector<BitVoxel<length> > m_host_id_list;
-//  thrust::device_vector<Voxel> m_host_list;
-
   /* ======== Variables with content on device ======== */
   /* Follow the Thrust paradigm: Struct of Vectors */
-  thrust::device_vector<VoxelIDType> m_dev_id_list;   // contains the voxel adresses / morton codes (This may not be a Voxel*, as Thrust can not sort pointers)
+  thrust::device_vector<VoxelIDType> m_dev_id_list;  // contains the voxel adresses / morton codes (This can not be a Voxel*, as Thrust can not sort pointers)
   thrust::device_vector<Vector3ui> m_dev_coord_list; // contains the voxel metric coordinates
-  thrust::device_vector<Voxel> m_dev_list;          // contains the actual data: bitvector or probability
+  thrust::device_vector<Voxel> m_dev_list;           // contains the actual data: bitvector or probability
 
 
   //! results of collision check on device
@@ -221,71 +222,6 @@ protected:
 
   //! result array for collision check with counter on device
   uint16_t* m_dev_collision_check_results_counter;
-};
-
-
-template<class VoxelIDType>
-struct offsetLessOperator
-{
-  ptrdiff_t addr_offset;
-  offsetLessOperator(const Vector3ui &ref_map_dim, const Vector3i &offset)
-  {
-    addr_offset = voxelmap::getVoxelIndexSigned(ref_map_dim, offset);
-  }
-
-  __host__ __device__
-  bool operator()(const VoxelIDType& this_voxel_addr, const VoxelIDType& other_voxel_addr) {
-      return this_voxel_addr + addr_offset < other_voxel_addr;
-  }
-};
-
-template<class Voxel, class VoxelIDType>
-struct Merge : public thrust::binary_function<thrust::tuple<VoxelIDType, Voxel>,
-    thrust::tuple<VoxelIDType, Voxel>, thrust::tuple<VoxelIDType, Voxel> >
-{
-  typedef thrust::tuple<VoxelIDType, Voxel> keyVoxelTuple;
-
-  __host__ __device__
-  keyVoxelTuple operator()(const keyVoxelTuple &lhs, const keyVoxelTuple &rhs) const
-  {
-    VoxelIDType l_key = thrust::get<0>(lhs);
-    Voxel l_voxel = thrust::get<1>(lhs);
-
-    VoxelIDType r_key = thrust::get<0>(rhs);
-    Voxel r_voxel = thrust::get<1>(rhs);
-
-    keyVoxelTuple ret = rhs;
-
-    if (l_key == r_key)
-    {
-      thrust::get<1>(ret) = Voxel::reduce(l_voxel, r_voxel);
-    }
-    return ret;
-  }
-};
-
-template<class VoxelIDType>
-struct applyOffsetOperator : public thrust::unary_function<thrust::tuple<Vector3ui, VoxelIDType>,
-    thrust::tuple<Vector3ui, VoxelIDType> >
-{
-  typedef thrust::tuple<Vector3ui, VoxelIDType> coordKeyTuple;
-
-  ptrdiff_t addr_offset;
-  Vector3i coord_offset;
-  applyOffsetOperator(const Vector3ui &ref_map_dim, const Vector3i &offset)
-  {
-    coord_offset = offset;
-    addr_offset = voxelmap::getVoxelIndexSigned(ref_map_dim, offset);
-  }
-
-  __host__ __device__
-  coordKeyTuple operator()(const coordKeyTuple &input) const
-  {
-    coordKeyTuple ret;
-    thrust::get<0>(ret) = thrust::get<0>(input) + coord_offset;
-    thrust::get<1>(ret) = thrust::get<1>(input) + addr_offset;
-    return ret;
-  }
 };
 
 } // end of namespace voxellist

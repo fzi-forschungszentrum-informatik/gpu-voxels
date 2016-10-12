@@ -31,7 +31,7 @@
 #endif
 
 #include <boost/regex.h>
-#include <tinyxml/tinyxml.h>
+#include <tinyxml.h>
 #include <icl_core/icl_core.h>
 
 #include "icl_core_config/Config.h"

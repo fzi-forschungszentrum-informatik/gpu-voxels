@@ -53,8 +53,8 @@ int main(int argc, char* argv[])
 
   Vector3ui dim(89, 123, 74);
   float side_length = 1.f;
-  ProbVoxelMap map_1(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP);
-  ProbVoxelMap map_2(dim.x, dim.y, dim.z, side_length, MT_PROBAB_VOXELMAP);
+  ProbVoxelMap map_1(dim, side_length, MT_PROBAB_VOXELMAP);
+  ProbVoxelMap map_2(dim, side_length, MT_PROBAB_VOXELMAP);
 
   std::vector<Vector3f> this_testpoints1;
   std::vector<Vector3f> this_testpoints2;

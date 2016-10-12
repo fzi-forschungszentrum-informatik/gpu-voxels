@@ -25,10 +25,12 @@
 #include "boost/random.hpp"
 #include "boost/generator_iterator.hpp"
 #include "gpu_voxels/helpers/cuda_datatypes.h"
+#include <gpu_voxels/test/testing_fixtures.hpp>
 
 using namespace gpu_voxels;
 
-BOOST_AUTO_TEST_SUITE(cudaMath)
+
+BOOST_FIXTURE_TEST_SUITE(cudaMath, ArgsFixture)
 
 const Matrix4f matrix(0.9751700, -0.218711, -0.0347626, 10, /**/
                       0.1976770, 0.930432, -0.3085770, 11,/**/
@@ -38,74 +40,106 @@ const Matrix4f matrix(0.9751700, -0.218711, -0.0347626, 10, /**/
 
 BOOST_AUTO_TEST_CASE(matrix_equality)
 {
-  BOOST_CHECK(matrix == matrix);
+  PERF_MON_START("matrix_equality");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    BOOST_CHECK(matrix == matrix);
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_equality", "matrix_equality", "cudaMath");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(matrix_inequality)
 {
-  Matrix4f a = matrix;
-  Matrix4f b = matrix;
-  b.a13 += 0.0001;
-  BOOST_CHECK(!(a == b));
+  PERF_MON_START("matrix_inequality");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    Matrix4f a = matrix;
+    Matrix4f b = matrix;
+    b.a13 += 0.0001;
+    BOOST_CHECK(!(a == b));
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_inequality", "matrix_inequality", "cudaMath");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(matrix_apprx_equality)
 {
-  Matrix4f a = matrix;
-  Matrix4f b = matrix;
-  b.a22 -= 0.00001;
-  BOOST_CHECK(a.apprx_equal(b, 0.000011));
+  PERF_MON_START("matrix_apprx_equality");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    Matrix4f a = matrix;
+    Matrix4f b = matrix;
+    b.a22 -= 0.00001;
+    BOOST_CHECK(a.apprx_equal(b, 0.000011));
 
-  a = matrix;
-  b = matrix;
-  b.a22 += 0.00001;
-  BOOST_CHECK(a.apprx_equal(b, 0.000011));
+    a = matrix;
+    b = matrix;
+    b.a22 += 0.00001;
+    BOOST_CHECK(a.apprx_equal(b, 0.000011));
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_apprx_equality", "matrix_apprx_equality", "cudaMath");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(matrix_apprx_inequality)
 {
-  Matrix4f a = matrix;
-  Matrix4f b = matrix;
-  b.a22 += 0.000013;
-  BOOST_CHECK(!a.apprx_equal(b, 0.000011));
+  PERF_MON_START("matrix_apprx_inequality");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    Matrix4f a = matrix;
+    Matrix4f b = matrix;
+    b.a22 += 0.000013;
+    BOOST_CHECK(!a.apprx_equal(b, 0.000011));
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_apprx_inequality", "matrix_apprx_inequality", "cudaMath");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(matrix_transpose)
 {
-  Matrix4f result = matrix.transpose();
-  Matrix4f correct_result = Matrix4f(0.9751700, 0.1976770, 0.0998334, 0, /**/
-                                     -0.218711, 0.930432, 0.294044, 0,/**/
-                                     -0.0347626, -0.3085770, 0.9505640, 0,/**/
-                                     10, 11, 12, 1);/**/
+  PERF_MON_START("matrix_transpose");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    Matrix4f result = matrix.transpose();
+    Matrix4f correct_result = Matrix4f(0.9751700, 0.1976770, 0.0998334, 0, /**/
+                                       -0.218711, 0.930432, 0.294044, 0,/**/
+                                       -0.0347626, -0.3085770, 0.9505640, 0,/**/
+                                       10, 11, 12, 1);/**/
 
-  BOOST_CHECK(result == correct_result);
+    BOOST_CHECK(result == correct_result);
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_transpose", "matrix_transpose", "cudaMath");
+  }
 }
 BOOST_AUTO_TEST_CASE(matrix_multiply)
 {
+  PERF_MON_START("matrix_multiply");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    Matrix4f result;
+    Matrix4f a = Matrix4f(1, 2, 3, 4, 4, 3, 2, 1, 2, 1, 3, 4, 2, 3, 1, 4);
+    Matrix4f b = Matrix4f(7, 4, 5, 6, 6, 5, 7, 4, 4, 6, 5, 7, 4, 5, 6, 7);
+    Matrix4f r = Matrix4f(47, 52, 58, 63, 58, 48, 57, 57, 48, 51, 56, 65, 52, 49, 60, 59);
 
-  Matrix4f result;
-  Matrix4f a = Matrix4f(1, 2, 3, 4, 4, 3, 2, 1, 2, 1, 3, 4, 2, 3, 1, 4);
-  Matrix4f b = Matrix4f(7, 4, 5, 6, 6, 5, 7, 4, 4, 6, 5, 7, 4, 5, 6, 7);
-  Matrix4f r = Matrix4f(47, 52, 58, 63, 58, 48, 57, 57, 48, 51, 56, 65, 52, 49, 60, 59);
+    result = a * b;
 
-  result = a * b;
-
-  BOOST_CHECK(result == r);
-
+    BOOST_CHECK(result == r);
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_multiply", "matrix_multiply", "cudaMath");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(matrix_inverse)
 {
-
-  Matrix4f inverse;
-  if(matrix.invertMatrix(inverse))
+  PERF_MON_START("matrix_inverse");
+  for(int i = 0; i < iterationCount; i++)
   {
-    Matrix4f result = matrix * inverse;
-    Matrix4f identity = Matrix4f::createIdentity();
+    Matrix4f inverse;
+    if(matrix.invertMatrix(inverse))
+    {
+      Matrix4f result = matrix * inverse;
+      Matrix4f identity = Matrix4f::createIdentity();
 
-    BOOST_CHECK(identity.apprx_equal(result, 0.00000011));
-  }else{
-    BOOST_CHECK(false && "Error in matrix inversion.");
+      BOOST_CHECK(identity.apprx_equal(result, 0.00000011));
+    }else{
+      BOOST_CHECK(false && "Error in matrix inversion.");
+    }
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_inverse", "matrix_inverse", "cudaMath");
   }
 }
 
@@ -113,45 +147,50 @@ BOOST_AUTO_TEST_CASE(matrix_inverse)
 
 BOOST_AUTO_TEST_CASE(matrix_rpy)
 {
-  gpu_voxels::Vector3f rot_a; // Input given in RPY
-  gpu_voxels::Vector3f rot_b; // Generated. Given in RPY
-  gpu_voxels::Vector3f rot_c; // Generated. Given in RPY
-
-  Matrix3f a; // holds rot_a in form of a matrix
-  Matrix3f b; // holds rot_b in form of a matrix
-  Matrix3f c; // holds rot_c in form of a matrix
-
-
-  boost::mt19937 rng;
-  boost::uniform_real<> plus_minus_two_pi(-2.0 * M_PI, 2.0 * M_PI);
-  boost::variate_generator< boost::mt19937, boost::uniform_real<> > gen(rng, plus_minus_two_pi);
-
-  // Calculate two RPY representations (rot_b, rot_c) from the matrix a, then convert them into matrices (b, c).
-  // Derive the rotation difference betwee a & b and a & c and see, if they are small enough (< 0.005 due to float rounding errors).
-  for(size_t n = 0; n < 1000; n++)
+  PERF_MON_START("matrix_rpy");
+  for(int i = 0; i < iterationCount; i++)
   {
-    rot_a = gpu_voxels::Vector3f(gen(), gen(), gen());
-    a = Matrix3f::createFromRPY(rot_a);
+    gpu_voxels::Vector3f rot_a; // Input given in RPY
+    gpu_voxels::Vector3f rot_b; // Generated. Given in RPY
+    gpu_voxels::Vector3f rot_c; // Generated. Given in RPY
 
-    rot_b = a.toRPY(0);
-    rot_c = a.toRPY(1);
+    Matrix3f a; // holds rot_a in form of a matrix
+    Matrix3f b; // holds rot_b in form of a matrix
+    Matrix3f c; // holds rot_c in form of a matrix
 
-    b = Matrix3f::createFromRPY(rot_b);
-    c = Matrix3f::createFromRPY(rot_c);
 
-    if(!(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
-    if(!(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
+    boost::mt19937 rng;
+    boost::uniform_real<> plus_minus_two_pi(-2.0 * M_PI, 2.0 * M_PI);
+    boost::variate_generator< boost::mt19937, boost::uniform_real<> > gen(rng, plus_minus_two_pi);
+
+    // Calculate two RPY representations (rot_b, rot_c) from the matrix a, then convert them into matrices (b, c).
+    // Derive the rotation difference betwee a & b and a & c and see, if they are small enough (< 0.005 due to float rounding errors).
+    for(size_t n = 0; n < 1000; n++)
     {
-       std::cout << "a = " << a << " b = " << b << " Diff = " << a.orientationMatrixDiff(b) << std::endl;
-    }
-    if(!(a.orientationMatrixDiff(c).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
-    {
-       std::cout << "a = " << a << " c = " << c << " Diff = " << a.orientationMatrixDiff(c) << std::endl;
-    }
+      rot_a = gpu_voxels::Vector3f(gen(), gen(), gen());
+      a = Matrix3f::createFromRPY(rot_a);
+
+      rot_b = a.toRPY(0);
+      rot_c = a.toRPY(1);
+
+      b = Matrix3f::createFromRPY(rot_b);
+      c = Matrix3f::createFromRPY(rot_c);
+
+      if(!(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
+        if(!(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
+        {
+          std::cout << "a = " << a << " b = " << b << " Diff = " << a.orientationMatrixDiff(b) << std::endl;
+        }
+      if(!(a.orientationMatrixDiff(c).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005)))
+      {
+        std::cout << "a = " << a << " c = " << c << " Diff = " << a.orientationMatrixDiff(c) << std::endl;
+      }
 
 
-    BOOST_CHECK_MESSAGE(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005), "Difference between input and first reconstructed RPY is zero.");
-    BOOST_CHECK_MESSAGE(a.orientationMatrixDiff(c).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005), "Difference between input and second reconstructed RPY is zero.");
+      BOOST_CHECK_MESSAGE(a.orientationMatrixDiff(b).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005), "Difference between input and first reconstructed RPY is zero.");
+      BOOST_CHECK_MESSAGE(a.orientationMatrixDiff(c).apprx_equal(gpu_voxels::Vector3f(0.0), 0.005), "Difference between input and second reconstructed RPY is zero.");
+    }
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_rpy", "matrix_rpy", "cudaMath");
   }
 }
 

@@ -7,7 +7,9 @@ ICMAKER_ADD_SOURCES(
   )
 
 ICMAKER_ADD_HEADERS(
+  ImportExport.h
   PerformanceMonitor.h
+  PerformanceMonitorMacros.h
   logging_performance_monitor.h
   )
 

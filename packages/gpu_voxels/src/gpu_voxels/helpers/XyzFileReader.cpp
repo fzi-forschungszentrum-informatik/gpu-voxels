@@ -21,6 +21,7 @@
  */
 //----------------------------------------------------------------------
 #include <gpu_voxels/helpers/XyzFileReader.h>
+#include <gpu_voxels/helpers/common_defines.h>
 
 namespace gpu_voxels {
 namespace file_handling {
@@ -53,7 +54,7 @@ bool XyzFileReader::readPointCloud(const std::string filename, std::vector<Vecto
   }
   LOGGING_DEBUG(
       Gpu_voxels_helpers,
-      "XYZ-FileReader: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f))/1024.0/1024.0 << " MB on CPU) from "<< filename.c_str() << "." << endl);
+      "XYZ-FileReader: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f)) * cBYTE2MBYTE << " MB on CPU) from "<< filename.c_str() << "." << endl);
   file.close();
   return true;
 }

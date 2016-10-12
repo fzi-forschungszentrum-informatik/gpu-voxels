@@ -89,7 +89,6 @@ __global__ void fill_vbo_without_precounting(ProbabilisticVoxel* voxelMap, Vecto
 
                   vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
                   // write the lower left front corner of the super voxel into the vbo as its translation
-                  // use the z as height so switch z and y
                   found = true;
                 }
               }
@@ -166,7 +165,6 @@ __global__ void fill_vbo_without_precounting(ProbabilisticVoxel* voxelMap, Vecto
 
                     vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
                     // write the lower left front corner of the super voxel into the vbo as its translation
-                    // use the z as height so switch z and y
                     found = true;
                   }
                   if (found)
@@ -175,23 +173,320 @@ __global__ void fill_vbo_without_precounting(ProbabilisticVoxel* voxelMap, Vecto
                   }
                 }
               }
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
-//              if ( && voxel->occupancy >= occupancy_threshold)
-//              {
-//                prefix = prefixes[voxel->voxeltype];
-//                index = atomicAdd(write_index + prefix, 1);
-//              }
-//              if (index != 0xffff && index < vbo_limits[prefix])
-//              {
-//                index = index + vbo_offsets[prefix];
-//
-//                vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
-//                // write the lower left front corner of the super voxel into the vbo as its translation
-//                // use the z as height so switch z and y
-//                found = true;
-//                break;
-//
-//              }
+/**
+
+TODO: what to change for distancemap?
+
+prefix is index into vbo_offsets and vbo_limits!
+write_index is global array containing first free vbo index of given type
+
+ * Search the voxel map for occupied voxels and write the position into the VBO.
+ * A voxel is occupied if its occupancy is greater than the occupancy_threshold.
+ * start_voxel and end_voxel define a cuboid in the voxel map, which will be traversed (the rest of the map will be ignored).
+ *
+ * @param voxelMap: the device pointer of the voxel map
+ * @param dim_voxel_map: the dimension of the voxel map
+ * @param start_voxel: the position of the first voxel of the voxel map
+ * @param end_voxel: the position of the last voxel of the voxel map
+ * @param occupancy_threshold: the minimum occupancy value.
+ * @param vbo: the device pointer of the VBO.
+ * @param vbo_offsets: the offsets of the imaginary VBO segments.
+ * @param vbo_limits: the maximum number of elements in the VBO segments.
+ * @param write_index: the atomic counters for each voxel type (should be initialized with 0).
+ * @param draw_voxel_type: if 0 the corresponding type at this index will not be drawn.
+ * @param prefixes: stores the index of the VBO segment for each voxel type.
+ */
+__global__ void fill_vbo_without_precounting(DistanceVoxel* voxelMap, Vector3ui dim_voxel_map,
+                                              Vector3ui dim_super_voxel, Vector3ui start_voxel,
+                                              Vector3ui end_voxel, visualizer_distance_drawmodes distance_drawmode, float4* vbo,
+                                              uint32_t* vbo_offsets, uint32_t* vbo_limits,
+                                              uint32_t* write_index, uint8_t* draw_voxel_type,
+                                              uint8_t* prefixes)
+{
+  // Grid-Stride Loops
+  for (uint32_t x = dim_super_voxel.x * (blockIdx.x * blockDim.x + threadIdx.x) + start_voxel.x;
+      x < dim_voxel_map.x && x < end_voxel.x; x += blockDim.x * gridDim.x * dim_super_voxel.x)
+  {
+    for (uint32_t y = dim_super_voxel.y * (blockIdx.y * blockDim.y + threadIdx.y) + start_voxel.y;
+        y < dim_voxel_map.y && y < end_voxel.y; y += blockDim.y * gridDim.y * dim_super_voxel.y)
+    {
+      for (uint32_t z = dim_super_voxel.z * (blockIdx.z * blockDim.z + threadIdx.z) + start_voxel.z;
+          z < dim_voxel_map.z && z < end_voxel.z; z += blockDim.z * gridDim.z * dim_super_voxel.z)
+      {
+        bool found = false;
+
+        //TODO: only look at the center voxel (or average the 8 center voxels) for supervoxels?
+
+        // check if one of the voxel of the super voxel is occupied
+        // these 3 loop are were slow for big super voxel sizes
+        for (uint32_t i = x; i < dim_super_voxel.x + x && i < dim_voxel_map.x && !found; i++)
+        {
+          for (uint32_t j = y; j < dim_super_voxel.y + y && j < dim_voxel_map.y && !found; j++)
+          {
+            for (uint32_t k = z; k < dim_super_voxel.z + z && k < dim_voxel_map.z && !found; k++)
+            {
+              const uint32_t UNINITIALIZED = 0xffffffff;
+              uint32_t index = UNINITIALIZED;
+              uint8_t prefix;
+
+              DistanceVoxel voxel = voxelMap[k * dim_voxel_map.x * dim_voxel_map.y
+                  + j * dim_voxel_map.x + i];
+              int32_t squared_distance = voxel.squaredObstacleDistance(Vector3i(i, j, k));
+              if (squared_distance < 0) squared_distance = 0;
+              float distance = sqrtf((float)squared_distance);
+
+              //VBO speichert nur offset und cube size, also intensität hier nur relevant für ">0?"
+
+              //always draw recognized obstacles, regardless of distance_drawmode
+              //mark obstacles as COLLISION(1)
+              if (distance <= 0)
+              {
+                uint8_t type = 1;
+
+                if (draw_voxel_type[type])
+                {
+                  prefix = prefixes[type];
+                  index = atomicAdd(write_index + prefix, 1);
+                  found = true;
+
+                  if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                  {
+                    index = index + vbo_offsets[prefix];
+
+                    vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                    // write the lower left front corner of the super voxel into the vbo as its translation
+                    // use the z as height so switch z and y
+                  }
+                }
+              }
+
+              if (distance_drawmode == DISTANCE_DRAW_PBA_INTERMEDIATE)
+              {
+                //mark voxels populated by PBA as SWEPT_VOLUME (10)
+                // TODO: remove after PBA debugging? needed because PBA will fill in distance exclusively in phase 3
+                if ((voxel.getObstacle().x != PBA_UNINITIALISED_COORD) || (voxel.getObstacle().y != PBA_UNINITIALISED_COORD) || (voxel.getObstacle().z != PBA_UNINITIALISED_COORD))
+                {
+                  uint8_t type = 10;
+
+                  if (draw_voxel_type[type])
+                  {
+                    prefix = prefixes[type];
+                    index = atomicAdd(write_index + prefix, 1);
+                    found = true;
+
+                    if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                    {
+                      index = index + vbo_offsets[prefix];
+
+                      vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                      // write the lower left front corner of the super voxel into the vbo as its translation
+                      // use the z as height so switch z and y
+                    }
+                  }
+                }
+
+                //mark obstacles processed by PBA as SWEPT_VOLUME (11)
+                // TODO: remove after PBA debugging? needed because PBA will fill in distance exclusively in phase 3
+                if ((voxel.getObstacle().x == i) && (voxel.getObstacle().y == j) && (voxel.getObstacle().z == k))
+                {
+                  uint8_t type = 11;
+
+                  if (draw_voxel_type[type])
+                  {
+                    prefix = prefixes[type];
+                    index = atomicAdd(write_index + prefix, 1);
+                    found = true;
+
+                    if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                    {
+                      index = index + vbo_offsets[prefix];
+
+                      vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                      // write the lower left front corner of the super voxel into the vbo as its translation
+                      // use the z as height so switch z and y
+                    }
+                  }
+                }
+
+
+                //mark obstacles processed by PBA as SWEPT_VOLUME (12)
+                if ((voxel.getObstacle().x != PBA_UNINITIALISED_COORD) && (voxel.getObstacle().y != PBA_UNINITIALISED_COORD) && (voxel.getObstacle().z != PBA_UNINITIALISED_COORD))
+                {
+                  uint8_t type = 12;
+
+                  if (draw_voxel_type[type])
+                  {
+                    prefix = prefixes[type];
+                    index = atomicAdd(write_index + prefix, 1);
+                    found = true;
+
+                    if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                    {
+                      index = index + vbo_offsets[prefix];
+
+                      vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                      // write the lower left front corner of the super voxel into the vbo as its translation
+                      // use the z as height so switch z and y
+                    }
+                  }
+                }
+
+
+                //mark obstacles processed by PBA as SWEPT_VOLUME (12)
+                if ((voxel.getObstacle().x != PBA_UNINITIALISED_COORD) && (voxel.getObstacle().y != PBA_UNINITIALISED_COORD) && (voxel.getObstacle().z != PBA_UNINITIALISED_COORD))
+                {
+                  if (distance <= 5)
+                  {
+                    uint8_t type = 13;
+
+                    if (draw_voxel_type[type])
+                    {
+                      prefix = prefixes[type];
+                      index = atomicAdd(write_index + prefix, 1);
+                      found = true;
+
+                      if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                      {
+                        index = index + vbo_offsets[prefix];
+
+                        vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                        // write the lower left front corner of the super voxel into the vbo as its translation
+                        // use the z as height so switch z and y
+                      }
+                    }
+                  }
+                }
+
+                if (true) {
+                  uint8_t type = 14;
+
+                  if (draw_voxel_type[type])
+                  {
+                    prefix = prefixes[type];
+                    index = atomicAdd(write_index + prefix, 1);
+                    found = true;
+
+                    if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                    {
+                      index = index + vbo_offsets[prefix];
+
+                      vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                      // write the lower left front corner of the super voxel into the vbo as its translation
+                    }
+                  }
+                }
+              } //DRAW_PBA_INTERMEDIATE
+
+
+              if (distance_drawmode == DISTANCE_DRAW_MULTICOLOR_GRADIENT)
+              {
+                //mark distance <= threshold as Swept Volume (10-20)
+                if (distance >= 1 && distance < 11) {
+                  uint8_t type = 10 + (int)distance; //use swept volume types 11-20
+
+                  if (draw_voxel_type[type])
+                  {
+                    prefix = prefixes[type];
+                    index = atomicAdd(write_index + prefix, 1);
+                    found = true;
+                    if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                    {
+                      index = index + vbo_offsets[prefix];
+                      vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                    }
+                  }
+                }
+              }
+
+
+              if (distance_drawmode == DISTANCE_DRAW_TWOCOLOR_GRADIENT)
+              {
+                if (distance < 50)
+                {
+                  uint8_t type = 21 + distance;
+
+                  if (draw_voxel_type[type])
+                  {
+                    prefix = prefixes[type];
+                    index = atomicAdd(write_index + prefix, 1);
+                    found = true;
+                    if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                    {
+                      index = index + vbo_offsets[prefix];
+                      vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                    }
+                  }
+                }
+
+                if (distance >= 50)
+                {
+                  uint8_t type = 250;
+
+                  if (draw_voxel_type[type])
+                  {
+                    prefix = prefixes[type];
+                    index = atomicAdd(write_index + prefix, 1);
+                    found = true;
+                    if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                    {
+                      index = index + vbo_offsets[prefix];
+                      vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                    }
+                  }
+                }
+              } //DRAW_TWOCOLOR_GRADIENT
+
+
+              if (distance_drawmode == DISTANCE_DRAW_VORONOI_LINEAR)
+              {
+                const Vector3ui obstacle = voxel.getObstacle();
+                uint linear_id = obstacle.x + dim_voxel_map.x*(obstacle.y + dim_voxel_map.y * (obstacle.z));
+
+                uint8_t type = 21 + (linear_id % 50); //use swept ids 20-219
+
+                if (draw_voxel_type[type])
+                {
+                  prefix = prefixes[type];
+                  index = atomicAdd(write_index + prefix, 1);
+                  found = true;
+                  if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                  {
+                    index = index + vbo_offsets[prefix];
+                    vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                  }
+                }
+              }
+
+              if (distance_drawmode == DISTANCE_DRAW_VORONOI_SCRAMBLE)
+              {
+                const Vector3ui obstacle = voxel.getObstacle();
+                uint linear_id = obstacle.x + dim_voxel_map.x*(obstacle.y + dim_voxel_map.y * (obstacle.z));
+                uint scrambled_id = linear_id * 137 + 241; //use swept ids 20-219
+
+  //              uint8_t type = 20 + (scrambled_id % 200); //use swept ids 20-219
+                uint8_t type = 20 + (scrambled_id % 196); //use swept ids 20-215
+
+                if (draw_voxel_type[type])
+                {
+                  prefix = prefixes[type];
+                  index = atomicAdd(write_index + prefix, 1);
+                  found = true;
+                  if (index != UNINITIALIZED && index < vbo_limits[prefix])
+                  {
+                    index = index + vbo_offsets[prefix];
+                    vbo[index] = make_float4(x, y, z, dim_super_voxel.x);
+                  }
+                }
+              }
+
             }
           }
         }

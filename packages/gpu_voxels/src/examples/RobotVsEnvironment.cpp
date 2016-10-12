@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
    */
   gvl->addMap(MT_BITVECTOR_OCTREE, "myEnvironmentMap");
 
-  if (!gvl->insertPointcloudFromFile("myEnvironmentMap", "pointcloud_0002.pcd", true,
+  if (!gvl->insertPointCloudFromFile("myEnvironmentMap", "pointcloud_0002.pcd", true,
                                      eBVM_OCCUPIED, true, Vector3f(-6, -7.3, 0)))
   {
     LOGGING_WARNING(Gpu_voxels, "Could not insert the PCD file..." << endl);

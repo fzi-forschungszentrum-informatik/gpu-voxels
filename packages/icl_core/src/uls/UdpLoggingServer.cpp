@@ -21,10 +21,10 @@
  *
  */
 //----------------------------------------------------------------------
-#include <QtCore/QByteArray>
-#include <QtCore/QStringList>
-#include <QtSql/QSqlError>
-#include <QtSql/QSqlQuery>
+#include <QByteArray>
+#include <QStringList>
+#include <QSqlError>
+#include <QSqlQuery>
 
 #include <iostream>
 

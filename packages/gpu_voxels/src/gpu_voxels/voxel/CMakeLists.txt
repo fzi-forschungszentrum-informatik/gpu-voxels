@@ -19,6 +19,7 @@ ICMAKER_ADD_HEADERS(
   DefaultCollider.h
   SVCollider.h
   ProbabilisticVoxel.h
+  DistanceVoxel.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -37,11 +38,13 @@ ICMAKER_ADD_CUDA_FILES(
   SVCollider.cu
   ProbabilisticVoxel.h
   ProbabilisticVoxel.hpp
+  DistanceVoxel.h
+  DistanceVoxel.hpp
   )
 
 # removing unknown pragma warnings due to OpenNI spam
 ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
-ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_VOXEL_)
 ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
 
 ICMAKER_INTERNAL_DEPENDENCIES(
@@ -59,7 +62,4 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_LIBRARY()
 ICMAKER_INSTALL_HEADERS(gpu_voxels/voxel)
-## Include files here that are needed when the package is installed.
-#ICMAKER_INSTALL_HEADER_EXTRAS(gpu_voxels/voxelmap/kernels
-#  kernels/VoxelMapOperations.h
-#)
+

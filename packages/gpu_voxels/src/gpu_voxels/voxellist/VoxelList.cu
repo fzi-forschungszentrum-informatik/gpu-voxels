@@ -29,12 +29,17 @@ namespace voxellist {
 // Explicit instantiation of template class to link against from other files where this template is used
 template class BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>;
 template class BitVoxelList<BIT_VECTOR_LENGTH, OctreeVoxelID>;
+
+//template size_t BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>::collideWithTypeMask(const BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>*,
+//                                                                                 const BitVoxel<BIT_VECTOR_LENGTH>&, float, const Vector3i&);
+
 // ##################################################################################
 
 // ############################### TemplateVoxelList ######################################
 // Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects
 template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::equals(const TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>&) const;
 template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::subtract(const TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>*, const Vector3f&);
+template void TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::screendump(bool) const;
 //template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::subtract(const TemplateVoxelList<ProbabilisticVoxel, MapVoxelID>*, const Vector3f&);
 
 //template size_t TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::collideCountingPerMeaning(const GpuVoxelsMapSharedPtr, std::vector<size_t>&, const Vector3i&);

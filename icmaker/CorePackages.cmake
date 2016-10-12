@@ -1,3 +1,6 @@
+# -- BEGIN LICENSE BLOCK ----------------------------------------------
+# -- END LICENSE BLOCK ------------------------------------------------
+
 # This file is included from CMakeLists.txt and contains packages used during built
 # CorePackages.cmake is provided by icmaker
 #
@@ -43,7 +46,8 @@ IF (NOT ICMAKER_USE_QT3)
   FIND_PACKAGE(Qt4 4.4.0 COMPONENTS QtSvg)
   FIND_PACKAGE(Qt4 4.4.0 COMPONENTS QtOpenGL)
   FIND_PACKAGE(Qt4 4.4.0 COMPONENTS Qt3Support)
-  FIND_PACKAGE(Qt4 4.4.0 COMPONENTS QtCore QtGui QtDeclarative QtXml QtNetwork)
+  FIND_PACKAGE(Qt4 4.4.0 COMPONENTS QtDeclarative)
+  FIND_PACKAGE(Qt4 4.4.0 COMPONENTS QtCore QtGui QtXml QtNetwork)
 ENDIF()
 FIND_PACKAGE(SCIP)
 FIND_PACKAGE(Speechd)
@@ -51,10 +55,12 @@ FIND_PACKAGE(SQLite3)
 FIND_PACKAGE(SSL)
 FIND_PACKAGE(Tcmalloc)
 FIND_PACKAGE(Threads)
+FIND_PACKAGE(TinyXML)
 FIND_PACKAGE(Xsd)
 FIND_PACKAGE(Zlib)
 FIND_PACKAGE(Inventor)
 FIND_PACKAGE(Spacenav)
+FIND_PACKAGE(X11)
 
 IF (ICMAKER_USE_PERCEPTION_PACKAGES)
   # perception:
@@ -136,9 +142,15 @@ IF(ICMAKER_USE_OTHER_PACKAGES)
   FIND_PACKAGE(LibDAI)
   FIND_PACKAGE(NetSNMP) # iboss
   FIND_PACKAGE(PythonLibs)
+  FIND_PACKAGE(PythonInterp)
   FIND_PACKAGE(SVM)
   FIND_PACKAGE(Xdo)
   FIND_PACKAGE(DXFLib)
+  FIND_PACKAGE(JNI)
+  FIND_PACKAGE(PerlLibs)
+  FIND_PACKAGE(SWIG)
+  FIND_PACKAGE(ROS)
+  FIND_PACKAGE(GTSAM)
 ENDIF()
 
 IF(ICMAKER_USE_DEPRECATED_PACKAGES)

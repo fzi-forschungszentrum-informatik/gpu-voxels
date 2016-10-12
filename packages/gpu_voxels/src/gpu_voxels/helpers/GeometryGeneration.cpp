@@ -57,7 +57,7 @@ void createOrientedBoxEdges(const OrientedBoxParams& params, float spacing, Poin
 
     ret.update(cloud);
 
-    Matrix4f transformation = Matrix4f::createFromRotationAndTranslation(Matrix3f::createFromYPR(params.rot), params.center);
+    Matrix4f transformation = Matrix4f::createFromRotationAndTranslation(Matrix3f::createFromRPY(params.rot), params.center);
     ret.transformSelf(&transformation);
 
     return;
@@ -80,7 +80,7 @@ void createOrientedBox(const OrientedBoxParams& params, float spacing, PointClou
   }
 
   ret.update(cloud);
-  Matrix4f transformation = Matrix4f::createFromRotationAndTranslation(Matrix3f::createFromYPR(params.rot), params.center);
+  Matrix4f transformation = Matrix4f::createFromRotationAndTranslation(Matrix3f::createFromRPY(params.rot), params.center);
   ret.transformSelf(&transformation);
 
   return;

@@ -35,7 +35,7 @@ find_path(ROS_INCLUDE_DIR
   PATHS ${ROS_PKGCONF_INCLUDE_DIRS} "${ROS_ROOT}/include"
 )
 
-SET (ros_libraries rostime roslib roscpp roscpp_serialization rosconsole tf)
+SET (ros_libraries rostime roslib roscpp roscpp_serialization rosconsole tf actionlib)
 FOREACH (ros_library ${ros_libraries})
   find_library(ROS_${ros_library}_LIBRARY
     NAMES ${ros_library}

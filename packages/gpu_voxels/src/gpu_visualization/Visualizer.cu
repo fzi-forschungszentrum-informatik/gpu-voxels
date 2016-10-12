@@ -22,7 +22,7 @@
 #include <gpu_visualization/shaders/LightingVertexShader.h>
 #include <gpu_visualization/shaders/SimpleFragmentShader.h>
 #include <gpu_visualization/shaders/SimpleVertexShader.h>
-
+#include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 
 namespace gpu_voxels {
 namespace visualization {
@@ -317,7 +317,7 @@ bool Visualizer::resizeGLBufferForCubelist(CubelistContext* con)
     }
     ////////////////////////////////////
     resizeGLBuffer(con, new_size_byte);
-    //  cuPrintDeviceMemoryInfo();
+    //  std::cout << getDeviceMemoryInfo();
     return true;
   }
   return true;
@@ -345,7 +345,7 @@ void Visualizer::resizeGLBuffer(DataContext* con, size_t new_size_byte)
 
   m_cur_mem -= con->m_cur_vbo_size;
   GLuint vbo = con->m_vbo;
-  //  cuPrintDeviceMemoryInfo();
+  //  std::cout << getDeviceMemoryInfo();
   LOGGING_DEBUG_C(Visualization, Visualizer,
                   "New buffer size: " << new_size_byte / 1e+006 << " MByte" << endl);
   assert(new_size_byte > 0);
@@ -612,6 +612,23 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
         m_cur_context->m_view_end_voxel_pos,/**/
         context->m_occupancy_threshold,/**/
         vbo_ptr,/**/
+        thrust::raw_pointer_cast(context->m_d_vbo_offsets.data()),/**/
+        thrust::raw_pointer_cast(context->m_d_vbo_segment_voxel_capacities.data()),/**/
+        thrust::raw_pointer_cast(indices.data()),/**/
+        thrust::raw_pointer_cast(m_cur_context->m_d_draw_types.data()),/**/
+        thrust::raw_pointer_cast(m_cur_context->m_d_prefixes.data()));/**/
+  }
+  else if(context->m_voxelMap->getMapType() == MT_DISTANCE_VOXELMAP)
+  {
+    fill_vbo_without_precounting<<<context->m_num_blocks, context->m_threads_per_block>>>(
+        /**/
+        (DistanceVoxel*) context->m_voxelMap->getVoidDeviceDataPtr(),/**/
+        context->m_voxelMap->getDimensions(),/**/
+        m_cur_context->m_dim_svoxel,/**/
+        m_cur_context->m_view_start_voxel_pos,/**/
+        m_cur_context->m_view_end_voxel_pos,/**/
+        static_cast<visualizer_distance_drawmodes>(m_cur_context->m_distance_drawmode),/**/
+        vbo_ptr,/*TODO: if there is a way to pass GL_RGBA color info to OpenGL, generate those colors here too? would need to register and map additional cuda resource*/
         thrust::raw_pointer_cast(context->m_d_vbo_offsets.data()),/**/
         thrust::raw_pointer_cast(context->m_d_vbo_segment_voxel_capacities.data()),/**/
         thrust::raw_pointer_cast(indices.data()),/**/
@@ -1654,20 +1671,39 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
   {
     case 't':
     {
-      rotate_slice_axis();
+      if (alt_pressed) {
+        //change distance drawmode
+        m_cur_context->m_distance_drawmode = (m_cur_context->m_distance_drawmode + 1) % DISTANCE_DRAW_MODE_COUNT;
 
-      const char* axis_name = "";
-      switch (m_cur_context->m_slice_axis) {
-        case 0: axis_name = "none"; break;
-        case 1: axis_name = "x"; break;
-        case 2: axis_name = "y"; break;
-        case 3: axis_name = "z"; break;
-        default: axis_name = "invalid value"; break;
+        const char* mode_name = "";
+        switch (m_cur_context->m_distance_drawmode) {
+          case DISTANCE_DRAW_DEFAULT:             mode_name = "default drawing type 1 only"; break;
+          case DISTANCE_DRAW_PBA_INTERMEDIATE:    mode_name = "pba intermediate using swept types 10-13"; break; // This is disabled. See common_defines.h
+          case DISTANCE_DRAW_TWOCOLOR_GRADIENT:   mode_name = "two-color distance gradient using swept types 21-70"; break;
+          case DISTANCE_DRAW_MULTICOLOR_GRADIENT: mode_name = "multi-color distance colors using swept types 11-20"; break;
+          case DISTANCE_DRAW_VORONOI_LINEAR:      mode_name = "voronoi linear colors using swept types 21-70"; break;
+          case DISTANCE_DRAW_VORONOI_SCRAMBLE:    mode_name = "voronoi scrambled colors using swept types 20-215"; break;
+          default: mode_name = "invalid value"; break;
+        }       
+        std::cout << "distance_drawmode: " << mode_name << ". press 's' twice to update view." << std::endl;
+
+      } else {
+        //rotate slice axis
+        rotate_slice_axis();
+
+        const char* axis_name = "";
+        switch (m_cur_context->m_slice_axis) {
+          case 0: axis_name = "none"; break;
+          case 1: axis_name = "x"; break;
+          case 2: axis_name = "y"; break;
+          case 3: axis_name = "z"; break;
+          default: axis_name = "invalid value"; break;
+        }
+        std::cout << "slice_axis: " << axis_name  << std::endl;
+
+        std::cout << "m_view_start_voxel_pos: " << (m_cur_context->m_view_start_voxel_pos.x) << " / " << (m_cur_context->m_view_start_voxel_pos.y) << " / " << (m_cur_context->m_view_start_voxel_pos.z);
+        std::cout << ", m_view_end_voxel_pos: " << (m_cur_context->m_view_end_voxel_pos.x) << " / " << (m_cur_context->m_view_end_voxel_pos.y) << " / " << (m_cur_context->m_view_end_voxel_pos.z) << std::endl;
       }
-      std::cout << "slice_axis: " << axis_name  << std::endl;
-
-      std::cout << "m_view_start_voxel_pos: " << (m_cur_context->m_view_start_voxel_pos.x) << " / " << (m_cur_context->m_view_start_voxel_pos.y) << " / " << (m_cur_context->m_view_start_voxel_pos.z);
-      std::cout << ", m_view_end_voxel_pos: " << (m_cur_context->m_view_end_voxel_pos.x) << " / " << (m_cur_context->m_view_end_voxel_pos.y) << " / " << (m_cur_context->m_view_end_voxel_pos.z) << std::endl;
       break;
     }
     case 'q':
@@ -1730,7 +1766,7 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
       printTotalVBOsizes();
       break;
     case 'n':
-      cuPrintDeviceMemoryInfo();
+      std::cout << getDeviceMemoryInfo();
       break;
     case 'o':
       flipExternalVisibilityTrigger();
@@ -2338,6 +2374,7 @@ void Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos
     else
     {
       std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
+
       std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
           << " z: " << n_pos.z * scale << unit << std::endl;
     }
@@ -2349,14 +2386,21 @@ void Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos
       gpu_voxels::voxelmap::BitVectorVoxelMap::Voxel voxel;
       cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(vm->getDeviceDataPtr(), vm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::BitVectorVoxelMap::Voxel), cudaMemcpyDeviceToHost);
       std::cout << "Voxel info: " << voxel << std::endl;
+
     } else if (vm_context->m_voxelMap->getMapType() == MT_PROBAB_VOXELMAP) {
       gpu_voxels::voxelmap::ProbVoxelMap* vm = static_cast<gpu_voxels::voxelmap::ProbVoxelMap *>(vm_context->m_voxelMap);
 
       gpu_voxels::voxelmap::ProbVoxelMap::Voxel voxel;
       cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(vm->getDeviceDataPtr(), vm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::ProbVoxelMap::Voxel), cudaMemcpyDeviceToHost);
       std::cout << "Voxel info: " << voxel << std::endl;
-    }
 
+    } else if (vm_context->m_voxelMap->getMapType() == MT_DISTANCE_VOXELMAP) {
+      gpu_voxels::voxelmap::DistanceVoxelMap* dvm = static_cast<gpu_voxels::voxelmap::DistanceVoxelMap *>(vm_context->m_voxelMap);
+
+      gpu_voxels::voxelmap::DistanceVoxelMap::Voxel voxel;
+      cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(dvm->getDeviceDataPtr(), dvm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::DistanceVoxelMap::Voxel), cudaMemcpyDeviceToHost);
+      std::cout << "Voxel info: " << voxel << std::endl;
+    }
   }
   if (found_in_octree)
   {
@@ -2516,6 +2560,7 @@ void Visualizer::printHelp()
   std::cout << "g: toggle draw whole map." << std::endl;
   std::cout << "t: change slice axis (none/x/y/z). requires 'draw whole map mode' to show slices." << std::endl;
   std::cout << "q|a: increment/decrement slice axis position (see 't'')" << std::endl;
+  std::cout << "ALT + t: change distance draw mode (default / color gradient / voronoi)." << std::endl;
   std::cout << "d: toggle draw grid." << std::endl;
   std::cout << "e: e: Toggle through drawing modes for triangles." << std::endl;
   std::cout << "l: toggle lighting on/off." << std::endl;
@@ -2528,9 +2573,10 @@ void Visualizer::printHelp()
   std::cout << "r: reset camera to default position." << std::endl;
   std::cout << "CRTL: high movement speed." << std::endl;
   std::cout << "SHIFT: medium movement speed." << std::endl;
-  std::cout << "0-9: toggle the drawing of the some types." << std::endl;
+  std::cout << "0-9: toggle the drawing of the type with the value of this digit" << std::endl;
+  std::cout << "ALT + 0-9: toggle the drawing of the type with 10*x + previous non-ALT-digit." << std::endl;
   std::cout << ",/.: previous/next keyboard mode: Voxelmap > Voxellist > Octree > Primitivearrays >" << std::endl;
-  std::cout << "F1-F11 Toggle drawing according to the keyboard mode." << std::endl;
+  std::cout << "F1-F12 Toggle drawing according to the keyboard mode." << std::endl;
   std::cout << "" << std::endl;
   std::cout << "---->Mouse" << std::endl;
   std::cout << "RIGHT_BUTTON: print x,y,z coordinates of the clicked voxel." << std::endl;

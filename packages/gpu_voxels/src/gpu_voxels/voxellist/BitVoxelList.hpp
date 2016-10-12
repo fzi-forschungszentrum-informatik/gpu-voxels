@@ -34,6 +34,9 @@ BitVoxelList<length, VoxelIDType>::BitVoxelList(const Vector3ui ref_map_dim, con
   // We already resize the result vector for Bitvector Checks
   m_dev_colliding_bits_result_list.resize(cMAX_NR_OF_BLOCKS);
   m_colliding_bits_result_list.resize(cMAX_NR_OF_BLOCKS);
+
+  // Allocate a BitVectorVoxel on the device to it use as bitmask for later coll-checks.
+  cudaMalloc(&m_dev_bitmask, sizeof(BitVectorVoxel));
 }
 
 
@@ -78,7 +81,7 @@ size_t BitVoxelList<length, VoxelIDType>::collideWith(const BitVectorVoxelList *
   size_t collisions = SSIZE_MAX;
   this->lockBoth(this, (TemplateVoxelMap<BitVectorVoxel>*)map, "BitVoxelList::collideWith");
   thrust::device_vector<bool> collision_stencil(this->m_dev_id_list.size()); // Temporary data structure
-  collisions = this->collideVoxellists((TemplateVoxelList<BitVectorVoxel, VoxelIDType>*)map, offset, collision_stencil, false); // suppress locking
+  collisions = this->collideVoxellists((TemplateVoxelList<BitVectorVoxel, VoxelIDType>*)map, offset, collision_stencil);
 
   this->unlockBoth(this, (TemplateVoxelMap<BitVectorVoxel>*)map, "BitVoxelList::collideWith");
   return collisions;
@@ -107,6 +110,59 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const BitVectorVoxelL
   this->unlockBoth(this, other, "BitVoxelList::collideWithTypes");
   return matching_voxels_list1.m_dev_id_list.size();
 }
+
+
+
+
+
+template<std::size_t length, class VoxelIDType>
+size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const BitVectorVoxelMap *other, BitVectorVoxel &types_in_collision, float coll_threshold, const Vector3i &offset)
+{
+  // Map Dims have to be equal to be able to compare pointer adresses!
+  if(other->getDimensions() != this->m_ref_map_dim)
+  {
+    LOGGING_ERROR_C(VoxellistLog, BitVoxelList,
+                    "The dimensions of the Voxellist reference map do not match the colliding voxel map dimensions. Not checking collisions!" << endl);
+    return SSIZE_MAX;
+  }
+
+  this->lockBoth(this, other, "BitVoxelList::collideWithTypes");
+  // get raw pointers to the thrust vectors data:
+  BitVectorVoxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(this->m_dev_list.data());
+  VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(this->m_dev_id_list.data());
+  BitVectorVoxel* m_dev_colliding_bits_result_list_ptr = thrust::raw_pointer_cast(m_dev_colliding_bits_result_list.data());
+
+  uint32_t num_blocks, threads_per_block;
+  computeLinearLoad(this->m_dev_list.size(), &num_blocks, &threads_per_block);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  size_t dynamic_shared_mem_size = sizeof(BitVectorVoxel) * cMAX_THREADS_PER_BLOCK;
+  kernelCollideWithVoxelMap<<<num_blocks, threads_per_block, dynamic_shared_mem_size>>>(dev_id_list_ptr, dev_voxel_list_ptr, (uint32_t)this->m_dev_list.size(),
+                                                                  other->getConstDeviceDataPtr(), this->m_ref_map_dim,
+                                                                  offset, this->m_dev_collision_check_results_counter, m_dev_colliding_bits_result_list_ptr);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+  // Copy back the results and reduce the block results:
+  this->m_colliding_bits_result_list = this->m_dev_colliding_bits_result_list;
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(this->m_collision_check_results_counter, this->m_dev_collision_check_results_counter,
+                 num_blocks * sizeof(uint16_t), cudaMemcpyDeviceToHost));
+
+  size_t number_of_collisions = 0;
+  types_in_collision.bitVector().clear();
+  for (uint32_t i = 0; i < num_blocks; i++)
+  {
+    number_of_collisions += this->m_collision_check_results_counter[i];
+    types_in_collision.bitVector() |= this->m_colliding_bits_result_list[i].bitVector();
+  }
+
+  this->unlockBoth(this, other, "BitVoxelList::collideWithTypes");
+  return number_of_collisions;
+}
+
+
+
+
+
 
 template<std::size_t length, class VoxelIDType>
 size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const ProbVoxelMap *map, BitVectorVoxel &types_in_collision, float coll_threshold, const Vector3i &offset)
@@ -154,6 +210,96 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const ProbVoxelMap *m
   return number_of_collisions;
 }
 
+
+template<std::size_t length, class VoxelIDType>
+size_t BitVoxelList<length, VoxelIDType>::collideWithTypeMask(const voxelmap::ProbVoxelMap *map,
+                                                              const BitVectorVoxel& types_to_check, float coll_threshold, const Vector3i &offset)
+{
+  // Map Dims have to be equal to be able to compare pointer adresses!
+  if(map->getDimensions() != this->m_ref_map_dim)
+  {
+    LOGGING_ERROR_C(VoxellistLog, BitVoxelList,
+                    "The dimensions of the Voxellist reference map do not match the colliding voxel map dimensions. Not checking collisions!" << endl);
+    return SSIZE_MAX;
+  }
+
+  this->lockBoth(this, map, "BitVoxelList::collideWithTypeMask");
+  // get raw pointers to the thrust vectors data:
+  BitVectorVoxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(this->m_dev_list.data());
+  VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(this->m_dev_id_list.data());
+
+  cudaMemcpy(m_dev_bitmask, &types_to_check, sizeof(BitVectorVoxel), cudaMemcpyHostToDevice);
+
+  uint32_t num_blocks, threads_per_block;
+  computeLinearLoad(this->m_dev_list.size(), &num_blocks, &threads_per_block);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  size_t dynamic_shared_mem_size = sizeof(uint16_t) * cMAX_THREADS_PER_BLOCK;
+  kernelCollideWithVoxelMapBitMask<<<num_blocks, threads_per_block, dynamic_shared_mem_size>>>(dev_id_list_ptr, dev_voxel_list_ptr, (uint32_t)this->m_dev_list.size(),
+                                                                  map->getConstDeviceDataPtr(), this->m_ref_map_dim, coll_threshold,
+                                                                  offset, m_dev_bitmask, this->m_dev_collision_check_results_counter);
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+  // Copy back the results and reduce the block results:
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(this->m_collision_check_results_counter, this->m_dev_collision_check_results_counter,
+                 num_blocks * sizeof(uint16_t), cudaMemcpyDeviceToHost));
+
+  size_t number_of_collisions = 0;
+  for (uint32_t i = 0; i < num_blocks; i++)
+  {
+    number_of_collisions += this->m_collision_check_results_counter[i];
+  }
+
+  this->unlockBoth(this, map, "BitVoxelList::collideWithTypeMask");
+  return number_of_collisions;
+}
+
+template<std::size_t length, class VoxelIDType>
+size_t BitVoxelList<length, VoxelIDType>::collideWithTypeMask(const voxelmap::BitVectorVoxelMap *map,
+                                                              const BitVectorVoxel& types_to_check, float coll_threshold, const Vector3i &offset)
+{
+  //TODO: Fuse this with kernel above!
+  // Map Dims have to be equal to be able to compare pointer adresses!
+  if(map->getDimensions() != this->m_ref_map_dim)
+  {
+    LOGGING_ERROR_C(VoxellistLog, BitVoxelList,
+                    "The dimensions of the Voxellist reference map do not match the colliding voxel map dimensions. Not checking collisions!" << endl);
+    return SSIZE_MAX;
+  }
+
+  this->lockBoth(this, map, "BitVoxelList::collideWithTypeMask");
+  // get raw pointers to the thrust vectors data:
+  BitVectorVoxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(this->m_dev_list.data());
+  VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(this->m_dev_id_list.data());
+
+  cudaMemcpy(m_dev_bitmask, &types_to_check, sizeof(BitVectorVoxel), cudaMemcpyHostToDevice);
+
+  uint32_t num_blocks, threads_per_block;
+  computeLinearLoad(this->m_dev_list.size(), &num_blocks, &threads_per_block);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  size_t dynamic_shared_mem_size = sizeof(uint16_t) * cMAX_THREADS_PER_BLOCK;
+  kernelCollideWithVoxelMapBitMask<<<num_blocks, threads_per_block, dynamic_shared_mem_size>>>(dev_id_list_ptr, dev_voxel_list_ptr, (uint32_t)this->m_dev_list.size(),
+                                                                  map->getConstDeviceDataPtr(), this->m_ref_map_dim,
+                                                                  offset, m_dev_bitmask, this->m_dev_collision_check_results_counter);
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+  // Copy back the results and reduce the block results:
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(this->m_collision_check_results_counter, this->m_dev_collision_check_results_counter,
+                 num_blocks * sizeof(uint16_t), cudaMemcpyDeviceToHost));
+
+  size_t number_of_collisions = 0;
+  for (uint32_t i = 0; i < num_blocks; i++)
+  {
+    number_of_collisions += this->m_collision_check_results_counter[i];
+  }
+
+  this->unlockBoth(this, map, "BitVoxelList::collideWithTypeMask");
+  return number_of_collisions;
+}
+
 template<std::size_t length, class VoxelIDType>
 size_t BitVoxelList<length, VoxelIDType>::collideWithBitcheck(const BitVectorVoxelList *map, const u_int8_t margin, const Vector3i &offset)
 {
@@ -191,7 +337,6 @@ size_t BitVoxelList<length, VoxelIDType>::collideCountingPerMeaning(const GpuVox
                                                            std::vector<size_t>&  collisions_per_meaning,
                                                            const Vector3i &offset_)
 {
-  // TODO: Implement locking for the maps seperately!
   try
   {
     switch (other_->getMapType())
@@ -250,40 +395,43 @@ void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(const TemplatedBitVec
                                               const u_int8_t margin, const Vector3i &offset,
                                               TemplatedBitVectorVoxelList* matching_voxels_list1, TemplatedBitVectorVoxelList* matching_voxels_list2) const
 {
+  if(offset != Vector3i(0))
+  {
+    LOGGING_ERROR_C(VoxellistLog, BitVoxelList, "Offset for VoxelList operation not supported! Result is undefined." << endl);
+    return;
+  }
 
-  //std::cout << "List1: ";
-  //for(size_t i = 0; i < list1->m_dev_id_list.size(); i++)
-  //    std::cout << list1->m_dev_id_list[i] << " ";
-  //std::cout << std::endl;
-
-  //std::cout << "List2: ";
-  //for(size_t i = 0; i < list2->m_dev_id_list.size(); i++)
-  //    std::cout << list2->m_dev_id_list[i] << " ";
-  //std::cout << std::endl;
-
+  bool wasSwapped = false;
   size_t num_hits1 = 0;
   size_t num_hits2 = 0;
   thrust::device_vector<bool> output;
 
-  //========== First search: Search for list1 in list2. =================================================
+  const TemplatedBitVectorVoxelList* biggerList;
+  const TemplatedBitVectorVoxelList* smallerList;
+
+  // For performance reasons choose the list in an order,
+  // so that we search the longer list for the elemensts
+  // of the shorter list in the first processing step.
+  if(list1->m_dev_id_list.size() < list2->m_dev_id_list.size())
+  {
+    biggerList = list2;
+    smallerList = list1;
+    wasSwapped = true;
+  }
+  else
+  {
+    biggerList = list1;
+    smallerList = list2;
+  }
+
+  //========== First search: Search for IDs from smaller list in bigger list. =================================================
   try
   {
-    output = thrust::device_vector<bool>(list2->m_dev_id_list.size());
-    // if offset is given, we need our own comparison opperator!
-    if(offset != Vector3i(0))
-    {
-      LOGGING_WARNING_C(VoxellistLog, BitVoxelList, "Offset for VoxelList collision was given. Thrust performace is not optimal with that!" << endl);
-      thrust::binary_search(thrust::device,
-                            list1->m_dev_id_list.begin(), list1->m_dev_id_list.end(),
-                            list2->m_dev_id_list.begin(), list2->m_dev_id_list.end(),
-                            output.begin(), voxellist::offsetLessOperator<VoxelIDType>(this->m_ref_map_dim, offset));
-    }else{
-      //todo: tests what performs better: shorter vec search in longer vec or vice versa
-      thrust::binary_search(thrust::device,
-                            list1->m_dev_id_list.begin(), list1->m_dev_id_list.end(),
-                            list2->m_dev_id_list.begin(), list2->m_dev_id_list.end(),
-                            output.begin());
-    }
+    output = thrust::device_vector<bool>(smallerList->m_dev_id_list.size());
+    thrust::binary_search(thrust::device,
+                          biggerList->m_dev_id_list.begin(), biggerList->m_dev_id_list.end(),
+                          smallerList->m_dev_id_list.begin(), smallerList->m_dev_id_list.end(),
+                          output.begin());
   }
   catch(thrust::system_error &e)
   {
@@ -291,7 +439,7 @@ void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(const TemplatedBitVec
     exit(-1);
   }
 
-  //========== Shorten list2 to those entries found in this list.
+  //========== Copy matching IDs (and the voxeldata) from smallerList to matching_voxels_list2.
   try
   {
     num_hits1 = thrust::count(output.begin(), output.end(), true);
@@ -299,8 +447,8 @@ void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(const TemplatedBitVec
     matching_voxels_list2->m_dev_list.resize(num_hits1);
 
     // we use the "output" list as stencil
-    thrust::copy_if( thrust::make_zip_iterator(thrust::make_tuple(list2->m_dev_id_list.begin(), list2->m_dev_list.begin())),
-                     thrust::make_zip_iterator(thrust::make_tuple(list2->m_dev_id_list.end(),   list2->m_dev_list.end())),
+    thrust::copy_if( thrust::make_zip_iterator(thrust::make_tuple(smallerList->m_dev_id_list.begin(), smallerList->m_dev_list.begin())),
+                     thrust::make_zip_iterator(thrust::make_tuple(smallerList->m_dev_id_list.end(), smallerList->m_dev_list.end())),
                      output.begin(),
                      thrust::make_zip_iterator(thrust::make_tuple(matching_voxels_list2->m_dev_id_list.begin(), matching_voxels_list2->m_dev_list.begin())),
                      thrust::identity<bool>());
@@ -311,34 +459,24 @@ void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(const TemplatedBitVec
     exit(-1);
   }
 
-  //========== Second search: Search for shortened list2 in this list. =================================================
+  //========== Second search: Search for matched IDs in biggerList. =================================================
   try
   {
-    output = thrust::device_vector<bool>(list1->m_dev_id_list.size()); // the result as vector of bools
-    // if offset is given, we need our own comparison opperator!
-    if(offset != Vector3i(0))
-    {
-      LOGGING_WARNING_C(VoxellistLog, BitVoxelList, "Offset for VoxelList collision was given. Thrust performace is not optimal with that!" << endl);
-      thrust::binary_search(thrust::device,
-                            matching_voxels_list2->m_dev_id_list.begin(), matching_voxels_list2->m_dev_id_list.end(),
-                            list1->m_dev_id_list.begin(), list1->m_dev_id_list.end(),
-                            output.begin(), voxellist::offsetLessOperator<VoxelIDType>(this->m_ref_map_dim, offset));
-    }else{
-      //todo: tests what performs better: shorter vec search in longer vec or vice versa
-      thrust::binary_search(thrust::device,
-                            matching_voxels_list2->m_dev_id_list.begin(), matching_voxels_list2->m_dev_id_list.end(),
-                            list1->m_dev_id_list.begin(), list1->m_dev_id_list.end(),
-                            output.begin());
-    }
+    output = thrust::device_vector<bool>(biggerList->m_dev_id_list.size()); // the result as vector of bools
 
-    //========== Shorten list1 to those entries found in shortened list2.
+    thrust::binary_search(thrust::device,
+                          biggerList->m_dev_id_list.begin(), biggerList->m_dev_id_list.end(),
+                          matching_voxels_list2->m_dev_id_list.begin(), matching_voxels_list2->m_dev_id_list.end(),
+                          output.begin());
+
+    //========== Resize matching_voxels_list1 to the number of matching entries found in previous step.
     num_hits2 = thrust::count(output.begin(), output.end(), true);
     matching_voxels_list1->m_dev_id_list.resize(num_hits2);
     matching_voxels_list1->m_dev_list.resize(num_hits2);
 
-    // we use the "output" list as stencil
-    thrust::copy_if( thrust::make_zip_iterator(thrust::make_tuple(list1->m_dev_id_list.begin(), list1->m_dev_list.begin())),
-                     thrust::make_zip_iterator(thrust::make_tuple(list1->m_dev_id_list.end(),   list1->m_dev_list.end())),
+    // we use the "output" list as stencil to copy the IDs (and the voxeldata) from the biggerList to matching_voxels_list1
+    thrust::copy_if( thrust::make_zip_iterator(thrust::make_tuple(biggerList->m_dev_id_list.begin(), biggerList->m_dev_list.begin())),
+                     thrust::make_zip_iterator(thrust::make_tuple(biggerList->m_dev_id_list.end(), biggerList->m_dev_list.end())),
                      output.begin(),
                      thrust::make_zip_iterator(thrust::make_tuple(matching_voxels_list1->m_dev_id_list.begin(), matching_voxels_list1->m_dev_list.begin())),
                      thrust::identity<bool>());
@@ -350,13 +488,16 @@ void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(const TemplatedBitVec
     exit(-1);
   }
 
-  //for(size_t i = 0; i < num_hits1; i++)
-  //{
-  //  std::cout << "Keys: " << matching_voxels_list1->m_dev_id_list[i] << " | " << matching_voxels_list1->m_dev_id_list[i] << std::endl;
-  //  std::cout << matching_voxels_list1->m_dev_list[i] << std::endl;
-  //  std::cout << matching_voxels_list2->m_dev_list[i] << std::endl;
-  //}
+  // If we swapped in the beginning we have to also swap the matching_voxels_lists
+  // So that matching_voxels_list1 contains voxeldata from input list1
+  // and matching_voxels_list2 contains voxeldata from input list2
+  if(wasSwapped)
+  {
+    matching_voxels_list1->m_dev_id_list.swap(matching_voxels_list2->m_dev_id_list);
+    matching_voxels_list1->m_dev_list.swap(matching_voxels_list2->m_dev_list);
+  }
 
+  // Do a sanity check:
   if(num_hits1 != num_hits2)
   {
     LOGGING_ERROR_C(VoxellistLog, BitVoxelList, "ASSERT 'num_hits1 == num_hits2' failed! " << num_hits1 << " != " << num_hits2 << endl);
@@ -370,7 +511,7 @@ void BitVoxelList<length, VoxelIDType>::shiftLeftSweptVolumeIDs(uint8_t shift_si
 {
   if (shift_size > 56) // restriction due to internal buffer
   {
-    LOGGING_ERROR_C(VoxellistLog, BitVoxelList, "Maximum shift size is 63! Higher shift number requested. Not performing shift operation." << endl);
+    LOGGING_ERROR_C(VoxellistLog, BitVoxelList, "Maximum shift size is 56! Higher shift number requested. Not performing shift operation." << endl);
     return;
   }
 

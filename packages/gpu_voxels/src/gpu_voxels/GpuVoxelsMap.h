@@ -36,7 +36,6 @@
 #include <stdint.h> // for fixed size datatypes
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
-#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 #include <gpu_voxels/helpers/common_defines.h>
 
@@ -93,12 +92,10 @@ public:
   }
 
   //mutex locking and unlocking
-  mutable boost::mutex m_mutex;
   void lockSelf(const std::string& function_name) const;
   void unlockSelf(const std::string& function_name) const;
 
   void lockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, const std::string& function_name) const;
-
   void unlockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, const std::string& function_name) const;
 
 
@@ -168,7 +165,7 @@ public:
   //virtual size_t collideWithBitcheck(const GpuVoxelsMapSharedPtr other, const u_int8_t margin = 0, const Vector3i &offset = Vector3i()) = 0;
 
   /*!
-   * \brief insertPointcloudFromFile inserts a pointcloud from a file into the map
+   * \brief insertPointCloudFromFile inserts a pointcloud from a file into the map
    * The coordinates are interpreted as global coordinates
    * \param path filename (Must end in .xyz for XYZ files, .pcd for PCD files or .binvox for Binvox files)
    * \param use_model_path Prepends environment variable GPU_VOXELS_MODEL_PATH to path if true
@@ -176,7 +173,7 @@ public:
    * \param offset_XYZ if given, the map will be transformed by this XYZ offset. If shifting is active, this happens after the shifting.
    * \return true if succeeded, false otherwise
    */
-  bool insertPointcloudFromFile(const std::string path, const bool use_model_path, const BitVoxelMeaning voxel_meaning,
+  bool insertPointCloudFromFile(const std::string path, const bool use_model_path, const BitVoxelMeaning voxel_meaning,
                                 const bool shift_to_zero = false, const Vector3f &offset_XYZ = Vector3f(),
                                 const float scaling = 1.0);
 
@@ -269,6 +266,9 @@ public:
 
 protected:
   MapType m_map_type;
+
+private:
+  mutable boost::recursive_timed_mutex m_mutex;
 };
 
 } // end of namespace

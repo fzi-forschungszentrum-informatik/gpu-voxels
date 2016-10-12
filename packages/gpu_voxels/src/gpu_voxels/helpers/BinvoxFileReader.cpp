@@ -30,6 +30,7 @@
  */
 //----------------------------------------------------------------------
 #include <gpu_voxels/helpers/BinvoxFileReader.h>
+#include <gpu_voxels/helpers/common_defines.h>
 
 namespace gpu_voxels {
 namespace file_handling {
@@ -160,7 +161,7 @@ bool BinvoxFileReader::readPointCloud(const std::string filename, std::vector<Ve
 
   LOGGING_DEBUG(
       Gpu_voxels_helpers,
-      "Binvox Handler: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f))/1024.0/1024.0 << " MB on CPU) from "<< filename.c_str() << "." << endl);
+      "Binvox Handler: loaded " << points.size() << " points ("<< (points.size()*sizeof(Vector3f)) * cBYTE2MBYTE << " MB on CPU) from "<< filename.c_str() << "." << endl);
 
   return true;
 }

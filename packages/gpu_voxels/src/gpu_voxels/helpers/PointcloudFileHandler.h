@@ -27,9 +27,7 @@
 #define GPU_VOXELS_HELPERS_POINTCLOUD_FILE_HANDLER_H_INCLUDED
 #include <cstdlib>
 #include <boost/filesystem/path.hpp>
-#include "gpu_voxels/helpers/PcdFileReader.h"
-#include "gpu_voxels/helpers/BinvoxFileReader.h"
-#include "gpu_voxels/helpers/XyzFileReader.h"
+#include "gpu_voxels/helpers/cuda_datatypes.h"
 
 /**
  * @namespace gpu_voxels::file_handling
@@ -38,10 +36,10 @@
 namespace gpu_voxels {
 namespace file_handling {
 
-/*! Read environment variable GPU_VOXELS_MODEL_PATH
- *  \returns the path
- */
-boost::filesystem::path getGpuVoxelsPath();
+// Forward declaration for the specific readers:
+class PcdFileReader;
+class XyzFileReader;
+class BinvoxFileReader;
 
 class PointcloudFileHandler
 {
@@ -64,11 +62,14 @@ public:
   bool loadPointCloud(const std::string _path, const bool use_model_path, std::vector<Vector3f> &points, const bool shift_to_zero = false,
                       const Vector3f &offset_XYZ = Vector3f(), const float scaling = 1.0);
 
+  ~PointcloudFileHandler();
+
 private:
   /*!
    * \brief Private ctor, as this is a singleton
    */
-  PointcloudFileHandler(){}
+  PointcloudFileHandler();
+
   /*!
    * \brief Private copy ctor, as this is a singleton
    */
@@ -91,9 +92,9 @@ private:
    */
   void shiftPointCloudToZero(std::vector<Vector3f> &points);
 
-  XyzFileReader xyz_reader;
-  PcdFileReader pcd_reader;
-  BinvoxFileReader binvox_reader;
+  XyzFileReader* xyz_reader;
+  PcdFileReader* pcd_reader;
+  BinvoxFileReader* binvox_reader;
 
 };
 

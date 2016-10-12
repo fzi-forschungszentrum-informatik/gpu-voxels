@@ -85,6 +85,18 @@ bool SVCollider::collide(const BitVoxel<length>& v1, const BitVoxel<length>& v2,
   return bitMarginCollisionCheck<length>(v1.bitVector(), v2.bitVector(), collisions, m_type_range, sv_offset);
 }
 
+template<class OtherVoxel>
+__host__ __device__
+bool SVCollider::collide(const DistanceVoxel& v1, const OtherVoxel& v2) const {
+    return false; // has no meaning
+}
+
+template<class OtherVoxel>
+__host__ __device__
+bool SVCollider::collide(const OtherVoxel& v1, const DistanceVoxel& v2) const {
+    return false; // has no meaning
+}
+
 Probability SVCollider::floatToProbability(const float val)
 {
   float tmp = (val * (float(MAX_PROBABILITY) - float(MIN_PROBABILITY))) + MIN_PROBABILITY;

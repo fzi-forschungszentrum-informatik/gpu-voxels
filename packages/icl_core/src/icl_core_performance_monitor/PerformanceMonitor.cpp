@@ -113,7 +113,7 @@ double PerformanceMonitor::measurement(string timer_name, string description, st
 }
 
 double PerformanceMonitor::startStop(string timer_name, string description, string prefix,
-                                     logging::LogLevel level)
+                                     logging::LogLevel level, const bool silent)
 {
   /*
    * If timer_name exists:
@@ -134,7 +134,7 @@ double PerformanceMonitor::startStop(string timer_name, string description, stri
       double double_ms = d.toNSec() / 1000000.0;
       monitor->addEvent(prefix, description, double_ms);
       monitor->m_timer[timer_name] = end;
-      if (getInstance()->m_print_stop)
+      if (!silent && getInstance()->m_print_stop)
       {
         std::stringstream ss;
         ss << makeName(prefix, description) << ": " << double_ms << " ms";
@@ -269,7 +269,7 @@ void PerformanceMonitor::createStatisticSummaryNonTime(stringstream& ss, string 
         "\n";
 }
 
-void PerformanceMonitor::printSummary(string prefix, string name,
+string PerformanceMonitor::printSummary(string prefix, string name,
                                       icl_core::logging::LogLevel level)
 {
   PerformanceMonitor* monitor = getInstance();
@@ -277,6 +277,7 @@ void PerformanceMonitor::printSummary(string prefix, string name,
   std::stringstream ss;
   monitor->createStatisticSummary(ss, prefix, name);
   monitor->print(ss.str(), level);
+  return ss.str();
 }
 
 void PerformanceMonitor::enablePrefix(string prefix)
@@ -304,18 +305,20 @@ void PerformanceMonitor::disablePrefix(string prefix)
   }
 }
 
-void PerformanceMonitor::printSummaryAll(icl_core::logging::LogLevel level)
+string PerformanceMonitor::printSummaryAll(icl_core::logging::LogLevel level)
 {
   PerformanceMonitor* monitor = getInstance();
 
+  std::stringstream ss;
   for (map<string, bool>::iterator it=monitor->m_enabled_prefix.begin();
        it != monitor->m_enabled_prefix.end(); ++it)
   {
-    printSummaryFromPrefix(it->first, level);
+    ss << printSummaryFromPrefix(it->first, level);
   }
+  return ss.str();
 }
 
-void PerformanceMonitor::printSummaryFromPrefix(string prefix, icl_core::logging::LogLevel level)
+string PerformanceMonitor::printSummaryFromPrefix(string prefix, icl_core::logging::LogLevel level)
 {
   PerformanceMonitor* monitor = getInstance();
   bool first = true;
@@ -373,6 +376,7 @@ void PerformanceMonitor::printSummaryFromPrefix(string prefix, icl_core::logging
     }
   }
   monitor->print(ss.str(), level);
+  return ss.str();
 }
 
 double PerformanceMonitor::getAverage(string name)
@@ -414,6 +418,18 @@ void PerformanceMonitor::getMedianNonTime(string name, double& median, double& m
   median = tmp[tmp.size() / 2];
   min = tmp[0];
   max = tmp[tmp.size() - 1];
+}
+
+vector<double> PerformanceMonitor::getData(string name, string prefix)
+{
+  PerformanceMonitor* monitor = getInstance();
+  return monitor->m_data[ makeName(prefix, name) ];
+}
+
+vector<double> PerformanceMonitor::getNonTimeData(string name, string prefix)
+{
+  PerformanceMonitor* monitor = getInstance();
+  return monitor->m_data_nontime[ makeName(prefix, name) ];
 }
 
 } // namespace timer

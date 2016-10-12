@@ -13,6 +13,7 @@
  */
 //----------------------------------------------------------------------
 #include "cuda_handling.h"
+#include <gpu_voxels/helpers/common_defines.h>
 
 namespace gpu_voxels {
 
@@ -61,6 +62,43 @@ bool cuGetDeviceInfo(cudaDeviceProp* device_properties, int nr_of_devices)
   return true;
 }
 
+
+std::string getDeviceInfos()
+{
+  std::stringstream tmp_stream;
+
+  int nr_of_devices;
+  cuGetNrOfDevices(&nr_of_devices);
+
+  if(nr_of_devices > 0)
+  {
+      std::cout << "Found " << nr_of_devices << " devices." << std::endl;
+      cudaDeviceProp* props = new cudaDeviceProp[nr_of_devices];
+
+      cuGetDeviceInfo(props, nr_of_devices);
+
+      for (int i = 0; i < nr_of_devices; i++)
+      {
+        tmp_stream << "Device Information of GPU " << i << std::endl
+                   << "Model: " << props[i].name << std::endl
+                   << "MultiprozessorCount: " << props[i].multiProcessorCount << std::endl
+                   << "Global Memory: " << cBYTE2MBYTE * props[i].totalGlobalMem << " MB" << std::endl
+                   << "Total Constant Memory: " << props[i].totalConstMem << std::endl
+                   << "Shared Memory per Block: " << props[i].sharedMemPerBlock << " Shared Memory per Multiprozessor: " << props[i].sharedMemPerMultiprocessor << std::endl
+                   << "Max Threads per Block " << props[i].maxThreadsPerBlock << " Max Threads per Multiprozessor: " << props[i].maxThreadsPerMultiProcessor << std::endl
+                   << "Registers per Block: " << props[i].regsPerBlock << " Registers per Multiprozessor: " <<props[i].regsPerMultiprocessor << std::endl
+                   << "Max grid dimensions: [ " << props[i].maxGridSize[0] << ", " << props[i].maxGridSize[1]  << ", " << props[i].maxGridSize[2] << " ]" << std::endl
+                   << "Max Block dimension: [ " << props[i].maxThreadsDim[0] << ", " << props[i].maxThreadsDim[1]  << ", " << props[i].maxThreadsDim[2] << " ]" << std::endl
+                   << "Warp Size: " << props[i].warpSize << std::endl << std::endl;
+
+        std::cout << "Dev " << i << " = " << tmp_stream.str() << std::endl;
+      }
+
+      delete props;
+  }
+  return tmp_stream.str();
+}
+
 bool cuTestAndInitDevice()
 {
 
@@ -91,22 +129,23 @@ bool cuTestAndInitDevice()
   return true;
 }
 
-void cuPrintDeviceMemoryInfo()
+std::string getDeviceMemoryInfo()
 {
+  std::stringstream tmp_stream;
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   //unsigned int free, total, used;
   size_t free, total, used;
   cudaMemGetInfo(&free, &total);
   used = total - free;
 
-  const float byte2mb = (float) 1 / (1024.0 * 1024.0);
+  tmp_stream << "Device memory status:" << std::endl;
+  tmp_stream << "-----------------------------------" << std::endl;
+  tmp_stream << "total memory (MB)  : " << (float) total * cBYTE2MBYTE << std::endl;
+  tmp_stream << "free  memory (MB)  : " << (float) free * cBYTE2MBYTE << std::endl;
+  tmp_stream << "used  memory (MB)  : " << (float) used * cBYTE2MBYTE << std::endl;
+  tmp_stream << "-----------------------------------" << std::endl;
 
-  LOGGING_INFO(CudaLog, "Device memory status:" << endl);
-  LOGGING_INFO(CudaLog, "-----------------------------------" << endl);
-  LOGGING_INFO(CudaLog, "total memory (MB)  : " << (float) total * byte2mb << endl);
-  LOGGING_INFO(CudaLog, "free  memory (MB)  : " << (float) free * byte2mb << endl);
-  LOGGING_INFO(CudaLog, "used  memory (MB)  : " << (float) used * byte2mb << endl);
-  LOGGING_INFO(CudaLog, "-----------------------------------" << endl);
+  return tmp_stream.str();
 }
 
 } // end of namespace

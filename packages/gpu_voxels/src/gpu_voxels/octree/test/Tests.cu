@@ -205,7 +205,7 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 //  rnd.sideLengthInVoxel = 512;
   printf("\n\nbuildTest()\n");
 
-  // gpu_voxels::cuPrintDeviceMemoryInfo();
+  // std::cout << gpu_voxels::getDeviceMemoryInfo();
 
 //  thrust::host_vector<gpu_voxels::Vector3ui> h_points;
 //  // thrust::device_vector<voxel_id> voxel;
@@ -216,7 +216,7 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 //    srand(9876);
 //    h_points = randomPoints(num_points, NUM_VOXEL);
 //
-//    gpu_voxels::cuPrintDeviceMemoryInfo();
+//    std::cout << gpu_voxels::getDeviceMemoryInfo();
 //  }
 ////  for (uint32_t i = 0; i < num_points; ++i)
 ////    if (voxel[i] == 41)
@@ -362,7 +362,7 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 ////  OctreeVoxelID num_points = 1024*1024;
 ////  rnd.sideLengthInVoxel = 128;
 
-//  gpu_voxels::cuPrintDeviceMemoryInfo();
+//  std::cout << gpu_voxels::getDeviceMemoryInfo();
 
 //  typedef Environment::InnerNode e_InnerNode;
 //  typedef Environment::LeafNode e_LeafNode;
@@ -427,7 +427,7 @@ bool buildTest(std::vector<Vector3f>& points, uint32_t num_points, double & time
 //  e_voxel.clear();
 //  e_voxel.shrink_to_fit();
 
-//  gpu_voxels::cuPrintDeviceMemoryInfo();
+//  std::cout << gpu_voxels::getDeviceMemoryInfo();
 
 //// intersect
 //  printf("intersecting both...\n");

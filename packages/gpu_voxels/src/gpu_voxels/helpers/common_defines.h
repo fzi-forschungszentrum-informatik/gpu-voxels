@@ -23,13 +23,20 @@
 #ifndef GPU_VOXELS_HELPERS_COMMON_DEFINES_H_INCLUDED
 #define GPU_VOXELS_HELPERS_COMMON_DEFINES_H_INCLUDED
 
+#include <boost/filesystem/path.hpp>
+#include <gpu_voxels/logging/logging_gpu_voxels_helpers.h>
 #include <string>
 
 namespace gpu_voxels {
 
 // CUDA Specific defines:
 const uint32_t cMAX_NR_OF_DEVICES = 10;
+//TODO: add define to allow 512^3 sized voxelmaps
+//#if __CUDACC_VER_MAJOR__ > 2
+//const uint32_t cMAX_NR_OF_BLOCKS = 3*65536; //512^3 / 1024 = 128K
+//#else
 const uint32_t cMAX_NR_OF_BLOCKS = 65535;
+//#endif
 const uint32_t cMAX_THREADS_PER_BLOCK = 1024;
 
 /*!
@@ -60,7 +67,9 @@ enum MapType {
   MT_PROBAB_VOXELMAP,            // 3D-Array of probabilistic Voxels (identified by their Voxelmap-like Pointer adress) that hold a Probability
   MT_PROBAB_VOXELLIST,           // List of     probabilistic Voxels (identified by their Voxelmap-like Pointer adress) that hold a Probability
   MT_PROBAB_OCTREE,              // Octree of   probabilistic Voxels (identified by a Morton Code)                      that hold a Probability
-  MT_PROBAB_MORTON_VOXELLIST     // List of     probabilistic Voxels (identified by a Morton Code)                      that hold a Probability
+  MT_PROBAB_MORTON_VOXELLIST,    // List of     probabilistic Voxels (identified by a Morton Code)                      that hold a Probability
+
+  MT_DISTANCE_VOXELMAP           // 3D-Array of deterministic Voxels (identified by their Voxelmap-like Pointer adress) that hold a distance and obstacle vector
 };
 
 static const std::string GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED = "THIS TYPE OF DATA STRUCTURE IS NOT YET IMPLEMENTED!";
@@ -83,12 +92,54 @@ static const std::string GPU_VOXELS_MAP_OFFSET_ON_WRONG_DATA_STRUCTURE = "OFFSET
 template<std::size_t length>
 class BitVoxel;
 class ProbabilisticVoxel;
+class DistanceVoxel;
 
 typedef BitVoxel<BIT_VECTOR_LENGTH> BitVectorVoxel;
 
 typedef uint32_t MapVoxelID;    // 32 Bits are enough in Maps, as GPU RAM restricts map size
 typedef uint64_t OctreeVoxelID; // Doesn't have to be in a 32 bit range, since the modeled space on Octrees can be a multitude of the maps
 
+static const int32_t DISTANCE_UNINITIALISED = 0; //0 == uninitialized;
+
+static const int32_t PBA_OBSTACLE_DISTANCE = 0;
+
+static const int32_t PBA_UNINITIALISED_10 = 1023; // (1 << 10) - 1
+static const int32_t PBA_UNINITIALISED_16 = 32767; //SHRT_MAX
+static const int32_t PBA_UNINITIALISED_32 = 2147483647; //INT_MAX
+
+static const int MANHATTAN_DISTANCE_UNINITIALIZED = 32767; //SHRT_MAX
+static const int MANHATTAN_DISTANCE_START = MANHATTAN_DISTANCE_UNINITIALIZED - 1;
+static const int MANHATTAN_DISTANCE_TOO_CLOSE = MANHATTAN_DISTANCE_UNINITIALIZED - 2;
+
+//check: if PBA_UNINITIALISED_FORW_PTR != PBA_UNINITIALISED_COORD PBA phase2 needs additional checks!
+//static const int32_t PBA_UNINITIALISED_COORD = PBA_UNINITIALISED_32;
+static const int32_t PBA_UNINITIALISED_COORD = PBA_UNINITIALISED_10;
+//static const int16_t PBA_UNINITIALISED_COORD = PBA_UNINITIALISED_16;
+//static const int16_t PBA_UNINITIALISED_COORD = PBA_UNINITIALISED_16;
+static const int32_t PBA_UNINITIALISED_FORW_PTR = PBA_UNINITIALISED_COORD;
+
+//typedef int32_t pba_fw_ptr_t;
+typedef int16_t pba_fw_ptr_t;
+
+static const int32_t MAX_OBSTACLE_DISTANCE = 2147483647; //INT_MAX
+
+static const unsigned int PBA_BLOCKSIZE = 64; //for phase 1, 2
+static const unsigned int PBA_TILE_DIM = 16; //for transposeXY
+static const unsigned int PBA_M3_BLOCKX = 16; //for phase 3
+
+static const uint32_t PBA_DEFAULT_M1_BLOCK_SIZE = PBA_BLOCKSIZE;
+static const uint32_t PBA_DEFAULT_M2_BLOCK_SIZE = PBA_BLOCKSIZE;
+static const uint32_t PBA_DEFAULT_M3_BLOCK_SIZE = PBA_M3_BLOCKX;
+
+enum visualizer_distance_drawmodes {
+  DISTANCE_DRAW_DEFAULT,
+  DISTANCE_DRAW_TWOCOLOR_GRADIENT,
+  DISTANCE_DRAW_MULTICOLOR_GRADIENT,
+  DISTANCE_DRAW_VORONOI_LINEAR,
+  DISTANCE_DRAW_VORONOI_SCRAMBLE,
+  DISTANCE_DRAW_MODE_COUNT,      // Endmarker
+  DISTANCE_DRAW_PBA_INTERMEDIATE // This mode lies after endmarker to disable it (required for debugging only).
+};
 
 /**
  * @brief Type for holding occupation probability
@@ -111,6 +162,7 @@ class BitVoxelMap;
 // typedefs for convenient usage
 typedef BitVoxelMap<BIT_VECTOR_LENGTH> BitVectorVoxelMap;
 
+class DistanceVoxelMap;
 
 }  // end of ns
 // ------------------------------------------------
@@ -214,5 +266,31 @@ namespace visualization {
  */
 
 
-    }// end of namespace
+/*! Read environment variable GPU_VOXELS_MODEL_PATH
+ *  \param prepend_env_path Set to false to disable and return empty path.
+ *  \returns the path
+ */
+static inline boost::filesystem::path getGpuVoxelsPath(bool prepend_env_path)
+{
+  if(prepend_env_path)
+  {
+    char const* tmp = std::getenv("GPU_VOXELS_MODEL_PATH");
+    if (tmp == NULL)
+    {
+      LOGGING_ERROR(
+          Gpu_voxels_helpers,
+          "The environment variable 'GPU_VOXELS_MODEL_PATH' could not be read. Did you set it?" << endl);
+      return boost::filesystem::path("");
+    }
+    return boost::filesystem::path(tmp);
+  }else{
+    return boost::filesystem::path("");
+  }
+}
+
+const float cMBYTE2BYTE = 1024.0 * 1024.0;
+const float cBYTE2MBYTE = 1.0 / cMBYTE2BYTE;
+
+
+}// end of namespace
 #endif

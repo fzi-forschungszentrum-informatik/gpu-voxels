@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
    * We can add a pointcloud from file (must end in .xyz for XYZ files, .pcd for PCD files or .binvox for Binvox files).
    * The GPU_VOXELS_MODEL_PATH environment variable holds the directory of the files and needs to be set to ../gpu_voxels/models/
    */
-  if (!gvl->insertPointcloudFromFile("myProbabVoxmap", "coordinate_system_100.binvox", true,
+  if (!gvl->insertPointCloudFromFile("myProbabVoxmap", "coordinate_system_100.binvox", true,
                                      gpu_voxels::eBVM_OCCUPIED, true, gpu_voxels::Vector3f(0, 0, 0),0.5))
   {
     LOGGING_WARNING(gpu_voxels::Gpu_voxels, "Could not insert the pointcloud..." << gpu_voxels::endl );

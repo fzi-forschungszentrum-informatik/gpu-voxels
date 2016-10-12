@@ -303,7 +303,7 @@ NTree<branching_factor, level_count, InnerNode, LeafNode>::NTree(uint32_t numBlo
   this->m_center = gpu_voxels::Vector3ui(pow(pow(branching_factor, 1.0 / 3), level_count - 2));
   this->m_extract_buffer_size = INITIAL_EXTRACT_BUFFER_SIZE;
   this->m_rebuild_buffer_size = INITIAL_REBUILD_BUFFER_SIZE;
-  this->m_max_memory_usage = 200 * 1024 * 1014; // 200 MB
+  this->m_max_memory_usage = 200 * cMBYTE2BYTE; // 200 MB
   this->m_rebuild_counter = 0;
   this->m_has_data = false;
 
@@ -1176,7 +1176,7 @@ OctreeVoxelID NTree<branching_factor, level_count, InnerNode, LeafNode>::interse
 //  thrust::device_vector<uint32_t> d_voxel_count(numBlocks * numThreadsPerBlock);
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 ////d_voxel_count.back() = 0;
-//  printf("Alloc %f MB for free space: %f ms\n", double(size) / 1024.0 / 1024.0, timeDiff(time, getCPUTime()));
+//  printf("Alloc %f MB for free space: %f ms\n", double(size) * cBYTE2MBYTE, timeDiff(time, getCPUTime()));
 //  time = getCPUTime();
 //
 //// ##### init free space #####
@@ -2070,7 +2070,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(Octr
   HANDLE_CUDA_ERROR(cudaMalloc(&d_newNodes, nSize));
   m_allocation_list.push_back(d_newNodes);
 #ifdef INSERT_MESSAGES
-  LOGGING_DEBUG(OctreeInsertLog, "cudaMalloc() for " << nSize / 1024.0 / 1024.0 << " MB" << endl);
+  LOGGING_DEBUG(OctreeInsertLog, "cudaMalloc() for " << nSize * cBYTE2MBYTE << " MB" << endl);
   LOGGING_DEBUG(OctreeInsertLog, "cudaMalloc(): " << timeDiff(time, getCPUTime()) << " ms" << endl);
 #endif
   time = getCPUTime();
@@ -2738,7 +2738,7 @@ void NTree<branching_factor, level_count, InnerNode,
   LOGGING_INFO(OctreeRebuildLog, "\n\n\n ##### rebuild() #####" << endl);
   LOGGING_INFO(OctreeRebuildLog, "alloc inner " << allocInnerNodes  << " alloc leaf " << allocLeafNodes << endl);
 #endif
-  gpu_voxels::cuPrintDeviceMemoryInfo();
+  std::cout << gpu_voxels::getDeviceMemoryInfo();
 
 #if defined REBUILD_MESSAGES && defined _IC_DEBUG_
   timespec total_time = getCPUTime();
@@ -2790,7 +2790,7 @@ void NTree<branching_factor, level_count, InnerNode,
       //thrust::sort(h_voxel_lists[l].begin(), h_voxel_lists[l].end());
     }
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-    gpu_voxels::cuPrintDeviceMemoryInfo();
+    std::cout << gpu_voxels::getDeviceMemoryInfo();
   }
 
   PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ProcessData", prefix);
@@ -2852,7 +2852,7 @@ void NTree<branching_factor, level_count, InnerNode,
   LOGGING_DEBUG(OctreeRebuildLog, "allocLeafNodes: " << allocLeafNodes << " allocInnerNodes: " << allocInnerNodes << endl);
 #endif
 
-  gpu_voxels::cuPrintDeviceMemoryInfo();
+  std::cout << gpu_voxels::getDeviceMemoryInfo();
 
 #if defined(REBUILD_MESSAGES) || defined(FEW_MESSAGES)
   LOGGING_DEBUG(OctreeRebuildLog, "#### rebuild(): " <<  timeDiff(total_time, getCPUTime()) << " ms ####\n\n " << endl);
@@ -2875,7 +2875,7 @@ void NTree<branching_factor, level_count, InnerNode,
   LOGGING_INFO(OctreeRebuildLog, "\n\n\n ##### rebuild() #####\n" << endl);
   LOGGING_INFO(OctreeRebuildLog, "alloc inner " << allocInnerNodes << " alloc leaf " << allocLeafNodes << endl);
 #endif
-  gpu_voxels::cuPrintDeviceMemoryInfo();
+  std::cout << gpu_voxels::getDeviceMemoryInfo();
 
   timespec time = getCPUTime();
 
@@ -3118,7 +3118,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::free_bounding_bo
   map_properties.align();
 
   // determine level of free space computation
-  const uint64_t max_mem = 200 * 1024 * 1024; // 200 MB
+  const uint64_t max_mem = 200 * cMBYTE2BYTE; // 200 MB
   const uint64_t mem_needed = map_properties.size_v * sizeof(typename InnerNode::RayCastType);
   if (mem_needed >= max_mem)
   {

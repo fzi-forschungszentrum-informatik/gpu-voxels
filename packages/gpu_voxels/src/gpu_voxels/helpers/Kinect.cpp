@@ -26,16 +26,14 @@
 #include <iostream>
 #include <math.h>
 #include <utility>
-//#include <pcl_conversions/pcl_conversions.h>
 
 namespace gpu_voxels {
 
-Kinect::Kinect(std::string identifier) :
-     m_running(false),
-     m_identifier(identifier)
+Kinect::Kinect(std::string identifier)
+  : m_data(640*480)
+  , m_running(false)
+  , m_identifier(identifier)
 {
-  //m_viewer("Sensor Data Viewer");
-  m_data = new std::vector<Vector3f>(640*480);
 }
 
 Kinect::~Kinect()
@@ -44,29 +42,31 @@ Kinect::~Kinect()
   {
     stop();
   }
-  delete[] m_data;
 }
 
 
 void Kinect::cloud_callback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr &cloud)
 {
+
   for (uint32_t i=0; i<cloud->points.size(); i++)
   {
-    m_data->at(i).x = /*(float)1000.0**/(cloud->points[i].x);
-    m_data->at(i).y = /*(float)1000.0**/(cloud->points[i].y);
-    m_data->at(i).z = /*(float)1000.0**/(cloud->points[i].z);
+    m_data[i].x = cloud->points[i].x;
+    m_data[i].y = cloud->points[i].y;
+    m_data[i].z = cloud->points[i].z;
 
-//    // cut kinect data to a specific range: (debugging)
-//    const float max_range = 2500;
-//    if (m_data[i].z > max_range)
-//    {
-//      m_data[i].x = NAN;
-//      m_data[i].y = NAN;
-//      m_data[i].z = NAN;
-//    }
+    //    // cut kinect data to a specific range: (debugging)
+    //    const float max_range = 2500;
+    //    if (m_data[i].z > max_range)
+    //    {
+    //      m_data[i].x = NAN;
+    //      m_data[i].y = NAN;
+    //      m_data[i].z = NAN;
+    //    }
 
     //printf("kinect point: %f, %f, %f\n", m_data[i].x,m_data[i].y, m_data[i].z);
   }
+
+  LOGGING_TRACE_C(Gpu_voxels_helpers, Kinect, "Kinect point cloud callback: point count: " << cloud->points.size() << endl);
 }
 
 void Kinect::run()

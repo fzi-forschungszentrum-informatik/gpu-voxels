@@ -32,7 +32,6 @@
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/cuda_handling.hpp>
-#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 #include <gpu_voxels/helpers/PointCloud.h>
 
 #include <gpu_voxels/logging/logging_gpu_voxels_helpers.h>

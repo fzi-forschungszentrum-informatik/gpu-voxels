@@ -26,6 +26,7 @@
 
 #include "gpu_voxels/robot/urdf_robot/robot_to_gpu.h"
 #include <gpu_voxels/helpers/cuda_datatypes.h>
+#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 #include "gpu_voxels/robot/kernels/KinematicOperations.h"
 #include "gpu_voxels/robot/urdf_robot/urdf_robot.h"
 #include <urdf_model/model.h>
@@ -42,12 +43,7 @@ RobotToGPU::RobotToGPU(const std::string &_path, const bool &use_model_path) :
   std::string path;
 
   // if param is true, prepend the environment variable GPU_VOXELS_MODEL_PATH
-  if(use_model_path)
-  {
-    path = (file_handling::getGpuVoxelsPath() / boost::filesystem::path(_path)).string();
-  }else{
-    path = _path;
-  }
+  path = (getGpuVoxelsPath(use_model_path) / boost::filesystem::path(_path)).string();
 
   boost::shared_ptr<urdf::ModelInterface> model_interface_shrd_ptr = urdf::parseURDFFile(path);
 

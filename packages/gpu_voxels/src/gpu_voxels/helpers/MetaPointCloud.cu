@@ -15,6 +15,7 @@
 #include "gpu_voxels/helpers/MathHelpers.h"
 #include <gpu_voxels/helpers/kernels/MetaPointCloudOperations.h>
 #include "gpu_voxels/helpers/kernels/HelperOperations.h"
+#include <gpu_voxels/helpers/PointcloudFileHandler.h>
 #include <boost/shared_ptr.hpp>
 #include <cstdlib>
 
@@ -104,7 +105,7 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
 //  LOGGING_DEBUG_C(
 //      Gpu_voxels_helpers,
 //      MetaPointCloud,
-//      "This MetaPointCloud requires: " << (m_accumulated_pointcloud_size * sizeof(Vector3f)) / 1024.0 / 1024.0 << "MB on the GPU and on the Host" << endl);
+//      "This MetaPointCloud requires: " << (m_accumulated_pointcloud_size * sizeof(Vector3f)) * cBYTE2MBYTE << "MB on the GPU and on the Host" << endl);
 
 }
 
@@ -455,7 +456,10 @@ void MetaPointCloud::updatePointCloud(uint16_t cloud, const PointCloud &pointclo
 void MetaPointCloud::updatePointCloud(const std::string &cloud_name, const std::vector<Vector3f> &pointcloud, bool sync)
 {
   int16_t cloud_id = getCloudNumber(cloud_name);
-  updatePointCloud(cloud_id, pointcloud.data(), pointcloud.size(), sync);
+  if(cloud_id >= 0)
+  {
+    updatePointCloud(cloud_id, pointcloud.data(), pointcloud.size(), sync);
+  }
 }
 
 void MetaPointCloud::updatePointCloud(uint16_t cloud, const Vector3f* pointcloud, uint32_t pointcloud_size,
