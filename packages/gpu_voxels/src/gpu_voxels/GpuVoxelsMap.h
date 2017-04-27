@@ -91,6 +91,12 @@ public:
     return dynamic_cast<T*>(this);
   }
 
+  template<class T>
+  bool is() const
+  {
+    return dynamic_cast<const T*>(this);
+  }
+
   //mutex locking and unlocking
   void lockSelf(const std::string& function_name) const;
   void unlockSelf(const std::string& function_name) const;

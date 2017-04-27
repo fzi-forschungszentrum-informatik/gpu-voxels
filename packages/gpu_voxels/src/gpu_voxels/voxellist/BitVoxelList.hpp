@@ -137,7 +137,7 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const BitVectorVoxelM
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   size_t dynamic_shared_mem_size = sizeof(BitVectorVoxel) * cMAX_THREADS_PER_BLOCK;
   kernelCollideWithVoxelMap<<<num_blocks, threads_per_block, dynamic_shared_mem_size>>>(dev_id_list_ptr, dev_voxel_list_ptr, (uint32_t)this->m_dev_list.size(),
-                                                                  other->getConstDeviceDataPtr(), this->m_ref_map_dim,
+                                                                  other->getConstDeviceDataPtr(), this->m_ref_map_dim, coll_threshold,
                                                                   offset, this->m_dev_collision_check_results_counter, m_dev_colliding_bits_result_list_ptr);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -210,9 +210,9 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const ProbVoxelMap *m
   return number_of_collisions;
 }
 
-
 template<std::size_t length, class VoxelIDType>
-size_t BitVoxelList<length, VoxelIDType>::collideWithTypeMask(const voxelmap::ProbVoxelMap *map,
+template<class Voxel>
+size_t BitVoxelList<length, VoxelIDType>::collideWithTypeMask(const TemplateVoxelMap<Voxel> *map,
                                                               const BitVectorVoxel& types_to_check, float coll_threshold, const Vector3i &offset)
 {
   // Map Dims have to be equal to be able to compare pointer adresses!
@@ -234,55 +234,10 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypeMask(const voxelmap::Pr
   computeLinearLoad(this->m_dev_list.size(), &num_blocks, &threads_per_block);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   size_t dynamic_shared_mem_size = sizeof(uint16_t) * cMAX_THREADS_PER_BLOCK;
+
   kernelCollideWithVoxelMapBitMask<<<num_blocks, threads_per_block, dynamic_shared_mem_size>>>(dev_id_list_ptr, dev_voxel_list_ptr, (uint32_t)this->m_dev_list.size(),
-                                                                  map->getConstDeviceDataPtr(), this->m_ref_map_dim, coll_threshold,
-                                                                  offset, m_dev_bitmask, this->m_dev_collision_check_results_counter);
-
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-
-  // Copy back the results and reduce the block results:
-  HANDLE_CUDA_ERROR(
-      cudaMemcpy(this->m_collision_check_results_counter, this->m_dev_collision_check_results_counter,
-                 num_blocks * sizeof(uint16_t), cudaMemcpyDeviceToHost));
-
-  size_t number_of_collisions = 0;
-  for (uint32_t i = 0; i < num_blocks; i++)
-  {
-    number_of_collisions += this->m_collision_check_results_counter[i];
-  }
-
-  this->unlockBoth(this, map, "BitVoxelList::collideWithTypeMask");
-  return number_of_collisions;
-}
-
-template<std::size_t length, class VoxelIDType>
-size_t BitVoxelList<length, VoxelIDType>::collideWithTypeMask(const voxelmap::BitVectorVoxelMap *map,
-                                                              const BitVectorVoxel& types_to_check, float coll_threshold, const Vector3i &offset)
-{
-  //TODO: Fuse this with kernel above!
-  // Map Dims have to be equal to be able to compare pointer adresses!
-  if(map->getDimensions() != this->m_ref_map_dim)
-  {
-    LOGGING_ERROR_C(VoxellistLog, BitVoxelList,
-                    "The dimensions of the Voxellist reference map do not match the colliding voxel map dimensions. Not checking collisions!" << endl);
-    return SSIZE_MAX;
-  }
-
-  this->lockBoth(this, map, "BitVoxelList::collideWithTypeMask");
-  // get raw pointers to the thrust vectors data:
-  BitVectorVoxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(this->m_dev_list.data());
-  VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(this->m_dev_id_list.data());
-
-  cudaMemcpy(m_dev_bitmask, &types_to_check, sizeof(BitVectorVoxel), cudaMemcpyHostToDevice);
-
-  uint32_t num_blocks, threads_per_block;
-  computeLinearLoad(this->m_dev_list.size(), &num_blocks, &threads_per_block);
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  size_t dynamic_shared_mem_size = sizeof(uint16_t) * cMAX_THREADS_PER_BLOCK;
-  kernelCollideWithVoxelMapBitMask<<<num_blocks, threads_per_block, dynamic_shared_mem_size>>>(dev_id_list_ptr, dev_voxel_list_ptr, (uint32_t)this->m_dev_list.size(),
-                                                                  map->getConstDeviceDataPtr(), this->m_ref_map_dim,
-                                                                  offset, m_dev_bitmask, this->m_dev_collision_check_results_counter);
-
+                                                                                               map->getConstDeviceDataPtr(), this->m_ref_map_dim, coll_threshold,
+                                                                                               offset, m_dev_bitmask, this->m_dev_collision_check_results_counter);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   // Copy back the results and reduce the block results:

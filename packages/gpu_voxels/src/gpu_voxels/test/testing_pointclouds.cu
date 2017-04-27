@@ -118,14 +118,17 @@ BOOST_AUTO_TEST_CASE(pointcloud_equality)
   }
 }
 
+
 BOOST_AUTO_TEST_CASE(pointcloud_rotation)
 {
+  // This only tests the API. The math behind this is tested in testing_cuda_math.cu
+
   PERF_MON_START("pointcloud_rotation");
   for(int i = 0; i < iterationCount; i++)
   {
-    // TODO: Make this a real test case!!
 
     PointCloud orig;
+    PointCloud rotated;
 
     std::vector<Vector3f> testdata;
     for(size_t i = 0; i < (size_t)numberOfPoints; i++)
@@ -137,12 +140,11 @@ BOOST_AUTO_TEST_CASE(pointcloud_rotation)
     gpu_voxels::Matrix4f transformation = gpu_voxels::Matrix4f::createFromRotationAndTranslation(
           gpu_voxels::Matrix3f::createFromRPY(Vector3f(12.0, 11.0, 56.0)), Vector3f(2.2, 1.1, 3.3));
 
+
+    orig.transform(&transformation, &rotated);
     orig.transformSelf(&transformation);
 
-    PointCloud second;
-    orig.transform(&transformation, &second);
-
-    BOOST_CHECK_MESSAGE(false, "TODO: MAKE THIS A REAL TESTCASE!!");
+    BOOST_CHECK_MESSAGE(orig == rotated, "Self rotation and copy rotation are equal.");
     PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("pointcloud_rotation", "pointcloud_rotation", "pointclouds");
   }
 }

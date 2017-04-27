@@ -105,6 +105,47 @@ static const bool USE_BIT_VOXEL_MAP = false;
 namespace gpu_voxels {
 namespace visualization {
 
+enum MENU_ITEM
+{
+  MENU_HELP,
+  MENU_TEXT_ALL,
+  MENU_TEXT_POINTS,
+  MENU_TEXT_VBO,
+  MENU_TEXT_VOXELMAPS,
+  MENU_TEXT_VOXELLISTS,
+  MENU_TEXT_OCTREES,
+  MENU_TEXT_PRIMITIVEARRAYS,
+  MENU_TEXT_TYPES,
+  MENU_TEXT_CLICKEDVOXELINFO,
+  MENU_CAMERA_RESET,
+  MENU_CAMERA_FREE,
+  MENU_CAMERA_ORBIT,
+  MENU_CAMERA_TOGGLETEXT,
+  MENU_GRID_ON,
+  MENU_GRID_OFF,
+  MENU_RENDERMODE_SOLID,
+  MENU_RENDERMODE_WIREFRAME,
+  MENU_RENDERMODE_SOLIDWIREFRAME,
+  MENU_RENDERMODE_DIST_DEFAULT,
+  MENU_RENDERMODE_DIST_TWOCOLOR_GRADIENT,
+  MENU_RENDERMODE_DIST_MULTICOLOR_GRADIENT,
+  MENU_RENDERMODE_DIST_VORONOI_LINEAR,
+  MENU_RENDERMODE_DIST_VORONOI_SCRAMBLE,
+  MENU_RENDERMODE_SLICING_OFF,
+  MENU_RENDERMODE_SLICING_X,
+  MENU_RENDERMODE_SLICING_Y,
+  MENU_RENDERMODE_SLICING_Z,
+  MENU_DRAWMAP_ALL,
+  MENU_DRAWMAP_VIEW,
+  MENU_DEPTHTEST_ALWAYS,
+  MENU_DEPTHTEST_LEQUAL,
+  MENU_LIGHT_ON,
+  MENU_LIGHT_OFF,
+  MENU_VISIBILITYTRIGGER_ACTIVATED,
+  MENU_VISIBILITYTRIGGER_DEACTIVATED,
+  MENU_NONSENSE
+};
+
 class Visualizer
 {
 public:
@@ -113,6 +154,7 @@ public:
   ~Visualizer();
 
   bool initalizeVisualizer(int& argc, char *argv[]);
+  void initializeDrawTextFlags();
 
   //callbacks
   void timerFunction(int32_t value, void (*callback)(int32_t));
@@ -120,6 +162,8 @@ public:
   void renderFunction(void);
   void idleFunction(void) const;
   void cleanupFunction(void);
+  void menuFunction(int);
+  
   //documentation of GPU_Voxels uses this
   /**
   * <ul>
@@ -141,6 +185,7 @@ public:
   * <li>r: Reset camera to default position.</li>
   * <li>s: Draw all swept volume types on/off (All SweptVol types will be deactivated after switching off.)</li>
   * <li>t: rotate slice axis</li>
+  * <li>ALT-t: Cycles through various view modes of Distance Fields (press 2x ‘s’ afterwards to update the view, if stuck)</li>
   * <li>v: Prints view info.</li>
   * <li>+/-: Increase/decrease the light intensity. Can be multiplied with SHIFT / CTRL.</li>
   * <li>CRTL: Hold down for high movement speed.</li>
@@ -203,6 +248,10 @@ public:
     m_max_mem = maxMem;
   }
 
+  std::vector<std::string> getVoxelMapNames();
+  std::vector<std::string> getVoxelListNames();
+  std::vector<std::string> getOctreeNames();
+  std::vector<std::string> getPrimitiveArrayNames();
 private:
 ////////////////////////////////////////private functions//////////////////////////////////////////
 
@@ -275,10 +324,10 @@ private:
   void toggleLighting();
 
   void printHelp();
-  void printViewInfo();
-  void printNumberOfVoxelsDrawn();
-  void printTotalVBOsizes();
-  void printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos);
+  std::string printViewInfo();
+  std::string printNumberOfVoxelsDrawn();
+  std::string printTotalVBOsizes();
+  std::string printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos);
   void log();
   void logCreate();
 
@@ -292,6 +341,16 @@ private:
   void lastKeyboardMode();
   std::string keyboardModetoString(int8_t index);
   void keyboardDrawTriangles();
+
+  /**
+    * Draws one line of text on the screen. (0,0) is the lower left corner of the screen.
+    */
+  void drawTextLine(std::string text, int x, int y);
+
+  /**
+    * Draws multiple lines of text divided by a \n on the screen. (0,0) is the lower left corner of the screen.
+    */
+  void drawText(std::string, int x, int y);
 /////////////////////////////////////////member variables//////////////////////////////////////////
   // the current context of the visualizer
   VisualizerContext* m_cur_context;
@@ -358,6 +417,20 @@ private:
   //benchmark variables
   uint32_t m_cur_fps;
   std::string m_log_file;
+
+  //Draw Text Flags
+  bool m_drawTextAll;
+  bool m_drawPointCountText;
+  bool m_drawVBOText;
+  bool m_drawVoxelMapText;
+  bool m_drawVoxelListText;
+  bool m_drawOctreeText;
+  bool m_drawPrimitiveArrayText;
+  bool m_drawTypeText;
+  bool m_drawClickedVoxelInfo;
+  bool m_drawCameraInfo;
+
+  std::string m_clickedVoxelInfo;
 };
 
 } // end of namespace visualization

@@ -106,15 +106,22 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, Voxel* this_voxel
  * @param [in] offset The other map can be offset for collision check
  * @param [out] results array of Bitvectors of collisions (one entry for each block)
  */
-__global__
+/*__global__
 void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
                                const ProbabilisticVoxel* other_map, Vector3ui other_map_dim, float col_threshold,
                                Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* results);
+*/
 
-
+template<class VoxelType>
 __global__
 void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
-                               const BitVectorVoxel *other_map, Vector3ui other_map_dim,
+                               const VoxelType *other_map, Vector3ui other_map_dim, float col_threshold,
+                               Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* bitvoxel_results);
+
+template<class VoxelType>
+__global__
+void kernelCollideWithVoxelMap(const OctreeVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
+                               const VoxelType *other_map, Vector3ui other_map_dim, float col_threshold,
                                Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* bitvoxel_results);
 
 /**
@@ -130,16 +137,22 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *t
  * @param [in] bitvoxel_mask The mask that specifies, which BVMs to check
  * @param [out] coll_counter_results Array of Bitvectors of collisions (one entry for each block)
  */
-__global__
+/*__global__
 void kernelCollideWithVoxelMapBitMask(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
                                       const ProbabilisticVoxel *other_map, Vector3ui other_map_dim, float col_threshold,
                                       Vector3i offset, const BitVectorVoxel* bitvoxel_mask, uint16_t* coll_counter_results);
-
+*/
+template<class VoxelType>
 __global__
 void kernelCollideWithVoxelMapBitMask(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
-                                      const BitVectorVoxel *other_map, Vector3ui other_map_dim, float col_threshold,
+                                      const VoxelType *other_map, Vector3ui other_map_dim, float col_threshold,
                                       Vector3i offset, const BitVectorVoxel* bitvoxel_mask, uint16_t* coll_counter_results);
 
+template<class VoxelType>
+__global__
+void kernelCollideWithVoxelMapBitMask(const OctreeVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
+                                      const VoxelType *other_map, Vector3ui other_map_dim, float col_threshold,
+                                      Vector3i offset, const BitVectorVoxel* bitvoxel_mask, uint16_t* coll_counter_results);
 
 // =================== MORTON KERNELS ======================
 

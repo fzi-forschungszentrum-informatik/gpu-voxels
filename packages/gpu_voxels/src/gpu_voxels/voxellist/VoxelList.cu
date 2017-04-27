@@ -30,8 +30,12 @@ namespace voxellist {
 template class BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>;
 template class BitVoxelList<BIT_VECTOR_LENGTH, OctreeVoxelID>;
 
-//template size_t BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>::collideWithTypeMask(const BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>*,
-//                                                                                 const BitVoxel<BIT_VECTOR_LENGTH>&, float, const Vector3i&);
+template size_t BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>::collideWithTypeMask(
+                                                              const TemplateVoxelMap< BitVoxel<BIT_VECTOR_LENGTH> >*,
+                                                              const BitVectorVoxel&, float, const Vector3i&);
+template size_t BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>::collideWithTypeMask(
+                                                              const TemplateVoxelMap< ProbabilisticVoxel >*,
+                                                              const BitVectorVoxel&, float, const Vector3i&);
 
 // ##################################################################################
 
@@ -41,6 +45,11 @@ template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::equals
 template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::subtract(const TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>*, const Vector3f&);
 template void TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::screendump(bool) const;
 //template bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::subtract(const TemplateVoxelList<ProbabilisticVoxel, MapVoxelID>*, const Vector3f&);
+
+
+template TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::keyCoordVoxelZipIterator TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::getBeginTripleZipIterator();
+template TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::keyCoordVoxelZipIterator TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::getEndTripleZipIterator();
+
 
 //template size_t TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::collideCountingPerMeaning(const GpuVoxelsMapSharedPtr, std::vector<size_t>&, const Vector3i&);
 

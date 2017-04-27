@@ -695,7 +695,7 @@ int main(int argc, char* argv[])
   //    uint32_t parameter_max = 32;
 
   // test various vals, print timings after each
-  for (uint32_t parameter_choice = 3; parameter_choice <= 3; parameter_choice++)
+  for (uint32_t parameter_choice = 1; parameter_choice <= 3; parameter_choice++)
   {
 
     for (uint32_t parameter_val = parameter_min; parameter_val <= parameter_max; parameter_val *= factor)
@@ -713,6 +713,8 @@ int main(int argc, char* argv[])
         break;
       default: LOGGING_INFO(Gpu_voxels, "parameter_choice invalid! " << parameter_choice << endl); break;
       }
+
+      if (m1+m2+m3 == 3 && parameter_choice != 1) continue; //test the m1=m2=m3=1 case only once
 
       for (float blocksize_factor = 1; blocksize_factor <= 1; blocksize_factor *= 2)
       {

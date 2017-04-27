@@ -50,17 +50,36 @@ class TemplateVoxelList : public AbstractVoxelList
   typedef thrust::tuple<keyIterator, voxelIterator> keyVoxelIteratorTuple;
   typedef thrust::zip_iterator<keyVoxelIteratorTuple> keyVoxelZipIterator;
 
+public:
   typedef thrust::tuple<keyIterator, coordIterator, voxelIterator> keyCoordVoxelIteratorTriple;
   typedef thrust::zip_iterator<keyCoordVoxelIteratorTriple> keyCoordVoxelZipIterator;
 
-
-public:
   TemplateVoxelList(const Vector3ui ref_map_dim, const float voxel_sidelength, const MapType map_type);
 
   //! Destructor
   virtual ~TemplateVoxelList();
 
   /* ======== getter functions ======== */
+
+  //! get thrust triple to the beggining of all data vectors
+  virtual  keyCoordVoxelZipIterator getBeginTripleZipIterator();
+
+  //! get thrust triple to the end of all data vectors
+  virtual keyCoordVoxelZipIterator getEndTripleZipIterator();
+
+  //! get acces to data vectors on device
+  typename thrust::device_vector<Voxel>::iterator getDeviceDataVectorBeginning()
+  {
+    return m_dev_list.begin();
+  }
+  typename thrust::device_vector<VoxelIDType>::iterator getDeviceIdVectorBeginning()
+  {
+    return m_dev_id_list.begin();
+  }
+  typename thrust::device_vector<Vector3ui>::iterator getDeviceCoordVectorBeginning()
+  {
+    return m_dev_coord_list.begin();
+  }
 
   //! get pointer to data array on device
   Voxel* getDeviceDataPtr()
@@ -116,6 +135,8 @@ public:
 
   virtual bool subtract(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3f &metric_offset = Vector3f());
   virtual bool subtract(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3i &voxel_offset = Vector3i());
+
+  virtual void resize(size_t new_size);
 
   virtual void shrinkToFit();
 

@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
   gvl->addMap(MT_BITVECTOR_VOXELLIST, "myBitVoxellist");
 
   // And a robot, generated from a ROS URDF file:
-  gvl->addRobot("myUrdfRobot", "hollie.urdf", true);
+  gvl->addRobot("myUrdfRobot", "hollie/hollie.urdf", true);
 
   // Define some joint values:
   robot::JointValueMap min_joint_values;

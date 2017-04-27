@@ -31,6 +31,7 @@
 #include "gpu_voxels/robot/urdf_robot/urdf_robot.h"
 #include <urdf_model/model.h>
 #include <urdf_parser/urdf_parser.h>
+#include <boost/filesystem.hpp>
 
 namespace gpu_voxels {
 namespace robot {
@@ -39,15 +40,16 @@ namespace robot {
 RobotToGPU::RobotToGPU(const std::string &_path, const bool &use_model_path) :
   Robot()
 {
-
-  std::string path;
-
+  // here we explicitely specify the path to URDF to handle relative paths:
   // if param is true, prepend the environment variable GPU_VOXELS_MODEL_PATH
-  path = (getGpuVoxelsPath(use_model_path) / boost::filesystem::path(_path)).string();
+  boost::filesystem::path path_to_urdf = getGpuVoxelsPath(use_model_path) / boost::filesystem::path(_path);
 
-  boost::shared_ptr<urdf::ModelInterface> model_interface_shrd_ptr = urdf::parseURDFFile(path);
+  LOGGING_INFO_C(RobotLog, Robot, "Parsing URDF " << path_to_urdf.string() << endl);
+  boost::shared_ptr<urdf::ModelInterface> model_interface_shrd_ptr = urdf::parseURDFFile(path_to_urdf.string());
 
-  Robot::load(*model_interface_shrd_ptr, true, true, use_model_path);
+  // for the robot itself we pass the path where we expect the binvox files:
+  boost::filesystem::path path_to_pointclouds = path_to_urdf.parent_path();
+  Robot::load(*model_interface_shrd_ptr, path_to_pointclouds, true, true);
 
   // allocate a copy of the pointcloud, which will hold the transformed version
   m_link_pointclouds_transformed = new MetaPointCloud(*Robot::getLinkPointclouds());

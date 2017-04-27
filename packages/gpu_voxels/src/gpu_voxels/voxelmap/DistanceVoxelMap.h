@@ -77,7 +77,7 @@ public:
   DistanceVoxel::pba_dist_t getObstacleDistance(const Vector3ui& pos);
   DistanceVoxel::pba_dist_t getObstacleDistance(uint x, uint y, uint z);
 
-  void extract_distances(free_space_t* dev_distances, int robot_radius);
+  void extract_distances(free_space_t* dev_distances, int robot_radius) const;
   void init_floodfill(free_space_t* distances, manhattan_dist_t* manhattan_distances, uint robot_radius);
 
   DistanceVoxel::accumulated_diff differences3D(const boost::shared_ptr<DistanceVoxelMap> other_map, int debug = 0, bool logging_reinit = true);

@@ -579,5 +579,30 @@ __global__ void calculate_cubes_per_type_list(Cube* cubes, uint32_t size, uint32
   }
 }
 
+
+
+/**
+ * Find the matching Cube and return its position in the array.
+ * This is used in the "click voxel to get its info" functionality.
+ *
+ * @param cubes: the device pointer of the cube list.
+ * @param num_cubes: the number of cubes to be searched
+ * @param coords: the search criteria coordinates.
+ * @param found_cube: found voxel will be written into this.
+ * @param found_flag: True if found, not modified if not found. So set to false before calling.
+ */
+__global__ void find_cubes_by_coordinates(const Cube* cubes, size_t num_cubes, Vector3ui coords, Cube* found_cube, bool* found_flag)
+{
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < num_cubes; i += blockDim.x * gridDim.x)
+  {
+    const Cube* cube = cubes + i;
+    if(cube->m_position == coords)
+    {
+      *found_flag = true;
+      *found_cube = *cube;
+    }
+  }
+}
+
 } // end of ns
 } // end of ns

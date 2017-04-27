@@ -55,7 +55,6 @@
  */
 
 #include <math.h>
-#include <boost/filesystem.hpp>
 
 #include <urdf_model/model.h>
 #include <urdf_model/link.h>
@@ -76,7 +75,7 @@ RobotLink::RobotLink(Robot* robot,
                       const std::string& parent_joint_name,
                       bool visual,
                       bool collision,
-                      bool use_model_path,
+                      const boost::filesystem::path &path_to_pointclouds,
                       MetaPointCloud& link_pointclouds)
 : robot_( robot )
 , name_( link->name )
@@ -85,7 +84,7 @@ RobotLink::RobotLink(Robot* robot,
 , collision_node_( NULL )
 , link_pointclouds_(link_pointclouds)
 , pose_calculated_(false)
-, use_model_path_(use_model_path)
+, path_to_pointclouds_(path_to_pointclouds)
 {
   pose_property_ = KDL::Frame();
 
@@ -221,7 +220,7 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
     scale = gpu_voxels::Vector3f(mesh.scale.x, mesh.scale.y, mesh.scale.z);
     
     fs::path p(mesh.filename);
-    fs::path pc_file = fs::path(p.stem().string() + std::string(".binvox"));
+    fs::path pc_file = path_to_pointclouds_ / fs::path(p.stem().string() + std::string(".binvox"));
 
     std::vector<Vector3f> link_cloud;
     Vector3f mesh_offset(origin.position.x, origin.position.y, origin.position.z);
@@ -229,7 +228,7 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
 
     LOGGING_DEBUG_C(RobotLog, RobotLink, "Loading pointcloud of link " << pc_file.string() << endl);
     if(!file_handling::PointcloudFileHandler::Instance()->loadPointCloud(
-         pc_file.string(), use_model_path_, link_cloud, false, mesh_offset, 1.0))
+         pc_file.string(), false, link_cloud, false, mesh_offset, 1.0))
     {
       LOGGING_ERROR_C(RobotLog, RobotLink,
                       "Could not read file [" << pc_file.string() <<

@@ -90,4 +90,17 @@ void kernelTransformCloud(const Matrix4f *transformation, const Vector3f *startA
   }
 }
 
+__global__
+void kernelScaleCloud(const Vector3f scaling, const Vector3f* startAddress, Vector3f* transformedAddress, uint32_t numberOfPoints)
+{
+  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+
+  while(i < numberOfPoints)
+  {
+    transformedAddress[i] = scaling * startAddress[i];
+    i += blockDim.x * gridDim.x;
+  }
+}
+
+
 } // end of namespace gpu_voxels

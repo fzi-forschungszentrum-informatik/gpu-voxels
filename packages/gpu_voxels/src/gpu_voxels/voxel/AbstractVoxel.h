@@ -50,6 +50,10 @@ class AbstractVoxel
    */
   __host__ __device__
   AbstractVoxel reduce(const AbstractVoxel other_voxel);
+
+  __host__ __device__
+  bool isOccupied(float col_threshold) const;
+
 };
 
 } // end of ns

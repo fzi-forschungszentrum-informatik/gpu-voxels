@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
   kinect->run();
 
   //Vis Helper
-  gvl->addPrimitives(primitive_array::primitive_Sphere, "measurementPoints");
+  gvl->addPrimitives(primitive_array::ePRIM_SPHERE, "measurementPoints");
 
   //PBA
   gvl->addMap(MT_DISTANCE_VOXELMAP, "pbaDistanceVoxmap");
@@ -105,16 +105,15 @@ int main(int argc, char* argv[])
   Matrix4f tf = Matrix4f::createFromRotationAndTranslation(Matrix3f::createFromRPY(-3.14/2.0, 0, 0), kinect_offsets);
 
   // Define two measurement points:
-  std::vector<Vector3f> measurement_points;
-  measurement_points.push_back(Vector3f(40, 100, 50));
-  measurement_points.push_back(Vector3f(160, 100, 50));
-  gvl->modifyPrimitives("measurementPoints", measurement_points, 1.0);
+  std::vector<Vector3i> measurement_points;
+  measurement_points.push_back(Vector3i(40, 100, 50));
+  measurement_points.push_back(Vector3i(160, 100, 50));
+  gvl->modifyPrimitives("measurementPoints", measurement_points, 5);
 
   LOGGING_INFO(Gpu_voxels, "start visualizing maps" << endl);
   while (true)
   {
     pbaDistanceVoxmap->clearMap();
-
     // Transform the Kinect cloud
     myKinectCloud.update(kinect->getDataPtr());
     myKinectCloud.transformSelf(&tf);
@@ -132,9 +131,9 @@ int main(int argc, char* argv[])
     thrust::device_ptr<DistanceVoxel> dvm_thrust_ptr(pbaDistanceVoxmap->getDeviceDataPtr());
     for(size_t i = 0; i < measurement_points.size(); i++)
     {
-      int id = voxelmap::getVoxelIndexSigned(map_dimensions, Vector3i(measurement_points[i].x, measurement_points[i].y, measurement_points[i].z));
+      int id = voxelmap::getVoxelIndexSigned(map_dimensions, measurement_points[i]);
       DistanceVoxel dv = dvm_thrust_ptr[id]; //get DistanceVoxel (with closest obstacle information)
-      float metric_free_space = sqrtf(dv.squaredObstacleDistance(Vector3i(measurement_points[i].x, measurement_points[i].y, measurement_points[i].z))) * voxel_side_length;
+      float metric_free_space = sqrtf(dv.squaredObstacleDistance(measurement_points[i])) * voxel_side_length;
       std::cout << "Obstacle @ " << dv.getObstacle() << " Voxel @ " << measurement_points[i] << " has a clearance of " << metric_free_space << "m." << std::endl;
     }
     usleep(100000);

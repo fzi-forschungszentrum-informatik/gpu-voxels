@@ -179,9 +179,10 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, Voxel* this_voxel
 /*!
  * Calculating Bitvector results and counting collisions
  */
+template<class VoxelType>
 __global__
 void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
-                               const ProbabilisticVoxel *other_map, Vector3ui other_map_dim, float col_threshold,
+                               const VoxelType *other_map, Vector3ui other_map_dim, float col_threshold,
                                Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* bitvoxel_results)
 {
   __shared__ uint16_t coll_counter_cache[cMAX_THREADS_PER_BLOCK];
@@ -194,13 +195,13 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *t
   coll_counter_cache[cache_index] = 0;
   bitvoxel_cache[cache_index] = BitVectorVoxel();
 
-  ProbabilisticVoxel* max_index = voxelmap::getHighestVoxelPtr(other_map, other_map_dim);
+  VoxelType* max_index = voxelmap::getHighestVoxelPtr(other_map, other_map_dim);
   while (i < this_list_size)
   {
-    const ProbabilisticVoxel* other_voxel = (other_map + this_id_list[i]) + voxelmap::getVoxelIndexSigned(other_map_dim, offset);
+    const VoxelType* other_voxel = (other_map + this_id_list[i]) + voxelmap::getVoxelIndexSigned(other_map_dim, offset);
     if(other_voxel >= other_map && other_voxel <= max_index)
     {
-      if(other_voxel->occupancy() >= col_threshold)
+      if(other_voxel->isOccupied(col_threshold))
       {
         coll_counter_cache[cache_index] += 1;
         bitvoxel_cache[cache_index].bitVector() |= this_voxel_list[i].bitVector();
@@ -238,152 +239,43 @@ void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *t
   }
 }
 
-
-/*!
- * Calculating Bitvector results and counting collisions
- */
+template<class VoxelType>
 __global__
-void kernelCollideWithVoxelMap(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
-                               const BitVectorVoxel *other_map, Vector3ui other_map_dim,
+void kernelCollideWithVoxelMap(const OctreeVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
+                               const VoxelType *other_map, Vector3ui other_map_dim, float col_threshold,
                                Vector3i offset, uint16_t* coll_counter_results, BitVectorVoxel* bitvoxel_results)
-{
-  //TODO: Combine this with the previous kernel and use COLLIDERS!
-  __shared__ uint16_t coll_counter_cache[cMAX_THREADS_PER_BLOCK];
+{}
 
-  // points to dynamic shared memory; memory is uninitialised
-  BitVectorVoxel* bitvoxel_cache = (BitVectorVoxel*)dynamic_shared_mem; //size: cMAX_THREADS_PER_BLOCK
-
-  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  uint32_t cache_index = threadIdx.x;
-  coll_counter_cache[cache_index] = 0;
-  bitvoxel_cache[cache_index] = BitVectorVoxel();
-
-  BitVectorVoxel* max_index = voxelmap::getHighestVoxelPtr(other_map, other_map_dim);
-  while (i < this_list_size)
-  {
-    const BitVectorVoxel* other_voxel = (other_map + this_id_list[i]) + voxelmap::getVoxelIndexSigned(other_map_dim, offset);
-    if(other_voxel >= other_map && other_voxel <= max_index)
-    {
-      if(other_voxel->bitVector().getBit(eBVM_OCCUPIED))
-      {
-        coll_counter_cache[cache_index] += 1;
-        bitvoxel_cache[cache_index].bitVector() |= this_voxel_list[i].bitVector();
-        // Mark the Voxel as colliding.
-        this_voxel_list[i].insert(eBVM_COLLISION);
-      }
-    }
-//    else
-//    {
-//      printf("Ignoring out of map voxel.");
-//    }
-    i += blockDim.x * gridDim.x;
-  }
-
-  __syncthreads();
-
-  uint32_t j = blockDim.x / 2;
-
-  while (j != 0)
-  {
-    if (cache_index < j)
-    {
-      coll_counter_cache[cache_index] = coll_counter_cache[cache_index] + coll_counter_cache[cache_index + j];
-      bitvoxel_cache[cache_index].bitVector() = bitvoxel_cache[cache_index].bitVector() | bitvoxel_cache[cache_index + j].bitVector();
-    }
-    __syncthreads();
-    j /= 2;
-  }
-
-  // copy results from this block to global memory
-  if (cache_index == 0)
-  {
-    coll_counter_results[blockIdx.x] = coll_counter_cache[0];
-    bitvoxel_results[blockIdx.x] = bitvoxel_cache[0];
-  }
-}
-
-
-/*!
- * Counts collisions only if the one of at least one of the Bitvector Bits matches the given Bitvector mask.
- */
+template<class VoxelType>
 __global__
-void kernelCollideWithVoxelMapBitMask(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
-                                      const ProbabilisticVoxel *other_map, Vector3ui other_map_dim, float col_threshold,
+void kernelCollideWithVoxelMapBitMask(const OctreeVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
+                                      const VoxelType *other_map, Vector3ui other_map_dim, float col_threshold,
                                       Vector3i offset, const BitVectorVoxel* bitvoxel_mask, uint16_t* coll_counter_results)
-{
-  __shared__ uint16_t coll_counter_cache[cMAX_THREADS_PER_BLOCK];
-
-  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  uint32_t cache_index = threadIdx.x;
-  coll_counter_cache[cache_index] = 0;
-
-  ProbabilisticVoxel* max_index = voxelmap::getHighestVoxelPtr(other_map, other_map_dim);
-  while (i < this_list_size)
-  {
-    const ProbabilisticVoxel* other_voxel = (other_map + this_id_list[i]) + voxelmap::getVoxelIndexSigned(other_map_dim, offset);
-    if(other_voxel >= other_map && other_voxel <= max_index)
-    {
-      if(other_voxel->occupancy() >= col_threshold)
-      {
-        if ( !(bitvoxel_mask->bitVector() & this_voxel_list[i].bitVector()).isZero() )
-        {
-          coll_counter_cache[cache_index] += 1;
-          // Mark the Voxel as colliding.
-          this_voxel_list[i].insert(eBVM_COLLISION);
-        }
-      }
-    }
-//    else
-//    {
-//      printf("Ignoring out of map voxel.");
-//    }
-    i += blockDim.x * gridDim.x;
-  }
-
-  __syncthreads();
-
-  uint32_t j = blockDim.x / 2;
-
-  while (j != 0)
-  {
-    if (cache_index < j)
-    {
-      coll_counter_cache[cache_index] = coll_counter_cache[cache_index] + coll_counter_cache[cache_index + j];
-    }
-    __syncthreads();
-    j /= 2;
-  }
-
-  // copy results from this block to global memory
-  if (cache_index == 0)
-  {
-    coll_counter_results[blockIdx.x] = coll_counter_cache[0];
-  }
-}
+{}
 
 /*!
  * Counts collisions only if at least one of this lists Bitvector Bits matches the given Bitvector mask.
  * The other map voxel are checked for eBVM_OCCUPIED.
  */
+template<class VoxelType>
 __global__
 void kernelCollideWithVoxelMapBitMask(const MapVoxelID* this_id_list, BitVectorVoxel *this_voxel_list, uint32_t this_list_size,
-                                      const BitVectorVoxel *other_map, Vector3ui other_map_dim,
+                                      const VoxelType *other_map, Vector3ui other_map_dim, float col_threshold,
                                       Vector3i offset, const BitVectorVoxel* bitvoxel_mask, uint16_t* coll_counter_results)
 {
-  //TODO: Fuse this with kernel above and use a COLLIDER!!
   __shared__ uint16_t coll_counter_cache[cMAX_THREADS_PER_BLOCK];
 
   uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
   uint32_t cache_index = threadIdx.x;
   coll_counter_cache[cache_index] = 0;
 
-  BitVectorVoxel* max_index = voxelmap::getHighestVoxelPtr(other_map, other_map_dim);
+  VoxelType* max_index = voxelmap::getHighestVoxelPtr(other_map, other_map_dim);
   while (i < this_list_size)
   {
-    const BitVectorVoxel* other_voxel = (other_map + this_id_list[i]) + voxelmap::getVoxelIndexSigned(other_map_dim, offset);
+    const VoxelType* other_voxel = (other_map + this_id_list[i]) + voxelmap::getVoxelIndexSigned(other_map_dim, offset);
     if(other_voxel >= other_map && other_voxel <= max_index)
     {
-      if(other_voxel->bitVector().getBit(eBVM_OCCUPIED))
+      if(other_voxel->isOccupied(col_threshold))
       {
         if ( !(bitvoxel_mask->bitVector() & this_voxel_list[i].bitVector()).isZero() )
         {

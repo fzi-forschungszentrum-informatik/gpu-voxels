@@ -90,7 +90,7 @@ bool GpuVoxels::addPrimitives(const primitive_array::PrimitiveType prim_type, co
   primitive_array::PrimitiveArraySharedPtr primitive_array_shared_ptr;
   VisProviderSharedPtr vis_primitives_shared_ptr;
 
-  primitive_array::PrimitiveArray* orig_prim_array = new primitive_array::PrimitiveArray(prim_type);
+  primitive_array::PrimitiveArray* orig_prim_array = new primitive_array::PrimitiveArray(m_dim, m_voxel_side_length, prim_type);
   VisPrimitiveArray* vis_prim_array = new VisPrimitiveArray(orig_prim_array, array_name);
   primitive_array_shared_ptr = primitive_array::PrimitiveArraySharedPtr(orig_prim_array);
   vis_primitives_shared_ptr = VisProviderSharedPtr(vis_prim_array);
@@ -125,6 +125,18 @@ bool GpuVoxels::modifyPrimitives(const std::string &array_name, const std::vecto
   return true;
 }
 
+bool GpuVoxels::modifyPrimitives(const std::string &array_name, const std::vector<Vector4i>& prim_positions)
+{
+  ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(array_name);
+  if (it == m_managed_primitive_arrays.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Primitives array with name '" << array_name << "' not found." << endl);
+    return false;
+  }
+  it->second.prim_array_shared_ptr->setPoints(prim_positions);
+  return true;
+}
+
 bool GpuVoxels::modifyPrimitives(const std::string &array_name, const std::vector<Vector3f>& prim_positions, const float& diameter)
 {
   ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(array_name);
@@ -137,14 +149,28 @@ bool GpuVoxels::modifyPrimitives(const std::string &array_name, const std::vecto
   return true;
 }
 
-bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
+bool GpuVoxels::modifyPrimitives(const std::string &array_name, const std::vector<Vector3i>& prim_positions, const uint32_t &diameter)
+{
+  ManagedPrimitiveArraysIterator it = m_managed_primitive_arrays.find(array_name);
+  if (it == m_managed_primitive_arrays.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Primitives array with name '" << array_name << "' not found." << endl);
+    return false;
+  }
+  it->second.prim_array_shared_ptr->setPoints(prim_positions, diameter);
+  return true;
+}
+
+GpuVoxelsMapSharedPtr GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
 {
   // check if map with same name already exists
   ManagedMapsIterator it = m_managed_maps.find(map_name);
   if (it != m_managed_maps.end())
   {
     LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Map with name '" << map_name << "' already exists." << endl);
-    return false;
+    std::stringstream ss;
+    ss << "Map with name '" << map_name << "' already exists." << endl;
+    throw ss.str();
   }
 
   GpuVoxelsMapSharedPtr map_shared_ptr;
@@ -183,12 +209,11 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
     case MT_BITVECTOR_MORTON_VOXELLIST:
     {
       LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
-      return false;
+      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED;
     }
 
     case MT_BITVECTOR_VOXELMAP:
     {
-      // todo move code to correct type e.g. MT_BITVECTOR_VOXELMAP
       voxelmap::BitVectorVoxelMap* orig_map = new voxelmap::BitVectorVoxelMap(m_dim, m_voxel_side_length, MT_BITVECTOR_VOXELMAP);
       VisVoxelMap* vis_map = new VisVoxelMap(orig_map, map_name);
 
@@ -200,7 +225,7 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
     case MT_PROBAB_VOXELLIST:
     {
       LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
-      return false;
+      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED;
     }
 
     case MT_PROBAB_OCTREE:
@@ -216,7 +241,7 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
     case MT_PROBAB_MORTON_VOXELLIST:
     {
       LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
-      return false;
+      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED;
     }
 
     case MT_DISTANCE_VOXELMAP:
@@ -232,7 +257,7 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
     default:
     {
       LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "THIS TYPE OF MAP IS UNKNOWN!" << endl);
-      return false;
+      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED;
     }
   }
 
@@ -241,11 +266,17 @@ bool GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
     std::pair<std::string, ManagedMap> named_map_pair(map_name,
                                                       ManagedMap(map_shared_ptr, vis_map_shared_ptr));
     m_managed_maps.insert(named_map_pair);
+
+    // sanity checking, that nothing went wrong:
+    CHECK_CUDA_ERROR();
+    return map_shared_ptr;
+  }
+  else
+  {
+    throw "Map was not set";
   }
 
-  // sanity checking, that nothing went wrong:
-  CHECK_CUDA_ERROR();
-  return true;
+
 }
 
 bool GpuVoxels::delMap(const std::string &map_name)

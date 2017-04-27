@@ -118,7 +118,7 @@ public:
    * \param map_name The name of the map for later identification
    * \return Returns true, if adding was successful, false otherwise
    */
-  bool addMap(const MapType map_type, const std::string &map_name);
+  GpuVoxelsMapSharedPtr addMap(const MapType map_type, const std::string &map_name);
 
   /*!
    * \brief delMap Remove a map from GVL.
@@ -264,9 +264,9 @@ public:
    * @param cloud The PointCloud to insert
    * @param voxel_meaning Voxel meaning of all voxels
    */
-  bool insertPointCloudIntoMap(const PointCloud &cloud, std::string map_name, 
+  bool insertPointCloudIntoMap(const PointCloud &cloud, std::string map_name,
                                const BitVoxelMeaning voxel_meaning);
-  
+
   /*!
    * @brief insertPointCloudIntoMap Inserts a PointCloud into the map.
    * @param cloud The PointCloud to insert
@@ -274,7 +274,7 @@ public:
    */
   bool insertPointCloudIntoMap(const std::vector<Vector3f> &cloud, std::string map_name,
                                const BitVoxelMeaning voxel_meaning);
-  
+
   /*!
    * @brief insertMetaPointCloudIntoMap Inserts a MetaPointCloud into the map. Each pointcloud
    * inside the MetaPointCloud will get it's own voxel meaning as given in the voxel_meanings
@@ -286,7 +286,7 @@ public:
   bool insertMetaPointCloudIntoMap(const MetaPointCloud &meta_point_cloud,
                                    std::string map_name,
                                    const std::vector<BitVoxelMeaning>& voxel_meanings);
-  
+
   /*!
    * @brief insertMetaPointCloudIntoMap Inserts a MetaPointCloud into the map.
    * @param meta_point_cloud The MetaPointCloud to insert
@@ -295,7 +295,7 @@ public:
   bool insertMetaPointCloudIntoMap(const MetaPointCloud &meta_point_cloud,
                                    std::string map_name,
                                    const BitVoxelMeaning voxel_meaning);
-  
+
   /*!
    * \brief insertRobotIntoMap Writes a robot with its current pose into a map
    * \param robot_name Name of the robot to use
@@ -332,20 +332,36 @@ public:
   /*!
    * \brief modifyPrimitives Creates or updates points and sizes of the primitives.
    * \param array_name Name of array to modify
-   * \param prim_positions Vector of new positions / sizes. Given in Voxels, not metric!
+   * \param prim_positions Vector of new metric positions / metric sizes.
    * \return true if successful, false otherwise
    */
   bool modifyPrimitives(const std::string &array_name, const std::vector<Vector4f>& prim_positions);
 
   /*!
+   * \brief modifyPrimitives Creates or updates points and sizes of the primitives.
+   * \param array_name Name of array to modify
+   * \param prim_positions Vector of new positions / sizes. Given in Voxels, not metric!
+   * \return true if successful, false otherwise
+   */
+  bool modifyPrimitives(const std::string &array_name, const std::vector<Vector4i>& prim_positions);
+
+  /*!
    * \brief modifyPrimitives Creates or updates points the primitives in the array. All have equal diameter.
    * \param array_name Name of array to modify
-   * \param prim_positions Vector of new positions. Given in Voxels, not metric!
-   * \param diameter The diameter of all primitives
+   * \param prim_positions Vector of new metric positions
+   * \param diameter The metric diameter of all primitives
    * \return true if successful, false otherwise
    */
   bool modifyPrimitives(const std::string &array_name, const std::vector<Vector3f>& prim_positions, const float& diameter);
 
+  /*!
+   * \brief modifyPrimitives Creates or updates points that represent primitives. All have equal diameter.
+   * \param array_name Name of array to modify
+   * \param prim_positions Vector of new positions. Given in Voxels, not metric!
+   * \param diameter The diameter of all primitives. Given in Voxels, not metric!
+   * \return true if successful, false otherwise
+   */
+  bool modifyPrimitives(const std::string &array_name, const std::vector<Vector3i>& prim_positions, const uint32_t& diameter);
   /*!
    * \brief getVisualization Gets a handle to the visualization interface of this map.
    * \return pointer to \code VisProvider of the map with the given name.
@@ -362,7 +378,7 @@ public:
    * @return void
    */
   void getDimensions(uint32_t& dim_x, uint32_t& dim_y, uint32_t& dim_z);
-  
+
   /**
    * @brief Gets the dimensions of voxel space
    * @param dim [out] number of Voxels in each dimension

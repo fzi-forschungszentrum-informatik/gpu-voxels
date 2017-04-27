@@ -95,7 +95,8 @@ void Robot::clear()
 
 }
 
-void Robot::load( const urdf::ModelInterface &urdf, bool visual, bool collision, const bool &use_model_path)
+void Robot::load( const urdf::ModelInterface &urdf, const boost::filesystem::path &path_to_pointclouds,
+                  bool visual, bool collision)
 {
   // clear out any data (properties, shapes, etc) from a previously loaded robot.
   clear();
@@ -119,7 +120,7 @@ void Robot::load( const urdf::ModelInterface &urdf, bool visual, bool collision,
       }
 
       RobotLink* link = new RobotLink(this, urdf_link, parent_joint_name,
-                                   visual, collision, use_model_path, link_pointclouds_);
+                                   visual, collision, path_to_pointclouds, link_pointclouds_);
 
       if (urdf_link == urdf.getRoot())
       {

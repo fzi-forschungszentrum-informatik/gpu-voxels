@@ -41,5 +41,16 @@ void kernelDebugMetaPointCloud(MetaPointCloudStruct* meta_point_clouds_struct);
 __global__
 void kernelTransformCloud(const Matrix4f* transformation, const Vector3f* startAddress, Vector3f* transformedAddress, uint32_t numberOfPoints);
 
+/*!
+ * \brief kernelScaleCloud scaled numberOfPoints Points starting at startAddress
+ * \param scaling The scaling factors to be applied
+ * \param startAddress address of the points to be transformed
+ * \param transformedAddress address where to store the transformed points. Can be the same as the input_cloud
+ * \param numberOfPoints number of points to be transformed
+*/
+__global__
+void kernelScaleCloud(const Vector3f scaling, const Vector3f* startAddress, Vector3f* transformedAddress, uint32_t numberOfPoints);
+
+
 }
 #endif

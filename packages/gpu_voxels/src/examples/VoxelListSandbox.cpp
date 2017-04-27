@@ -18,6 +18,8 @@
 * \author  Felix Mauch <mauch@fzi.de>
 * \date    2015-05-04
 *
+* This program demonstrates various collision functions of VoxelLists.
+*
 */
 //----------------------------------------------------------------------
 #include <cstdlib>

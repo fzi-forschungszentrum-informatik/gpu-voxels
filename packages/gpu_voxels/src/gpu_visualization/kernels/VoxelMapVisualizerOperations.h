@@ -76,6 +76,8 @@ __global__ void fill_vbo_with_cubelist(Cube* cubes, uint32_t size, float4* vbo, 
 
 __global__ void calculate_cubes_per_type_list(Cube* cubes, uint32_t size, uint32_t* cubes_per_type,
                                          uint8_t* draw_voxel_type, uint8_t* prefixes);
+
+__global__ void find_cubes_by_coordinates(const Cube* cubes, size_t num_cubes, Vector3ui coords, Cube* found_cube, bool* found_flag);
 } // end of ns
 } // end of ns
 

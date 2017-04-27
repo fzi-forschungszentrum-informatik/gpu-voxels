@@ -196,9 +196,7 @@ void TemplateVoxelList<Voxel, VoxelIDType>::make_unique()
                                     thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin(),m_dev_list.begin()) ) );
 
     size_t new_lenght = thrust::distance(m_dev_id_list.begin(), new_end.first);
-    m_dev_id_list.resize(new_lenght);
-    m_dev_coord_list.resize(new_lenght);
-    m_dev_list.resize(new_lenght);
+    this->resize(new_lenght);
   }
   catch(thrust::system_error &e)
   {
@@ -275,9 +273,7 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const Vector3f *poi
   uint32_t offset_new_entries = m_dev_list.size();
 
   // resize capacity
-  m_dev_list.resize(offset_new_entries + size);
-  m_dev_coord_list.resize(offset_new_entries + size);
-  m_dev_id_list.resize(offset_new_entries + size);
+  this->resize(offset_new_entries + size);
 
   // get raw pointers to the thrust vectors data:
   Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
@@ -306,9 +302,7 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertMetaPointCloud(const MetaPoint
 
   uint32_t offset_new_entries = m_dev_list.size();
   // resize capacity
-  m_dev_list.resize(offset_new_entries + total_points);
-  m_dev_coord_list.resize(offset_new_entries + total_points);
-  m_dev_id_list.resize(offset_new_entries + total_points);
+  this->resize(offset_new_entries + total_points);
 
   // get raw pointers to the thrust vectors data:
   Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
@@ -342,9 +336,7 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertMetaPointCloud(const MetaPoint
 
   uint32_t offset_new_entries = m_dev_list.size();
   // resize capacity
-  m_dev_list.resize(offset_new_entries + total_points);
-  m_dev_coord_list.resize(offset_new_entries + total_points);
-  m_dev_id_list.resize(offset_new_entries + total_points);
+  this->resize(offset_new_entries + total_points);
 
   // get raw pointers to the thrust vectors data:
   Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
@@ -368,6 +360,17 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertMetaPointCloud(const MetaPoint
   make_unique();
 
   unlockSelf("TemplateVoxelList::insertMetaPointCloud");
+}
+
+
+template<class Voxel, class VoxelIDType>
+void TemplateVoxelList<Voxel, VoxelIDType>::resize(size_t new_size)
+{
+  lockSelf("TemplateVoxelList::resize");
+  m_dev_list.resize(new_size);
+  m_dev_coord_list.resize(new_size);
+  m_dev_id_list.resize(new_size);
+  unlockSelf("TemplateVoxelList::resize");
 }
 
 template<class Voxel, class VoxelIDType>
@@ -514,9 +517,7 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr ot
       uint32_t num_new_voxels = m->getDimensions().x;
       uint32_t offset_new_entries = m_dev_list.size();
       // resize capacity
-      m_dev_list.resize(offset_new_entries + num_new_voxels);
-      m_dev_coord_list.resize(offset_new_entries + num_new_voxels);
-      m_dev_id_list.resize(offset_new_entries + num_new_voxels);
+      this->resize(offset_new_entries + num_new_voxels);
 
       // We append the given list to our own list of points.
       thrust::copy(
@@ -576,16 +577,13 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const TemplateVoxelList<Vox
 
 
   // remove the overlapping voxels:
-  new_end = thrust::remove_if(thrust::make_zip_iterator( thrust::make_tuple(m_dev_id_list.begin(), m_dev_coord_list.begin(), m_dev_list.begin()) ),
-                              thrust::make_zip_iterator( thrust::make_tuple(m_dev_id_list.end(), m_dev_coord_list.end(), m_dev_list.end()) ),
+  new_end = thrust::remove_if(this->getBeginTripleZipIterator(),
+                              this->getEndTripleZipIterator(),
                               overlap_stencil.begin(),
                               thrust::identity<bool>());
 
   size_t new_lenght = thrust::distance(m_dev_id_list.begin(), thrust::get<0>(new_end.get_iterator_tuple()));
-  m_dev_id_list.resize(new_lenght);
-  m_dev_coord_list.resize(new_lenght);
-  m_dev_list.resize(new_lenght);
-
+  this->resize(new_lenght);
   unlockBoth(this, other, "TemplateVoxelList::subtract");
 
   return true;
@@ -610,6 +608,18 @@ template<class Voxel, class VoxelIDType>
 Vector3f TemplateVoxelList<Voxel, VoxelIDType>::getMetricDimensions() const
 {
   return Vector3f(m_ref_map_dim.x, m_ref_map_dim.y, m_ref_map_dim.z) * getVoxelSideLength();
+}
+
+template<class Voxel, class VoxelIDType>
+TemplateVoxelList<Voxel, VoxelIDType>::keyCoordVoxelZipIterator TemplateVoxelList<Voxel, VoxelIDType>::getBeginTripleZipIterator()
+{
+  return thrust::make_zip_iterator( thrust::make_tuple(m_dev_id_list.begin(), m_dev_coord_list.begin(), m_dev_list.begin()) );
+}
+
+template<class Voxel, class VoxelIDType>
+TemplateVoxelList<Voxel, VoxelIDType>::keyCoordVoxelZipIterator TemplateVoxelList<Voxel, VoxelIDType>::getEndTripleZipIterator()
+{
+  return thrust::make_zip_iterator( thrust::make_tuple(m_dev_id_list.end(), m_dev_coord_list.end(), m_dev_list.end()) );
 }
 
 

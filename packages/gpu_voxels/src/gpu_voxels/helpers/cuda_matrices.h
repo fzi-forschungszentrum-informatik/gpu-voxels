@@ -489,6 +489,20 @@ struct Matrix4f
     return Vector3f(a14, a24, a34);
   }
 
+  __device__ __host__ void setRotation(const Matrix3f& rot)
+  {
+    a11 = rot.a11;  a12 = rot.a12;  a13 = rot.a13;
+    a21 = rot.a21;  a22 = rot.a22;  a23 = rot.a23;
+    a31 = rot.a31;  a32 = rot.a32;  a33 = rot.a33;
+  }
+
+  __device__ __host__ void setTranslation(const Vector3f& trans)
+  {
+    a14 = trans.x;
+    a24 = trans.y;
+    a34 = trans.z;
+  }
+
   //! Transpose a matrix
   __host__ __device__
   Matrix4f transpose() const

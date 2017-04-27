@@ -284,6 +284,39 @@ void PointCloud::transform(const Matrix4f *transform, PointCloud *transformed_cl
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
+
+void PointCloud::scaleSelf(const Vector3f* scaling)
+{
+  this->scale(scaling, this);
+}
+
+void PointCloud::scale(const Vector3f* scaling, PointCloud* transformed_cloud)
+{
+
+  Vector3f* transformed_dev;
+  if(transformed_cloud == this)
+  {
+    transformed_dev = m_points_dev;
+  }
+  else
+  {
+    transformed_cloud->resize(m_points_size);
+    transformed_dev = transformed_cloud->getDevicePointer();
+  }
+
+  computeLinearLoad(m_points_size,
+                    &m_blocks, &m_threads_per_block);
+  cudaDeviceSynchronize();
+  // transform the cloud via Kernel.
+  kernelScaleCloud<<< m_blocks, m_threads_per_block >>>
+     (*scaling,
+      m_points_dev,
+      transformed_dev,
+      m_points_size);
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
 Vector3f* PointCloud::getDevicePointer()
 {
   return m_points_dev;

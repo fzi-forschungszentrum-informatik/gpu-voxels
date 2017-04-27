@@ -1,21 +1,20 @@
 /**
  * \page Prerequisites Prerequisites
  * Some words on what you will need to build the library. I don’t give explicit version requirements as they get outdated too fast. 
- * For specific problems or questions please consult the <a title="Contact" href="http://www.gpu-voxels.org/contact/">mailing-list</a>.
+ * For specific problems or questions please write to our GITHub bugtracker <a title="Bugtracker" href="https://github.com/fzi-forschungszentrum-informatik/gpu-voxels/issues">https://github.com/fzi-forschungszentrum-informatik/gpu-voxels/issues</a>.
  * 
  * \section hardware Hardware
  * As this is called GPU-Voxels, you will of course need a decent graphics card! 
  * CUDA <a title="CUDA Compute Capability" href="https://en.wikipedia.org/wiki/CUDA#Supported_GPUs" target="_blank">Compute Capability</a> 2.0 or greater is required. 
  * The more GPU memory the better.\n
  * We run the library on various workstations and even on laptops with 64 Bit OS. But we never tested it with 32 Bit! So be careful with that.\n
- * Also we made it compile on the NVIDIA Jetson TK1 (ARM32 SoC) but as CUDA does not support Shared Memory (so no visualization available) for 32 Bit ARMs we did not investigate that further.
- * Things look a lot better on the NVIDIA Jetson TX1 (ARM64 SoC), although it requires huge effort to meet all the requirements to build GPU Voxels.
- * We just exemeriment with that.
+ * Also we made it compile on the NVIDIA Jetson TX1 (ARM64 SoC), although it requires some effort to meet all the requirements to build GPU Voxels.
+ * But as CUDA does not support Shared Memory (so no visualization available) for ARMs we did not investigate that further.
  *
  * \section req_libs Required libraries to build GPU-Voxels
  * The software is tested on 64 Bit Ubuntu Linux Trusty (14.04) and Xenial (16.04). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:
  * <ul>
- * <li>CUDA &gt; 5.5</li>
+ * <li>CUDA &gt; 6.5</li>
  * <li>PCL</li>
  * <li>OpenNI</li>
  * <li>Boost</li>
@@ -30,9 +29,9 @@
  * </ul>
  *  
  * \section add_tools Additional Tools
- * As soon as you want to experiment with your own geometrical models, you will have to “voxelize” them. Models are represented as dense pointclouds in GPU-Voxels. I am using the really nice tool <b><em>binvox </em></b>to perform this task on the GPU. You can download it at <a title="Binvox" href="http://www.cs.princeton.edu/~min/binvox/" target="_blank">http://www.cs.princeton.edu/~min/binvox/</a>
+ * As soon as you want to experiment with your own geometrical models, you will have to “voxelize” them. Models are represented as dense pointclouds in GPU-Voxels. I am using the really nice tool <b><em>binvox </em></b>to perform this task on the GPU. You can download it at <a title="Binvox" href="http://www.patrickmin.com/binvox/" target="_blank">http://www.patrickmin.com/binvox/</a>
  * \n\n
- * Huge thanks to Patrick Min (<a title="Patrick Min" href="http://www.cs.princeton.edu/~min/" target="_blank">http://www.cs.princeton.edu/~min/</a>) for offering the tool for free as a download!
+ * Huge thanks to Patrick Min (<a title="Patrick Min" href="http://www.patrickmin.com/" target="_blank">http://www.patrickmin.com/</a>) for offering the tool for free as a download!
  * \n\n\n
  * ==> After installing the libs, continue with \ref Compiling.
  * 
@@ -102,6 +101,11 @@ hermann-local@ids-isabel-2:~/src/ic_workspace_open_source/build$ cmake ..
  * After compiling you should end with some example programs within the <b><em>build/bin</em></b> directory.\n
  * All programs require the environment variable <b><em>GPU_VOXELS_MODEL_PATH</em></b> be set to the folder, that contains the example files (<b><em>gpu_voxels/models</em></b>)
  * <ul>
+ * <li><b><em>collisions</em></b> – Shows various ways to collide maps</li>
+ * <li><b><em>distance_kinect_demo</em></b> – Calculates a distance field on Kinect data and measures distances in it</li>
+ * <li><b><em>heightmap_loader</em></b> – Shows how to convert 2D png images to voxel-geometries</li>
+ * <li><b><em>urdf_loader_ros_listener</em></b> – Animates a robot model via ROS joint topics</li>
+ * <li><b><em>shift_vs_transform</em></b> – Demonstrates performance gain when shifting voxelmaps</li>
  * <li><b><em>robot_vs_environment</em></b> – High Level API example</li>
  * <li><b><em>swept_volume_vs_environment</em></b> – Kinect collision Detection against a Sweep</li>
  * <li><b>sandbox</b> – Shows the usage of the primitive_array Data type</li>

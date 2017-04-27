@@ -39,6 +39,7 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
   )
 
 ICMAKER_BUILD_PROGRAM()
+
 #------------- Example Program for the usage of gpu_voxels ------------
 ICMAKER_SET("maps" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 
@@ -320,42 +321,6 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_PROGRAM()
 
-#------------- Example Program for the usage of gpu_voxels ------------
-#ICMAKER_SET("ibeo_source" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
-
-#ICMAKER_ADD_HEADERS(
-#  IbeoSourceWrapper.h
-#  )
-
-#ICMAKER_ADD_SOURCES(
-#  IbeoSource.cpp
-#  IbeoSourceWrapper.cpp
-#  )
-
-#ICMAKER_ADD_CUDA_FILES(
-#  )
-
-#ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
-#ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_EXAMPLES_IBEO_SOURCE_)
-#ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
-
-#ICMAKER_INTERNAL_DEPENDENCIES(
-#  icl_core
-#  icl_core_config
-#  icl_core_logging
-#  icl_sourcesink
-#  icl_hardware_ibeo_noapi
-#  icl_hardware_ncom
-#  icl_gps_types
-#  gpu_voxels
-#  )
-
-#ICMAKER_EXTERNAL_DEPENDENCIES(
-#  CUDA
-#  )
-
-#ICMAKER_BUILD_PROGRAM()
-
 #------------- Example Program voxellist sandbox ------------
 ICMAKER_SET("voxellist_sandbox" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 
@@ -455,7 +420,7 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_PROGRAM()
 
-#------------- Example Program distance_voxel_test ------------
+#------------- Example Program distance_kinect_demo ------------
 ICMAKER_SET("distance_kinect_demo" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 add_definitions(-DIC_PERFORMANCE_MONITOR)
 
@@ -490,6 +455,38 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
   )
 
 ICMAKER_BUILD_PROGRAM()
+
+#------------- Example Program for the two primitiveArray APIs ------------
+ICMAKER_SET("primitivearraytest" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
+
+ICMAKER_ADD_HEADERS(
+
+  )
+
+ICMAKER_ADD_SOURCES(
+  PrimitiveArrayTest.cpp
+  )
+
+ICMAKER_ADD_CUDA_FILES(
+  )
+
+ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_EXAMPLES_REFACTORINGTEST_)
+ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
+
+ICMAKER_INTERNAL_DEPENDENCIES(
+  icl_core
+  icl_core_config
+  icl_core_logging
+  gpu_voxels
+  )
+
+ICMAKER_EXTERNAL_DEPENDENCIES(
+
+  )
+
+ICMAKER_BUILD_PROGRAM()
+
 
 #------------- adding examples in subdirectories ------------
 ADD_SUBDIRECTORY(swept_fitter)

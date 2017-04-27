@@ -111,7 +111,7 @@ bool SharedMemoryManagerPrimitiveArrays::getPrimitivePositions(const uint32_t in
   cudaIpcCloseMemHandle(*d_positions);
   /*If an error occurred */
   size = 0;
-  type = primitive_array::primitive_INITIAL_VALUE;
+  type = primitive_array::ePRIM_INITIAL_VALUE;
   d_positions = NULL;
   return false;
 }

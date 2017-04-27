@@ -283,6 +283,12 @@ struct Vector3f
     z = z / length();
   }
 
+  __device__ __host__
+  inline Vector3f abs() const
+  {
+    return Vector3f(fabs(x), fabs(y), fabs(z));
+  }
+
   /*!
    * \brief normalized does not affect the vector it is called on but returns a normalized copy of it
    * which has unit length
@@ -557,6 +563,12 @@ __device__ __host__
 }
 
 __device__ __host__
+   inline Vector3f operator*(const Vector3f& a, const Vector3f& b)
+{
+  return Vector3f(a.x * b.x, a.y * b.y, a.z * b.z);
+}
+
+__device__ __host__
    inline Vector3f operator*(const Vector3i& b, const float& a)
 {
   Vector3f result;
@@ -719,6 +731,12 @@ __device__ __host__
 
 __device__ __host__
    inline Vector3f operator/(const Vector3f& a, const float b)
+{
+  return Vector3f(a.x / b, a.y / b, a.z / b);
+}
+
+__device__ __host__
+   inline Vector3f operator/(const Vector3i& a, const float b)
 {
   return Vector3f(a.x / b, a.y / b, a.z / b);
 }

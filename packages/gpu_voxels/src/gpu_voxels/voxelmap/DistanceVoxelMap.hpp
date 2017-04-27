@@ -135,6 +135,13 @@ bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other
  * cjuelg: jump flood distances, obstacle vectors
  */
 void DistanceVoxelMap::jumpFlood3D(int block_size, int debug, bool logging_reinit) {
+
+  if (this->m_dim.x % 2 || this->m_dim.y % 2) 
+  {
+    LOGGING_ERROR(VoxelmapLog, "jumpFlood3D: dimX and dimY cannot be odd numbers" << endl);
+    return;
+  }
+
 #ifdef IC_PERFORMANCE_MONITOR
   if (logging_reinit) PERF_MON_INITIALIZE(10, 100);
   if (debug) PERF_MON_START("kerneltimer");
@@ -269,6 +276,12 @@ void DistanceVoxelMap::exactDistances3D(std::vector<Vector3f>& points) {
  *
  */
 void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, uint32_t arg_m1_blocksize, uint32_t arg_m2_blocksize, uint32_t arg_m3_blocksize, bool detailtimer) {
+
+  if (this->m_dim.x != this->m_dim.y || this->m_dim.x % 64) 
+  {
+    LOGGING_ERROR(VoxelmapLog, "parallelBanding3D: dimX and dimY must be equal; they also must be divisible by 64" << endl);
+    //return; //TODO: check whether this is the right check; why not 32?
+  }
 
   bool sync_always = detailtimer;
   if (sync_always); //ifndef IC_PERFORMANCE_MONITOR there would be a compiler warning otherwise
@@ -654,7 +667,8 @@ void DistanceVoxelMap::init_floodfill(free_space_t* dev_distances, manhattan_dis
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-void DistanceVoxelMap::extract_distances(free_space_t* dev_distances, int robot_radius) {
+void DistanceVoxelMap::extract_distances(free_space_t* dev_distances, int robot_radius) const
+{
   thrust::device_ptr<DistanceVoxel> dev_voxel_begin(this->m_dev_data);
   thrust::device_ptr<DistanceVoxel> dev_voxel_end(dev_voxel_begin + this->getVoxelMapSize());
   thrust::device_ptr<free_space_t> dev_free_space_begin(dev_distances);

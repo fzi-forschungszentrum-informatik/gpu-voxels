@@ -269,6 +269,24 @@ void Camera_gpu::toggleCameraMode()
   updateViewMatrix();
 }
 
+std::string Camera_gpu::getCameraInfo()
+{
+  std::stringstream returnString;
+  returnString << "Free Flight Mode: (" << m_cur_context.camera_position.x
+               << ", " << m_cur_context.camera_position.y
+               << ", " << m_cur_context.camera_position.z << ")\n";
+  returnString << "Orbital Mode Focus Point: (" << m_cur_context.camera_target.x
+               << ", " << m_cur_context.camera_target.y
+               << ", " << m_cur_context.camera_target.z << ")\n";
+  returnString << "Horizontal Angle: " << glm::degrees(m_cur_context.h_angle) << "°\n";
+  returnString << "Vertical Angle: " << glm::degrees(m_cur_context.v_angle) << "°\n";
+  returnString << "Field of View: " << glm::degrees(m_cur_context.foV) << "°\n";
+  returnString << "Window Dimensions: W: " << getWindowWidth() << "  H: " << getWindowHeight() << "\n";
+  
+  return returnString.str();
+}
+
+
 // --- debug functions ---
 void Camera_gpu::printCameraPosDirR()
 {

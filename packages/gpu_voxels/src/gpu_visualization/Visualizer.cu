@@ -47,6 +47,17 @@ Visualizer::Visualizer()
   m_move_focus_vertical_enabled = false;
   m_keyboardmode = 0;
   m_trianglemode = 0;
+  m_drawTextAll = true;
+  m_drawPointCountText = false;
+  m_drawVBOText = false;
+  m_drawVoxelMapText = true;
+  m_drawVoxelListText = true;
+  m_drawOctreeText = true;
+  m_drawPrimitiveArrayText = true;
+  m_drawTypeText = false;
+  m_drawClickedVoxelInfo = false;
+  m_drawCameraInfo = false;
+  m_clickedVoxelInfo = "no Voxel clicked yet";
 }
 
 Visualizer::~Visualizer()
@@ -62,6 +73,46 @@ Visualizer::~Visualizer()
   {
     delete *it;
   }
+}
+
+std::vector<std::string> Visualizer::getVoxelMapNames()
+{
+  std::vector<std::string> names;
+  for(size_t i = 0; i < m_cur_context->m_voxel_maps.size(); i++)
+  {
+    names.push_back(m_cur_context->m_voxel_maps[i]->m_map_name);
+  }
+  return names;
+}
+
+std::vector<std::string> Visualizer::getVoxelListNames()
+{
+  std::vector<std::string> names;
+  for(size_t i = 0; i < m_cur_context->m_voxel_lists.size(); i++)
+  {
+    names.push_back(m_cur_context->m_voxel_lists[i]->m_map_name);
+  }
+  return names;
+}
+
+std::vector<std::string> Visualizer::getOctreeNames()
+{
+  std::vector<std::string> names;
+  for(size_t i = 0; i < m_cur_context->m_octrees.size(); i++)
+  {
+    names.push_back(m_cur_context->m_octrees[i]->m_map_name);
+  }
+  return names;
+}
+
+std::vector<std::string> Visualizer::getPrimitiveArrayNames()
+{
+  std::vector<std::string> names;
+  for(size_t i = 0; i < m_cur_context->m_prim_arrays.size(); i++)
+  {
+    names.push_back(m_cur_context->m_prim_arrays[i]->m_map_name);
+  }
+  return names;
 }
 
 bool Visualizer::initGL(int32_t* argc, char**argv)
@@ -82,7 +133,7 @@ bool Visualizer::initGL(int32_t* argc, char**argv)
 
 /////////// Initialize glut ///////////////////
   glutInit(argc, argv);
-  glutInitContextVersion(4, 3);
+  //glutInitContextVersion(4, 3);
   // removes deprecated functions
   glutInitContextFlags(GLUT_FORWARD_COMPATIBLE);
   glutInitContextProfile(GLUT_CORE_PROFILE);
@@ -227,6 +278,18 @@ bool Visualizer::initalizeVisualizer(int& argc, char *argv[])
   }
 
   return initializeContextFromXML(argc, argv) & initGL(&argc, argv);
+}
+
+void Visualizer::initializeDrawTextFlags()
+{
+  if(m_cur_context->m_voxel_maps.size() < 1)
+  m_drawVoxelMapText = false;
+  if(m_cur_context->m_voxel_lists.size() < 1)
+  m_drawVoxelListText = false;  
+  if(m_cur_context->m_octrees.size() < 1)
+  m_drawOctreeText = false;
+  if(m_cur_context->m_prim_arrays.size() < 1)
+  m_drawPrimitiveArrayText = false;
 }
 
 /*!
@@ -755,7 +818,7 @@ void Visualizer::fillGLBufferWithCubelist(CubelistContext* context, uint32_t ind
 
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     HANDLE_CUDA_ERROR(cudaGraphicsUnmapResources(1, &context->m_cuda_ressources, 0));
-    cudaIpcCloseMemHandle(context->getCubesDevicePointer());
+    //cudaIpcCloseMemHandle(context->getCubesDevicePointer()); // moved out of this function and added to caller as it is required for Octrees but makes live hard for voxellists.
     updateTypesSegmentMapping(context);
   }
 }
@@ -1140,7 +1203,9 @@ void Visualizer::drawFocusPoint()
         0, // stride
         (void*) 0 // array buffer offset
         );
+    glPointSize( 4.0 );
     glDrawArrays(GL_POINTS, 0, 1);
+    glPointSize( 1.0 );
   }
 }
 
@@ -1185,7 +1250,7 @@ void Visualizer::drawPrimitivesFromSharedMem()
         if(m_shm_manager_primitive_arrays->hasPrimitiveBufferChanged(prim_array_num))
         {
           glm::vec4* dev_ptr_positions;
-          primitive_array::PrimitiveType tmp_prim_type = primitive_array::primitive_INITIAL_VALUE;
+          primitive_array::PrimitiveType tmp_prim_type = primitive_array::ePRIM_INITIAL_VALUE;
           if (m_shm_manager_primitive_arrays->getPrimitivePositions(prim_array_num, (Vector4f**)&dev_ptr_positions, con->m_total_num_voxels,
                                                               tmp_prim_type))
           {
@@ -1222,14 +1287,14 @@ void Visualizer::drawPrimitivesFromSharedMem()
             if(con->m_prim_type != tmp_prim_type)
             {
               con->m_prim_type = tmp_prim_type;
-              if (con->m_prim_type == primitive_array::primitive_Sphere)
+              if (con->m_prim_type == primitive_array::ePRIM_SPHERE)
               {
                 Sphere* sphere;
                 m_interpreter->getDefaultSphere(sphere);
                 con->m_default_prim = sphere;
                 con->m_default_prim->create(m_cur_context->m_lighting);
               }
-              else if (con->m_prim_type == primitive_array::primitive_Cuboid)
+              else if (con->m_prim_type == primitive_array::ePRIM_CUBOID)
               {
                 Cuboid* cuboid;
                 m_interpreter->getDefaultCuboid(cuboid);
@@ -1317,6 +1382,46 @@ void Visualizer::drawPrimitivesFromSharedMem()
 
 }
 
+void Visualizer::drawTextLine(std::string text, int x, int y)
+{
+  glMatrixMode(GL_PROJECTION);
+  double* matrix = new double[16];
+  glGetDoublev(GL_PROJECTION_MATRIX, matrix);
+  glLoadIdentity();
+  glOrtho(0, getWidth(), 0, getHeight(), -5, 5);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+  glPushMatrix();
+  glLoadIdentity();
+  glRasterPos2i(x,y);
+  for(uint i = 0; i < text.size(); i++)
+  {
+    glutBitmapCharacter(GLUT_BITMAP_8_BY_13, (int)text[i]);
+  }
+  glPopMatrix();
+  glMatrixMode(GL_PROJECTION);
+  glLoadMatrixd(matrix);
+  glMatrixMode(GL_MODELVIEW);
+}
+
+void Visualizer::drawText(std::string text, int x, int y)
+{
+  std::vector<std::string> lines;
+  std::string rest = text;
+  size_t index = rest.find("\n");
+  while(index != std::string::npos)
+  {
+    lines.push_back(rest.substr(0, index));
+    rest = rest.substr(index + 1, rest.size() - 1);
+    index = rest.find("\n");
+  }
+  lines.push_back(rest);
+  for(uint i = 0; i < lines.size(); i++)
+  {
+    drawTextLine(lines[i], x, y - 15 * i);
+  }
+}
+
 ///////////////////////////////Begin: Callback functions for freeglut///////////////////////////////
 void Visualizer::renderFunction(void)
 {
@@ -1324,6 +1429,113 @@ void Visualizer::renderFunction(void)
   int32_t lastTime = glutGet(GLUT_ELAPSED_TIME);
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  //draw text on display
+  if (m_drawTextAll)
+  {
+    std::stringstream displayText;
+    if(m_drawPointCountText)
+    displayText << printNumberOfVoxelsDrawn() << "\n";
+    if(m_drawVBOText)
+    displayText << printTotalVBOsizes() << "\n";
+
+    if (m_drawVoxelMapText)
+    {
+      displayText << "VoxelMaps: ";
+      for (size_t i = 0; i < m_cur_context->m_voxel_maps.size(); i++)
+      {
+        if (!m_cur_context->m_voxel_maps[i]->m_draw_context)
+        {
+          displayText << "(" << m_cur_context->m_voxel_maps[i]->m_map_name << ") ";
+        }
+        else
+        {
+          displayText << m_cur_context->m_voxel_maps[i]->m_map_name << " ";
+        }
+      }
+      displayText << "\n";
+    }
+    if (m_drawVoxelListText)
+    {
+      displayText << "VoxelLists: ";
+      for (size_t i = 0; i < m_cur_context->m_voxel_lists.size(); i++)
+      {
+        if (!m_cur_context->m_voxel_lists[i]->m_draw_context)
+        {
+          displayText << "(" << m_cur_context->m_voxel_lists[i]->m_map_name << ") ";
+        }
+        else
+        {
+          displayText << m_cur_context->m_voxel_lists[i]->m_map_name << " ";
+        }
+      }
+      displayText << "\n";
+    }
+    if (m_drawOctreeText)
+    {
+      displayText << "Octrees: ";
+      for (size_t i = 0; i < m_cur_context->m_octrees.size(); i++)
+      {
+        if (!m_cur_context->m_octrees[i]->m_draw_context)
+        {
+          displayText << "(" << m_cur_context->m_octrees[i]->m_map_name << ") ";
+        }
+        else
+        {
+          displayText << m_cur_context->m_octrees[i]->m_map_name << " ";
+        }
+      }
+      displayText << "\n";
+    }
+    if (m_drawPrimitiveArrayText)
+    {
+      displayText << "Primitive Arrays: ";
+      for (size_t i = 0; i < m_cur_context->m_prim_arrays.size(); i++)
+      {
+        if (!m_cur_context->m_prim_arrays[i]->m_draw_context)
+        {
+          displayText << "(" << m_cur_context->m_prim_arrays[i]->m_map_name << ") ";
+        }
+        else
+        {
+          displayText << m_cur_context->m_prim_arrays[i]->m_map_name << " ";
+        }
+      }
+      displayText << "\n";
+    }
+
+    if (m_drawTypeText)
+    {
+      displayText << "Types drawn: ";
+      int count = 0;
+      for (size_t i = 0; i < m_cur_context->m_draw_types.size(); i++)
+      {
+        if (m_cur_context->m_draw_types[i])
+        {
+          displayText << i << " ";
+          count++;
+        }
+        if (count >= 35)
+        {
+          displayText << "\n";
+          count = 0;
+        }
+      }
+      displayText << "\n";
+    }
+    drawText(displayText.str(), 10, getHeight() - 20);
+
+    if (m_drawClickedVoxelInfo)
+    {
+      drawText(m_clickedVoxelInfo, getWidth() / 2, 80);
+    }
+
+    if (m_drawCameraInfo)
+    {
+      drawText(m_cur_context->m_camera->getCameraInfo(), 10, 80);
+    }
+  }
+  //end of drawing text
 
   drawPrimitivesFromSharedMem();
 
@@ -1442,6 +1654,7 @@ void Visualizer::renderFunction(void)
         if (updateVoxelListContext(m_cur_context->m_voxel_lists[i], i))
         {
           fillGLBufferWithCubelist(m_cur_context->m_voxel_lists[i], i);
+          cudaIpcCloseMemHandle(m_cur_context->m_voxel_lists[i]->getCubesDevicePointer()); // unmap shared mem
         }
         m_shm_manager_voxellists->setBufferSwappedToFalse(i);
       }
@@ -1461,6 +1674,7 @@ void Visualizer::renderFunction(void)
         if (updateOctreeContext(m_cur_context->m_octrees[i], i))
         {
           fillGLBufferWithCubelist(m_cur_context->m_octrees[i], i);
+          cudaIpcCloseMemHandle(m_cur_context->m_octrees[i]->getCubesDevicePointer());
         }
         m_shm_manager_octrees->setOctreeBufferSwappedToFalse(i);
       }
@@ -1487,11 +1701,13 @@ void Visualizer::renderFunction(void)
 void Visualizer::mouseClickFunction(int32_t button, int32_t state, int32_t xpos, int32_t ypos)
 {
   float speed_multiplier = 80.f;
-  if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
+  // A left click always looks up voxel info
+  if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
   {
-    printPositionOfVoxelUnderMouseCursor(xpos, ypos);
+    m_clickedVoxelInfo = printPositionOfVoxelUnderMouseCursor(xpos, ypos);
   }
-  else if (button == 3 && state == GLUT_DOWN) /*mouse wheel up*/
+
+  if (button == 3 && state == GLUT_DOWN) /*mouse wheel up*/
   {
     int32_t modi = glutGetModifiers();
     if (modi & GLUT_ACTIVE_CTRL  && modi & GLUT_ACTIVE_ALT)
@@ -1975,6 +2191,151 @@ void Visualizer::keyboardDrawTriangles()
   }
 }
 
+void Visualizer::menuFunction(int value)
+{
+  switch(value)
+  {
+    case MENU_NONSENSE:
+      break;
+    case MENU_HELP:
+      printHelp();
+      break;
+    case MENU_TEXT_ALL:
+      m_drawTextAll = !m_drawTextAll;
+      break;
+    case MENU_TEXT_POINTS:
+      m_drawPointCountText = !m_drawPointCountText;
+      break;
+    case MENU_TEXT_VBO:
+      m_drawVBOText = !m_drawVBOText;
+      break;
+    case MENU_TEXT_VOXELMAPS:
+      m_drawVoxelMapText = !m_drawVoxelMapText;
+      break;
+    case MENU_TEXT_VOXELLISTS:
+      m_drawVoxelListText = !m_drawVoxelListText;
+      break;
+    case MENU_TEXT_OCTREES:
+      m_drawOctreeText = !m_drawOctreeText;
+      break;
+    case MENU_TEXT_PRIMITIVEARRAYS:
+      m_drawPrimitiveArrayText = !m_drawPrimitiveArrayText;
+      break;
+    case MENU_TEXT_TYPES:
+      m_drawTypeText = !m_drawTypeText;
+      break;
+    case MENU_TEXT_CLICKEDVOXELINFO:
+      m_drawClickedVoxelInfo = !m_drawClickedVoxelInfo;
+      break;
+    case MENU_CAMERA_RESET:
+      m_cur_context->m_camera->resetToInitialValues();
+      createFocusPointVBO();
+      break;
+    case MENU_CAMERA_FREE:
+      m_cur_context->m_camera->m_camera_orbit = true;
+      m_cur_context->m_camera->toggleCameraMode();
+      break;
+    case MENU_CAMERA_ORBIT:
+      m_cur_context->m_camera->m_camera_orbit = false;
+      m_cur_context->m_camera->toggleCameraMode();
+      break;
+    case MENU_CAMERA_TOGGLETEXT:
+      m_drawCameraInfo = !m_drawCameraInfo;
+      break;
+    case MENU_GRID_ON:
+      m_cur_context->m_draw_grid = true;
+      break;
+    case MENU_GRID_OFF:
+      m_cur_context->m_draw_grid = false;
+      break;
+    case MENU_RENDERMODE_SOLID:
+      m_cur_context->m_draw_edges_of_triangels = false;
+      m_cur_context->m_draw_filled_triangles = true;
+      break;
+    case MENU_RENDERMODE_WIREFRAME:
+      m_cur_context->m_draw_edges_of_triangels = true;
+      m_cur_context->m_draw_filled_triangles = false;
+      break;
+    case MENU_RENDERMODE_SOLIDWIREFRAME:
+      m_cur_context->m_draw_edges_of_triangels = true;
+      m_cur_context->m_draw_filled_triangles = true;
+      break;    
+    case MENU_RENDERMODE_DIST_DEFAULT:
+      m_cur_context->m_distance_drawmode = DISTANCE_DRAW_DEFAULT;
+      break;
+    case MENU_RENDERMODE_DIST_TWOCOLOR_GRADIENT:
+      m_cur_context->m_distance_drawmode = DISTANCE_DRAW_TWOCOLOR_GRADIENT;
+      break;
+    case MENU_RENDERMODE_DIST_MULTICOLOR_GRADIENT:
+      m_cur_context->m_distance_drawmode = DISTANCE_DRAW_MULTICOLOR_GRADIENT;
+      break;
+    case MENU_RENDERMODE_DIST_VORONOI_LINEAR:
+      m_cur_context->m_distance_drawmode = DISTANCE_DRAW_VORONOI_LINEAR;
+      break;
+    case MENU_RENDERMODE_DIST_VORONOI_SCRAMBLE:
+      m_cur_context->m_distance_drawmode = DISTANCE_DRAW_VORONOI_SCRAMBLE;
+      break;
+    case MENU_RENDERMODE_SLICING_OFF:
+      m_cur_context->m_slice_axis = 0;
+      break;
+    case MENU_RENDERMODE_SLICING_X:
+      m_cur_context->m_slice_axis = 1;
+      break;
+    case MENU_RENDERMODE_SLICING_Y:
+      m_cur_context->m_slice_axis = 2;
+      break;
+    case MENU_RENDERMODE_SLICING_Z:
+      m_cur_context->m_slice_axis = 3;
+      break;
+    case MENU_DRAWMAP_ALL:
+      m_cur_context->m_draw_whole_map = true;
+      break;
+    case MENU_DRAWMAP_VIEW:
+      m_cur_context->m_draw_whole_map = false;
+      break;
+    case MENU_DEPTHTEST_ALWAYS:
+      m_cur_context->m_draw_collison_depth_test_always = true;
+      break;
+    case MENU_DEPTHTEST_LEQUAL:
+      m_cur_context->m_draw_collison_depth_test_always = false;
+      break;
+    case MENU_LIGHT_ON:
+      m_cur_context->m_lighting = false;
+      break;
+    case MENU_LIGHT_OFF:
+      m_cur_context->m_lighting = true;
+      break;
+    case MENU_VISIBILITYTRIGGER_ACTIVATED:
+      m_use_external_draw_type_triggers = true;
+      break;
+    case MENU_VISIBILITYTRIGGER_DEACTIVATED:
+      m_use_external_draw_type_triggers = false;
+      break;
+    default:
+      //Functions for maps: VoxelMaps
+      if(value >= 300 && value < 400)
+      {
+        flipDrawVoxelmap(value - 300);
+      }
+      //Functions for maps: voxellists
+      if(value >= 400 && value < 500)
+      {
+        flipDrawVoxellist(value - 400);
+      }
+      //Functions for maps: Octrees
+      if(value >= 500 && value < 600)
+      {
+        flipDrawOctree(value - 500);
+      }
+      if(value >= 600 && value < 700)
+      {
+        flipDrawPrimitiveArray(value - 600);
+      }
+      break;
+  }
+  glutPostRedisplay();
+  return;
+}
 
 void Visualizer::idleFunction(void) const
 {
@@ -2242,7 +2603,7 @@ void Visualizer::updateTypesSegmentMapping(DataContext* context)
 /**
  * Prints the position of the voxel under the mouse cursor.
  */
-void Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos)
+std::string Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos)
 {
 //clear background color
   glClearColor(1.f, 1.f, 1.f, 1.f);
@@ -2339,20 +2700,20 @@ void Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos
     }
   }
 
+std::stringstream returnString;
 //reset background color
   glm::vec4 bc = m_cur_context->m_background_color;
   glClearColor(bc.x, bc.y, bc.z, 1.f);
   std::cout << std::endl;
   if (!found_in_voxelmap && !found_in_octree && !found_in_voxellist)
   {
-    std::cout << "There is no voxel!" << std::endl;
-    return;
+    returnString << "There is no voxel!" << std::endl;
   }
   float scale = m_cur_context->m_scale_unit.first;
   std::string unit = m_cur_context->m_scale_unit.second;
   if (found_in_voxelmap)
   {
-    std::cout << "Found voxel in voxel map: " << m_cur_context->m_voxel_maps[data_index]->m_map_name
+    returnString << "Found voxel in voxel map: " << m_cur_context->m_voxel_maps[data_index]->m_map_name
         << std::endl;
     n_pos = n_pos / d;
 
@@ -2362,20 +2723,20 @@ void Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos
       n_pos = n_pos * d;
       Vector3ui end_pos = n_pos + d - Vector3ui(1);
 
-      std::cout << "Start voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z
+      returnString << "Start voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z
           << std::endl;
-      std::cout << "Start voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
+      returnString << "Start voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
           << " z: " << n_pos.z * scale << unit << std::endl;
-      std::cout << "End voxel position x: " << end_pos.x << " y: " << end_pos.y << " z: " << end_pos.z
+      returnString << "End voxel position x: " << end_pos.x << " y: " << end_pos.y << " z: " << end_pos.z
           << std::endl;
-      std::cout << "End voxel distance x: " << end_pos.x * scale << unit << " y: " << end_pos.y * scale
+      returnString << "End voxel distance x: " << end_pos.x * scale << unit << " y: " << end_pos.y * scale
           << unit << " z: " << end_pos.z * scale << unit << std::endl;
     }
     else
     {
-      std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
+      returnString << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
 
-      std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
+      returnString << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
           << " z: " << n_pos.z * scale << unit << std::endl;
     }
 
@@ -2385,37 +2746,75 @@ void Visualizer::printPositionOfVoxelUnderMouseCursor(int32_t xpos, int32_t ypos
 
       gpu_voxels::voxelmap::BitVectorVoxelMap::Voxel voxel;
       cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(vm->getDeviceDataPtr(), vm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::BitVectorVoxelMap::Voxel), cudaMemcpyDeviceToHost);
-      std::cout << "Voxel info: " << voxel << std::endl;
+      returnString << "Voxel info: " << voxel << std::endl;
 
     } else if (vm_context->m_voxelMap->getMapType() == MT_PROBAB_VOXELMAP) {
       gpu_voxels::voxelmap::ProbVoxelMap* vm = static_cast<gpu_voxels::voxelmap::ProbVoxelMap *>(vm_context->m_voxelMap);
 
       gpu_voxels::voxelmap::ProbVoxelMap::Voxel voxel;
       cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(vm->getDeviceDataPtr(), vm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::ProbVoxelMap::Voxel), cudaMemcpyDeviceToHost);
-      std::cout << "Voxel info: " << voxel << std::endl;
+      returnString << "Voxel info: " << voxel << std::endl;
 
     } else if (vm_context->m_voxelMap->getMapType() == MT_DISTANCE_VOXELMAP) {
       gpu_voxels::voxelmap::DistanceVoxelMap* dvm = static_cast<gpu_voxels::voxelmap::DistanceVoxelMap *>(vm_context->m_voxelMap);
 
       gpu_voxels::voxelmap::DistanceVoxelMap::Voxel voxel;
       cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(dvm->getDeviceDataPtr(), dvm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::DistanceVoxelMap::Voxel), cudaMemcpyDeviceToHost);
-      std::cout << "Voxel info: " << voxel << std::endl;
+      returnString << "Voxel info: " << voxel << std::endl;
     }
   }
   if (found_in_octree)
   {
-    std::cout << "Found voxel in octree: " << m_cur_context->m_octrees[data_index]->m_map_name << std::endl;
-    std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
-    std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
+    returnString << "Found voxel in octree: " << m_cur_context->m_octrees[data_index]->m_map_name << std::endl;
+    returnString << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
+    returnString << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
         << " z: " << n_pos.z * scale << unit << std::endl;
   }
   if (found_in_voxellist)
   {
-    std::cout << "Found voxel in Voxellist: " << m_cur_context->m_voxel_lists[data_index]->m_map_name << std::endl;
-    std::cout << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
-    std::cout << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
+    returnString << "Found voxel in Voxellist: " << m_cur_context->m_voxel_lists[data_index]->m_map_name << std::endl;
+    returnString << "Voxel position x: " << n_pos.x << " y: " << n_pos.y << " z: " << n_pos.z << std::endl;
+    returnString << "Voxel distance x: " << n_pos.x * scale << unit << " y: " << n_pos.y * scale << unit
         << " z: " << n_pos.z * scale << unit << std::endl;
+
+    // First we have to map in the CUDA shared memory of the data structure
+    CubelistContext* vm_context = m_cur_context->m_voxel_lists[data_index];
+    if (updateVoxelListContext(vm_context, data_index))
+    {
+
+      // as we can not access cubes by their XYZ coords, we have to search for the right voxel:
+      Cube h_found_cube;
+      Cube* d_found_cube;
+      cudaMalloc((void**)&d_found_cube, sizeof(Cube));
+      bool h_found_flag(false);
+      bool* d_found_flag;
+      cudaMalloc((void**)&d_found_flag, sizeof(bool));
+      cudaMemset(d_found_flag, 0, sizeof(bool));
+
+      find_cubes_by_coordinates<<<vm_context->m_num_blocks, vm_context->m_threads_per_block>>>(vm_context->getCubesDevicePointer(),
+                                                                                               vm_context->getNumberOfCubes(),
+                                                                                               n_pos, d_found_cube, d_found_flag);
+
+
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+      HANDLE_CUDA_ERROR(cudaMemcpy((void*)&h_found_flag, d_found_flag, sizeof(bool), cudaMemcpyDeviceToHost));
+
+      if(h_found_flag)
+      {
+        cudaMemcpy((void*)&h_found_cube, d_found_cube, sizeof(Cube), cudaMemcpyDeviceToHost);
+        returnString << "Voxel info: " << h_found_cube.m_type_vector << std::endl;
+      }
+
+      cudaFree(d_found_cube);
+      cudaFree(d_found_flag);
+
+      // unmap the CUDA shared mem
+      cudaIpcCloseMemHandle(vm_context->getCubesDevicePointer());
+    }
   }
+
+  std::cout << returnString.str();
+  return returnString.str();
 }
 
 void Visualizer::toggleLighting()
@@ -2465,7 +2864,7 @@ void Visualizer::distributeMaxMemory()
 
 }
 
-void Visualizer::printNumberOfVoxelsDrawn()
+std::string Visualizer::printNumberOfVoxelsDrawn()
 {
   uint32_t num_voxels = 0;
 
@@ -2477,10 +2876,13 @@ void Visualizer::printNumberOfVoxelsDrawn()
   {
     num_voxels += m_cur_context->m_octrees[i]->m_total_num_voxels;
   }
-  std::cout << "#Voxels " << num_voxels << " #Triangles " << num_voxels * 36 << std::endl;
+  std::stringstream returnString;
+  returnString << "#Voxels: " << num_voxels << " #Triangles: " << num_voxels*36;
+  //std::cout << returnString.str() << std::endl;
+  return returnString.str();
 }
 
-void Visualizer::printTotalVBOsizes()
+std::string Visualizer::printTotalVBOsizes()
 {
   size_t total_size = 0;
   for (size_t i = 0; i < m_cur_context->m_voxel_maps.size(); i++)
@@ -2491,25 +2893,35 @@ void Visualizer::printTotalVBOsizes()
   {
     total_size += m_cur_context->m_octrees[i]->m_cur_vbo_size;
   }
-  std::cout << "Current Size of the VBOs: " << total_size / 1e+006 << " MByte.\n";
+  for (uint32_t i = 0; i < m_cur_context->m_voxel_lists.size(); i++)
+  {
+    total_size += m_cur_context->m_voxel_lists[i]->m_cur_vbo_size;
+  }
+  std::stringstream returnString;
+  returnString << "VBO Size: " << total_size / 1e+006 << " MByte";
+  //std::cout << "Current Size of the VBOs: " << total_size / 1e+006 << " MByte.\n";
+  return returnString.str();
+  
 }
 
-void Visualizer::printViewInfo()
+std::string Visualizer::printViewInfo()
 {
-  std::cout << "--------printing view info--------" << std::endl;
+  //std::cout << "--------printing view info--------" << std::endl;
+  std::stringstream resultString;
   glm::vec3 vd = m_cur_context->m_dim_view;
-  std::cout << "dimension of view x: " << vd.x << " y: " << vd.y << " z: " << vd.z << std::endl;
+  resultString << "dimension of view x: " << vd.x << " y: " << vd.y << " z: " << vd.z << std::endl;
 
   Vector3ui vs = m_cur_context->m_view_start_voxel_pos;
-  std::cout << "m_view_start_voxel_index x: " << vs.x << " y: " << vs.y << " z: " << vs.z << std::endl;
+  resultString << "m_view_start_voxel_index x: " << vs.x << " y: " << vs.y << " z: " << vs.z << std::endl;
   Vector3ui ve = m_cur_context->m_view_end_voxel_pos;
-  std::cout << "m_view_end_voxel_index x: " << ve.x << " y: " << ve.y << " z: " << ve.z << std::endl;
+  resultString << "m_view_end_voxel_index x: " << ve.x << " y: " << ve.y << " z: " << ve.z << std::endl;
 
   glm::vec3 d = m_cur_context->m_camera->getCameraDirection();
-  std::cout << "Camera direction  x: " << d.x << " y: " << d.y << " z: " << d.z << std::endl;
+  resultString << "Camera direction  x: " << d.x << " y: " << d.y << " z: " << d.z << std::endl;
 
   glm::vec3 t = m_cur_context->m_camera->getCameraTarget();
-  std::cout << "Camera target: x: " << t.x << " y: " << t.y << " z: " << t.z << std::endl;
+  resultString << "Camera target: x: " << t.x << " y: " << t.y << " z: " << t.z;
+  return resultString.str();
 }
 
 /**

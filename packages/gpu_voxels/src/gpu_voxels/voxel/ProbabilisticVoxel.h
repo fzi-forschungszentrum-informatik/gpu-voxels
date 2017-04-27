@@ -89,6 +89,9 @@ public:
     }
   };
 
+  __host__ __device__
+  bool isOccupied(float col_threshold) const;
+
 
   template<typename T>
   __host__

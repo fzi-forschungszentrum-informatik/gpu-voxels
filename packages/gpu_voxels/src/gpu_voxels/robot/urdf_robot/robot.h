@@ -68,6 +68,7 @@
 #include <urdf_model/model.h>
 #include <kdl/frames_io.hpp>
 #include <kdl_parser/kdl_parser.hpp>
+#include <boost/filesystem.hpp>
 
 namespace urdf {
   class ModelInterface;
@@ -100,7 +101,8 @@ public:
    * @param visual Whether or not to load the visual representation
    * @param collision Whether or not to load the collision representation
    */
-  void load( const urdf::ModelInterface &urdf, bool visual = true, bool collision = true, const bool &use_model_path = true);
+  void load( const urdf::ModelInterface &urdf, const boost::filesystem::path &path_to_pointclouds,
+             bool visual = true, bool collision = true);
 
   /**
    * \brief Clears all data loaded from a URDF

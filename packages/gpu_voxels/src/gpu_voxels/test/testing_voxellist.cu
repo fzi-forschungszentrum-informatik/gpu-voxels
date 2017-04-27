@@ -78,6 +78,98 @@ BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap)
   }
 }
 
+
+
+BOOST_AUTO_TEST_CASE(bitvoxellist_collide_with_types_prob_voxelmap)
+{
+  PERF_MON_START("bitvoxellist_collide_with_types_prob_voxelmap");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    float side_length = 1.f;
+
+    BitVectorVoxelList* list = new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST);
+
+    Vector3f b1_min(1.1,1.1,1.1);
+    Vector3f b1_max(3.9,3.9,3.9);
+    Vector3f b2_min(2.1,2.1,2.1);
+    Vector3f b2_max(4.9,4.9,4.9);
+
+    std::vector<BitVoxelMeaning> voxel_meanings;
+    voxel_meanings.push_back(BitVoxelMeaning(11));
+    voxel_meanings.push_back(BitVoxelMeaning(12));
+
+    std::vector<std::vector<Vector3f> > box_clouds;
+    float delta = 0.1;
+
+    box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+
+    MetaPointCloud boxes(box_clouds);
+    boxes.syncToDevice();
+
+    list->insertMetaPointCloud(boxes, voxel_meanings);
+
+    GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(Vector3ui(dimX, dimY, dimZ), side_length, MT_PROBAB_VOXELMAP));
+    map_2->insertMetaPointCloud(boxes, eBVM_OCCUPIED);
+
+    BitVectorVoxel types_in_collision;
+
+    size_t num_colls = list->collideWithTypes(map_2->as<ProbVoxelMap>(), types_in_collision, 1.0);
+    BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
+    BOOST_CHECK_MESSAGE(types_in_collision.bitVector().getBit(11) && types_in_collision.bitVector().getBit(12), "Both Types found.");
+    types_in_collision.bitVector().clearBit(11);
+    types_in_collision.bitVector().clearBit(12);
+    BOOST_CHECK_MESSAGE(types_in_collision.bitVector().isZero(), "All other Types are clear.");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_collide_with_types_prob_voxelmap", "bitvoxellist_collide_with_types_prob_voxelmap", "voxellists");
+  }
+}
+
+
+BOOST_AUTO_TEST_CASE(bitvoxellist_collide_with_types_bitvoxelmap)
+{
+  PERF_MON_START("bitvoxellist_collide_with_types_bitvoxelmap");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    float side_length = 1.f;
+
+    BitVectorVoxelList* list = new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST);
+
+    Vector3f b1_min(1.1,1.1,1.1);
+    Vector3f b1_max(3.9,3.9,3.9);
+    Vector3f b2_min(2.1,2.1,2.1);
+    Vector3f b2_max(4.9,4.9,4.9);
+
+    std::vector<BitVoxelMeaning> voxel_meanings;
+    voxel_meanings.push_back(BitVoxelMeaning(11));
+    voxel_meanings.push_back(BitVoxelMeaning(12));
+
+    std::vector<std::vector<Vector3f> > box_clouds;
+    float delta = 0.1;
+
+    box_clouds.push_back(createBoxOfPoints(b1_min, b1_max, delta));
+    box_clouds.push_back(createBoxOfPoints(b2_min, b2_max, delta));
+
+    MetaPointCloud boxes(box_clouds);
+    boxes.syncToDevice();
+
+    list->insertMetaPointCloud(boxes, voxel_meanings);
+
+    GpuVoxelsMapSharedPtr map_2(new BitVectorVoxelMap(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELMAP));
+    map_2->insertMetaPointCloud(boxes, eBVM_OCCUPIED);
+
+    BitVectorVoxel types_in_collision;
+
+    size_t num_colls = list->collideWithTypes(map_2->as<BitVectorVoxelMap>(), types_in_collision, 1.0);
+    BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
+    BOOST_CHECK_MESSAGE(types_in_collision.bitVector().getBit(11) && types_in_collision.bitVector().getBit(12), "Both Types found.");
+    types_in_collision.bitVector().clearBit(11);
+    types_in_collision.bitVector().clearBit(12);
+    BOOST_CHECK_MESSAGE(types_in_collision.bitVector().isZero(), "All other Types are clear.");
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_collide_with_types_bitvoxelmap", "bitvoxellist_collide_with_types_bitvoxelmap", "voxellists");
+  }
+}
+
+
 BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap_shifting)
 {
   PERF_MON_START("collide_bitvoxellist_with_prob_voxelmap_shifting");

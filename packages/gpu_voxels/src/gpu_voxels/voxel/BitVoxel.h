@@ -74,6 +74,11 @@ public:
     }
   };
 
+  __host__ __device__
+  bool isOccupied(float col_threshold) const
+  {
+    return !(bitVector().noneButEmpty());
+  }
 
   /**
    * @brief operator >> Overloaded ostream operator. Please note that the output bit string is starting from

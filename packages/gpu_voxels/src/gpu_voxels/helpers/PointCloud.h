@@ -110,16 +110,28 @@ public:
   void update(const Vector3f* points, uint32_t size);
 
   /*!
-   * \brief transform Applies the transformation to the own points and overrides the points
+   * \brief transformSelf Applies the transformation to the own points and overrides the points
    * \param transform Transformation matrix
    */
   void transformSelf(const Matrix4f* transform);
   /*!
    * \brief transform Applies a transformation to this cloud and returns the result in transformed_cloud
    * \param transform Transformation matrix
-   * \param transformed_cloud Output cloud. Has to have the same size as the current pointcloud
+   * \param transformed_cloud Output cloud. Will be resized.
    */
   void transform(const Matrix4f* transform, PointCloud* transformed_cloud);
+
+  /*!
+   * \brief scaleSelf Applies scaling around origin to the own points and overrides the points
+   * \param scaling The scaling factors.
+   */
+  void scaleSelf(const Vector3f* scaling);
+  /*!
+   * \brief scale Applies scaling around origin to this cloud and returns the result in transformed_cloud
+   * \param scaling The scaling factors.
+   * \param scaled_cloud Output cloud. Will be resized.
+   */
+  void scale(const Vector3f* scaling, PointCloud* scaled_cloud);
 
   Vector3f* getDevicePointer();
   const Vector3f *getConstDevicePointer() const;

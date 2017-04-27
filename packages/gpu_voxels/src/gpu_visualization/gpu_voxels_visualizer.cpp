@@ -43,7 +43,130 @@ void runVisualisation(int32_t* argc, char* argv[])
   glutPassiveMotionFunc(mousePassiveMotionFunctionWrapper);
   glutMouseFunc(mouseClickFunctionWrapper);
 
+  createRightClickMenu();
+
   glutMainLoop();
+  return;
+}
+
+void createRightClickMenu()
+{
+  int textMenu = glutCreateMenu(&menuFunctionWrapper);
+  glutAddMenuEntry("All", MENU_TEXT_ALL);
+  glutAddMenuEntry("Points Count", MENU_TEXT_POINTS);
+  glutAddMenuEntry("VBO Info", MENU_TEXT_VBO);
+  glutAddMenuEntry("VoxelMaps", MENU_TEXT_VOXELMAPS);
+  glutAddMenuEntry("VoxelLists", MENU_TEXT_VOXELLISTS);
+  glutAddMenuEntry("Octrees", MENU_TEXT_OCTREES);
+  glutAddMenuEntry("PrimitiveArrays", MENU_TEXT_PRIMITIVEARRAYS);
+  glutAddMenuEntry("Types", MENU_TEXT_TYPES);
+  glutAddMenuEntry("Clicked Voxel Info", MENU_TEXT_CLICKEDVOXELINFO);
+
+  int mapMenu = glutCreateMenu(&menuFunctionWrapper);
+  
+  std::vector<std::string> voxelmapNames = vis->getVoxelMapNames();
+  for(size_t i = 0; i < voxelmapNames.size(); i++)
+  {
+    glutSetMenu(mapMenu);
+    std::stringstream tmp;
+    tmp << "Toggle Draw " << voxelmapNames[i];
+    glutAddMenuEntry(tmp.str().data(), 300 + i);
+  }
+
+  std::vector<std::string> voxellistNames = vis->getVoxelListNames();
+  for(size_t i = 0; i < voxellistNames.size(); i++)
+  {
+    glutSetMenu(mapMenu);
+    std::stringstream tmp;
+    tmp << "Toggle Draw " << voxellistNames[i];
+    glutAddMenuEntry(tmp.str().data(), 400 + i);
+  }
+
+  std::vector<std::string> octreeNames = vis->getOctreeNames();
+  for(size_t i = 0; i < octreeNames.size(); i++)
+  {
+    glutSetMenu(mapMenu);
+    std::stringstream tmp;
+    tmp << "Toggle Draw " << octreeNames[i];
+    glutAddMenuEntry(tmp.str().data(), 500 + i);
+  }
+
+  std::vector<std::string> primArrayNames = vis->getPrimitiveArrayNames();
+  for(size_t i = 0; i < primArrayNames.size(); i++)
+  {
+    glutSetMenu(mapMenu);
+    std::stringstream tmp;
+    tmp << "Toggle Draw " << primArrayNames[i];
+    glutAddMenuEntry(tmp.str().data(), 600 + i);
+  }
+
+
+  //define sub menus
+  int cameraMenu = glutCreateMenu(&menuFunctionWrapper);
+  glutAddMenuEntry("Free", MENU_CAMERA_FREE);
+  glutAddMenuEntry("Orbit", MENU_CAMERA_ORBIT);
+  glutAddMenuEntry("Reset", MENU_CAMERA_RESET);
+  glutAddMenuEntry("Toggle Info", MENU_CAMERA_TOGGLETEXT);
+
+  int gridMenu = glutCreateMenu(&menuFunctionWrapper);
+  glutAddMenuEntry("On", MENU_GRID_ON);
+  glutAddMenuEntry("Off", MENU_GRID_OFF);
+
+    // sub sub menu of rendermodes
+    int rendermodeSubMenuDist = glutCreateMenu(&menuFunctionWrapper);
+    glutAddMenuEntry("Default", MENU_RENDERMODE_DIST_DEFAULT);
+    glutAddMenuEntry("Two-color gradient", MENU_RENDERMODE_DIST_TWOCOLOR_GRADIENT);
+    glutAddMenuEntry("Multicolor gradient", MENU_RENDERMODE_DIST_MULTICOLOR_GRADIENT);
+    glutAddMenuEntry("Voronoi linear", MENU_RENDERMODE_DIST_VORONOI_LINEAR);
+    glutAddMenuEntry("Voronoi scrambled", MENU_RENDERMODE_DIST_VORONOI_SCRAMBLE);
+    glutAddMenuEntry("!Press 2x 's' afterwards!", MENU_NONSENSE);
+    int rendermodeSubMenuSlice = glutCreateMenu(&menuFunctionWrapper);
+    glutAddMenuEntry("No slicing", MENU_RENDERMODE_SLICING_OFF);
+    glutAddMenuEntry("Slice X", MENU_RENDERMODE_SLICING_X);
+    glutAddMenuEntry("Slice Y", MENU_RENDERMODE_SLICING_Y);
+    glutAddMenuEntry("Slice Z", MENU_RENDERMODE_SLICING_Z);
+  int rendermodeMenu = glutCreateMenu(&menuFunctionWrapper);
+  glutAddMenuEntry("Solid", MENU_RENDERMODE_SOLID);
+  glutAddMenuEntry("Wireframe", MENU_RENDERMODE_WIREFRAME);
+  glutAddMenuEntry("Solid+Wireframe", MENU_RENDERMODE_SOLIDWIREFRAME);
+  glutAddSubMenu("Distance Maps Rendermode", rendermodeSubMenuDist);
+  glutAddSubMenu("Slicing", rendermodeSubMenuSlice);
+
+  int drawmapMenu = glutCreateMenu(&menuFunctionWrapper);
+  glutAddMenuEntry("All", MENU_DRAWMAP_ALL);
+  glutAddMenuEntry("View", MENU_DRAWMAP_VIEW);
+
+  int depthMenu = glutCreateMenu(&menuFunctionWrapper);
+  glutAddMenuEntry("Always", MENU_DEPTHTEST_ALWAYS);
+  glutAddMenuEntry("LEqual", MENU_DEPTHTEST_LEQUAL);
+
+  int lightMenu = glutCreateMenu(&menuFunctionWrapper);
+  glutAddMenuEntry("On", MENU_LIGHT_ON);
+  glutAddMenuEntry("Off", MENU_LIGHT_OFF);
+
+  int visibilityMenu = glutCreateMenu(&menuFunctionWrapper);
+  glutAddMenuEntry("Activated", MENU_VISIBILITYTRIGGER_ACTIVATED);
+  glutAddMenuEntry("Deacvivated", MENU_VISIBILITYTRIGGER_DEACTIVATED);
+
+  //define main menu
+  glutCreateMenu(&menuFunctionWrapper);
+
+  glutAddMenuEntry("Print Help in Console", MENU_HELP);
+
+  glutAddSubMenu("Toggle Text", textMenu);
+
+  if((voxelmapNames.size() + voxellistNames.size() + octreeNames.size() + primArrayNames.size()) > 0)
+  glutAddSubMenu("Maps", mapMenu);
+
+  glutAddSubMenu("Camera", cameraMenu);
+  glutAddSubMenu("Grid", gridMenu);
+  glutAddSubMenu("Render Mode", rendermodeMenu);
+  glutAddSubMenu("Draw Map", drawmapMenu);
+  glutAddSubMenu("Depth Test", depthMenu);  
+  glutAddSubMenu("Light", lightMenu);  
+  glutAddSubMenu("Visibility Trigger", visibilityMenu);
+
+  glutAttachMenu(GLUT_RIGHT_BUTTON);
   return;
 }
 
@@ -274,7 +397,7 @@ int32_t main(int32_t argc, char* argv[])
   {
     registerPrimitiveArrayFromSharedMemory(i);
   }
-
+  vis->initializeDrawTextFlags();
   runVisualisation(&argc, argv);
 
   LOGGING_INFO(Visualization, "Exiting..\n");

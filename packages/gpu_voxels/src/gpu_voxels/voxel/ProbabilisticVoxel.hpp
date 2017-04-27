@@ -81,6 +81,12 @@ void ProbabilisticVoxel::insert(const uint32_t voxel_meaning)
 }
 
 __host__ __device__
+bool ProbabilisticVoxel::isOccupied(float col_threshold) const
+{
+  return m_occupancy >= col_threshold;
+}
+
+__host__ __device__
 ProbabilisticVoxel ProbabilisticVoxel::reduce(const ProbabilisticVoxel voxel, const ProbabilisticVoxel other_voxel)
 {
   ProbabilisticVoxel res = voxel;

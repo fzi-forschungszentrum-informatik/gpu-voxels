@@ -66,7 +66,7 @@ class DistanceVoxel //: public AbstractVoxel
 public:
 
   typedef int32_t pba_dist_t;
-  typedef uint pba_voxel_t;
+  typedef uint32_t pba_voxel_t; // This stores the xyz-postiton as 3x 9Bit interger (+ x3 1Bit as "uninitialized" marker)
 
   __host__ __device__
   const Vector3ui getObstacle() const;

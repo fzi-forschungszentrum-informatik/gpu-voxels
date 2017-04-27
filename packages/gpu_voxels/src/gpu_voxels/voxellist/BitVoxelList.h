@@ -141,8 +141,8 @@ public:
   size_t collideWithTypes(const voxelmap::ProbVoxelMap* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWithTypes(const voxellist::BitVectorVoxelList* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWithTypes(const voxelmap::BitVectorVoxelMap *map, BitVectorVoxel &types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
-  size_t collideWithTypeMask(const voxelmap::ProbVoxelMap* map, const BitVectorVoxel& types_to_check, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
-  size_t collideWithTypeMask(const voxelmap::BitVectorVoxelMap* map, const BitVectorVoxel& types_to_check, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  template< class Voxel>
+  size_t collideWithTypeMask(const voxelmap::TemplateVoxelMap<Voxel> *map, const BitVectorVoxel& types_to_check, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWithBitcheck(const voxellist::BitVectorVoxelList* map, const u_int8_t margin = 0, const Vector3i &offset = Vector3i());
 
 

@@ -58,7 +58,19 @@ ENDIF(CUDA_FOUND)
 IF(GLEW_FOUND AND GLM_FOUND AND OPENGL_FOUND AND GLUT_FOUND)
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with visualization. GLEW, GLM, OpenGL and GLUT were found.")
 ELSE(GLEW_FOUND AND GLM_FOUND AND OPENGL_FOUND AND GLUT_FOUND)
-  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without visualization. Could not find GLEW, GLM, OpenGL or GLUT.")
+  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without visualization because the following packages are missing:") 
+  IF(NOT GLEW_FOUND)
+    MESSAGE(STATUS "    Glew")
+  ENDIF(NOT GLEW_FOUND)
+  IF(NOT GLM_FOUND)
+    MESSAGE(STATUS "    GLM")
+  ENDIF(NOT GLM_FOUND)
+  IF(NOT OPENGL_FOUND)
+    MESSAGE(STATUS "    OpenGL")
+  ENDIF(NOT OPENGL_FOUND)
+  IF(NOT GLUT_FOUND)
+    MESSAGE(STATUS "    Glut")
+  ENDIF(NOT GLUT_FOUND)
 ENDIF(GLEW_FOUND AND GLM_FOUND AND OPENGL_FOUND AND GLUT_FOUND)
 
 IF(ROS_FOUND)
@@ -70,7 +82,19 @@ ENDIF(ROS_FOUND)
 IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with URDF support. urdfdom, orocos and kdl_parser and ROS-kdl were found.")
 ELSE(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
-  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without URDF support. Could not find urdfdom or orocos or kdl_parser or ROS-kdl. ")
+  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without URDF support. Could not find the following packages:")
+  IF(NOT urdfdom_FOUND)
+    MESSAGE(STATUS "    urdfdom")
+  ENDIF(NOT urdfdom_FOUND)
+  IF(NOT orocos_kdl_FOUND)
+    MESSAGE(STATUS "    orocos_kdl")
+  ENDIF(NOT orocos_kdl_FOUND)
+  IF(NOT kdl_parser_FOUND)
+    MESSAGE(STATUS "    kdl_parser")
+  ENDIF(NOT kdl_parser_FOUND)
+  IF(NOT ROS_FOUND)
+    MESSAGE(STATUS "    ROS")
+  ENDIF(NOT ROS_FOUND)
 ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
 
 #IF(OPENNI2_FOUND)
@@ -106,26 +130,29 @@ MESSAGE(STATUS "----------------------------------------------------------------
 
 ###############################################################################
 # Change these lines to increase performance if your GPU's compute capability is higher
-# GPU-Voxels requires GPU CUDA capabilities >= 2.0
-#SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} -arch=sm_20)
-SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} -arch=sm_35)
+# GPU-Voxels requires GPU CUDA capabilities >= 3.0
+SET(ICMAKER_CUDA_COMPUTE_VERSION 30)
+#SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
 
 #SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} --ptxas-options=-v) #nvcc outputs register and memory usage data for each kernel
 SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} -Xcompiler=-Wall)
 SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler=-Wall")
 #SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler=-Wall --maxrregcount=31") # uncomment this to compile for JetsonTX1
-MESSAGE("ICMAKER_CUDA_CPPDEFINES: ${ICMAKER_CUDA_CPPDEFINES}")
-MESSAGE("CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 
 # Enable position independent code
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-SET(ICMAKER_CUDA_CPPDEFINES "-gencode=arch=compute_20,code=compute_20")
 
 IF( (CMAKE_BUILD_TYPE STREQUAL "Debug") OR (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo") )
  MESSAGE(WARNING "Building with THRUST_DEBUG option!")
- SET(ICMAKER_CUDA_CPPDEFINES "-gencode=arch=compute_20,code=compute_20 -DTHRUST_DEBUG")
+ SET(ICMAKER_CUDA_THRUST_DEBUG "-DTHRUST_DEBUG" )
+ELSE()
+ SET(ICMAKER_CUDA_THRUST_DEBUG "" )
 ENDIF()
 
+SET(ICMAKER_CUDA_CPPDEFINES "-gencode=arch=compute_${ICMAKER_CUDA_COMPUTE_VERSION},code=compute_${ICMAKER_CUDA_COMPUTE_VERSION} ${ICMAKER_CUDA_THRUST_DEBUG}")
+
+MESSAGE("ICMAKER_CUDA_CPPDEFINES: ${ICMAKER_CUDA_CPPDEFINES}")
+MESSAGE("CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 
 ###############################################################################
 # Remove vtk definitions (Macro copied from PCL)

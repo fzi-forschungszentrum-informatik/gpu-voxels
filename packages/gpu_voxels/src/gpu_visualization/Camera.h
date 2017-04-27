@@ -33,6 +33,7 @@
 #include <string.h>
 #include <math.h>
 #include <iostream>
+#include <sstream>
 
 #include <GL/glew.h>
 #if defined (__APPLE__) || defined(MACOSX)
@@ -218,15 +219,16 @@ public:
     m_mouse_old_y = m_window_height - y;
   }
 
+  std::string getCameraInfo();
   // --- debug functions ---
   void printCameraPosDirR();
-
+  
   glm::vec3 getCameraRight() const
   {
     return m_camera_right;
   }
   // --- end debug functions ---
-
+  bool m_camera_orbit;
 private:
 
   void updateViewMatrix();
@@ -256,7 +258,7 @@ private:
   float m_window_width;
   float m_window_height;
 
-  bool m_camera_orbit;
+  
   int32_t m_mouse_old_x;
   int32_t m_mouse_old_y;
 

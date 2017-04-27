@@ -46,7 +46,7 @@ class PrimitiveArrayContext: public DataContext
 {
 public:
   PrimitiveArrayContext() :
-  m_prim_type(primitive_array::primitive_INITIAL_VALUE)
+  m_prim_type(primitive_array::ePRIM_INITIAL_VALUE)
   {
   }
 
@@ -54,7 +54,7 @@ public:
    * Create a default context for the given voxel map.
    */
   PrimitiveArrayContext(std::string prim_array_name) :
-  m_prim_type(primitive_array::primitive_INITIAL_VALUE)
+  m_prim_type(primitive_array::ePRIM_INITIAL_VALUE)
   {
     m_map_name = prim_array_name;
 

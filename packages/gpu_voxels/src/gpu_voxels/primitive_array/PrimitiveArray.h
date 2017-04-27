@@ -39,9 +39,9 @@ namespace primitive_array {
 
 enum PrimitiveType
 {
-  primitive_Sphere = 0,
-  primitive_Cuboid = 1,
-  primitive_INITIAL_VALUE = 255 // initial value to determine if the type has changed.
+  ePRIM_SPHERE = 0,
+  ePRIM_CUBOID = 1,
+  ePRIM_INITIAL_VALUE = 255 // initial value to determine if the type has changed.
 };
 
 
@@ -52,14 +52,16 @@ class PrimitiveArray
 {
 public:
 
-  PrimitiveArray(PrimitiveType type);
+  PrimitiveArray(const Vector3ui dim, const float voxel_side_length, PrimitiveType type);
   ~PrimitiveArray();
 
   //! updates the points in the array
   void setPoints(const std::vector<Vector4f> &points);
+  void setPoints(const std::vector<Vector4i> &points);
 
   //! generate entities at points, all with same diameter
   void setPoints(const std::vector<Vector3f> &points, const float &diameter);
+  void setPoints(const std::vector<Vector3i> &points, const uint32_t &diameter);
 
   //! get pointer to data array on device
   void* getVoidDeviceDataPtr() const { return (void*)m_dev_ptr_to_primitive_positions; }
@@ -77,11 +79,17 @@ public:
   virtual std::size_t getMemoryUsage();
 
 private:
+  Vector3ui m_dim;
+  float m_voxel_side_length;
+  Vector3ui getDimensions() const;
+  Vector3f getMetricDimensions() const;
+
+  void storePoints(const std::vector<Vector4f> &points);
+
   PrimitiveType m_primitive_type;
   uint32_t m_num_entities;
   Vector4f* m_dev_ptr_to_primitive_positions;
   float m_diameter;
-
 };
 
 } // end of namespace primitive_array

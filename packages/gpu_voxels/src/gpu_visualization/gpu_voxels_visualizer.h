@@ -101,8 +101,15 @@ void mouseClickFunctionWrapper(int32_t button, int32_t state, int32_t x, int32_t
 {
   vis->mouseClickFunction(button, state, x, y);
 }
+void menuFunctionWrapper(int value)
+{
+  vis->menuFunction(value);
+}
 
 void runVisualisation(int32_t* argc, char* argv[]);
+
+void createRightClickMenu();
+
 void registerVoxelmapFromSharedMemory(uint32_t index);
 void registerVoxellistFromSharedMemory(uint32_t index);
 void registerOctreeFromSharedMemory(uint32_t index);

@@ -71,6 +71,7 @@ ADD_SUBDIRECTORY(voxelmap)
 ADD_SUBDIRECTORY(voxellist)
 ADD_SUBDIRECTORY(vis_interface)
 ADD_SUBDIRECTORY(octree)
+ADD_SUBDIRECTORY(helpers_highlevel)
 
 #------------- gpu_voxels library ---------------------------------
 # This library resembles the high level interface to link against.

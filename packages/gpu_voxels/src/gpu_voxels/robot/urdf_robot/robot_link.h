@@ -65,6 +65,7 @@
 #include "gpu_voxels/helpers/MetaPointCloud.h"
 #include <Eigen/Geometry>
 #include <kdl/frames.hpp>
+#include <boost/filesystem.hpp>
 
 namespace urdf {
   class ModelInterface;
@@ -92,7 +93,7 @@ public:
              const std::string& parent_joint_name,
              bool visual,
              bool collision,
-             bool use_model_path,
+             const boost::filesystem::path &path_to_pointclouds,
              MetaPointCloud& link_pointclouds);
 
   virtual ~RobotLink();
@@ -140,7 +141,7 @@ private:
 
   MetaPointCloud& link_pointclouds_;
   bool pose_calculated_;
-  bool use_model_path_;
+  boost::filesystem::path path_to_pointclouds_;
 };
 
 } // namespace robot

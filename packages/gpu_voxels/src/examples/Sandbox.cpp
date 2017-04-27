@@ -71,10 +71,10 @@ int main(int argc, char* argv[])
   gvl->addMap(MT_PROBAB_VOXELMAP, "myCoordinateSystemMap");
 
   // And two different primitive types
-  gvl->addPrimitives(primitive_array::primitive_Sphere, "myPrims");
-  gvl->addPrimitives(primitive_array::primitive_Cuboid, "mySecondPrims");
+  gvl->addPrimitives(primitive_array::ePRIM_SPHERE, "myPrims");
+  gvl->addPrimitives(primitive_array::ePRIM_CUBOID, "mySecondPrims");
   std::vector<Vector4f> prim_positions(1000);
-  std::vector<Vector4f> prim_positions2(1000);
+  std::vector<Vector4i> prim_positions2(1000);
 
   // These coordinates are used for three boxes that are inserted into the maps
   Vector3f center1_min(0.5,0.5,0.5);
@@ -134,8 +134,9 @@ int main(int argc, char* argv[])
     for(size_t i = 0; i < prim_positions.size(); i++)
     {
       // x, y, z, size
-      prim_positions[i] = Vector4f(100.0 + (i / 10.0), 100.0 + sin(i/5.0), sin(j++ / 5.0), 0.4);
-      prim_positions2[i] = Vector4f(100.0 + (sin(i/5.0)), 100.0 + sin(j++ / 5.0), i / 10.0, 0.4);
+      prim_positions[i] = Vector4f(0.2 + (i / 250.0), 0.2 + (sin(i/5.0)/50.0), (sin(j/5.0) / 50.0), 0.01);
+      prim_positions2[i] = Vector4i(20 + (sin(i/5.0)/0.5), 20 + (sin(j/5.0) / 0.5), i / 2.5, 1);
+      j++;
     }
     gvl->modifyPrimitives("myPrims", prim_positions);
     gvl->modifyPrimitives("mySecondPrims", prim_positions2);

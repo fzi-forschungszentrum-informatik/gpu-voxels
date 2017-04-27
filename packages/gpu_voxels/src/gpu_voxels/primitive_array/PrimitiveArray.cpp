@@ -27,7 +27,9 @@
 namespace gpu_voxels {
 namespace primitive_array {
 
-PrimitiveArray::PrimitiveArray(PrimitiveType type) :
+PrimitiveArray::PrimitiveArray(Vector3ui dim, float voxel_side_length, PrimitiveType type) :
+  m_dim(dim),
+  m_voxel_side_length(voxel_side_length),
   m_primitive_type(type),
   m_num_entities(0),
   m_dev_ptr_to_primitive_positions(NULL)
@@ -44,7 +46,64 @@ PrimitiveArray::~PrimitiveArray()
   }
 }
 
-void PrimitiveArray::setPoints(const std::vector<Vector4f> &points)
+// metric coords
+void PrimitiveArray::setPoints(const std::vector<Vector4f> &metricPoints)
+{
+  std::vector<Vector4f> voxelPoints(metricPoints.size());
+  //calculate voxel coordinates
+  for(size_t i = 0; i < metricPoints.size(); i++)
+  {
+    voxelPoints[i] = Vector4f(floor(metricPoints[i].x / m_voxel_side_length) + 0.5,
+                              floor(metricPoints[i].y / m_voxel_side_length) + 0.5,
+                              floor(metricPoints[i].z / m_voxel_side_length) + 0.5,
+                              (metricPoints[i].w / m_voxel_side_length) / 2.0);
+  }
+  storePoints(voxelPoints);
+}
+
+// metric coords
+void PrimitiveArray::setPoints(const std::vector<Vector3f> &metricPoints, const float &diameter)
+{
+  std::vector<Vector4f> voxelPoints(metricPoints.size());
+  for(size_t i = 0; i < metricPoints.size(); i++)
+  {
+    voxelPoints[i] = Vector4f(floor(metricPoints[i].x / m_voxel_side_length) + 0.5,
+                              floor(metricPoints[i].y / m_voxel_side_length) + 0.5,
+                              floor(metricPoints[i].z / m_voxel_side_length) + 0.5,
+                              (diameter / m_voxel_side_length) / 2.0);
+  }
+  storePoints(voxelPoints);
+}
+
+// voxel coords
+void PrimitiveArray::setPoints(const std::vector<Vector4i> &points)
+{
+  std::vector<Vector4f> points_f(points.size());
+  for(size_t i = 0; i < points.size(); i++)
+  {
+    points_f[i] = Vector4f(points[i].x + 0.5,
+                           points[i].y + 0.5,
+                           points[i].z + 0.5,
+                           points[i].w / 2.0);
+  }
+  storePoints(points_f);
+}
+
+// voxel coords
+void PrimitiveArray::setPoints(const std::vector<Vector3i> &points, const uint32_t &diameter)
+{
+  std::vector<Vector4f> points_4d(points.size());
+  for(size_t i = 0; i < points.size(); i++)
+  {
+    points_4d[i] = Vector4f(points[i].x + 0.5,
+                            points[i].y + 0.5,
+                            points[i].z + 0.5,
+                            diameter / 2.0);
+  }
+  storePoints(points_4d);
+}
+
+void PrimitiveArray::storePoints(const std::vector<Vector4f> &points)
 {
   // if only the poses have changed, but the number of primitives stays constant,
   // we only have to copy over the new data. Else we need to malloc new mem!
@@ -65,17 +124,6 @@ void PrimitiveArray::setPoints(const std::vector<Vector4f> &points)
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_dev_ptr_to_primitive_positions, points.data(), m_num_entities * sizeof(Vector4f),
                  cudaMemcpyHostToDevice));
-}
-
-void PrimitiveArray::setPoints(const std::vector<Vector3f> &points, const float &diameter)
-{
-  std::vector<Vector4f> points_4d(points.size());
-  for(size_t i = 0; i < points.size(); i++)
-  {
-    points_4d[i] = Vector4f(points[i].x , points[i].y, points[i].z, diameter);
-  }
-
-  setPoints(points_4d);
 }
 
 std::size_t PrimitiveArray::getMemoryUsage()
