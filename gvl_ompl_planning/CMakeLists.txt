@@ -38,6 +38,7 @@ add_library (gvl_ompl_planner_helper gvl_ompl_planner_helper.cpp)
 target_include_directories (gvl_ompl_planner_helper
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC ${gpu_voxels_INCLUDE_DIRS}
+    PUBLIC ${icl_core_INCLUDE_DIRS}
     PUBLIC ${CUDA_INCLUDE_DIRS}
     PUBLIC ${OMPL_INCLUDE_DIRS}
     PUBLIC ${orocos_kdl_INCLUDE_DIRS} # this should be removed in upcoming versions.

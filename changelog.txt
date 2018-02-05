@@ -340,7 +340,7 @@ Other changes:
 - Documentation updates
 - More CMake output, when libs can not be found
 
-V 1.1 (2018-01-12):
+V 1.1 (2018-02-05):
 ====================
 New Year Release: 
 Lots of fixes and better C++11 compatibility. Partial Cuda 9.1 support.
@@ -399,5 +399,8 @@ Minor changes:
 Other changes:
 - Documentation updates
 
+V1.1.1 (2018-02-05):
+====================
+Fix gvl_ompl_planner missing icl_core includes
 
 
