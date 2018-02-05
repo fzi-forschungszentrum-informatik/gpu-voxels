@@ -73,7 +73,7 @@ public:
   Probability getOccupancy() const;
 
   __host__   __device__
-  void insert(const uint32_t voxel_meaning);
+  void insert(const BitVoxelMeaning voxel_meaning);
 
   __host__ __device__
   static ProbabilisticVoxel reduce(const ProbabilisticVoxel voxel, const ProbabilisticVoxel other_voxel);

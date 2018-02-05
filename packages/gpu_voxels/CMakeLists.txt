@@ -1,5 +1,7 @@
 # this is for emacs file handling -*- mode: cmake; indent-tabs-mode: nil -*-
 
+# SET(CMAKE_CXX_STANDARD 11) # uncomment to activate C++11 mode
+
 # --- To be used by other modules ---
 SET(GPU_VOXELS_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}/src" CACHE INTERNAL "")
 SET(GPU_VOXELS_IDL_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src" CACHE INTERNAL "")
@@ -130,14 +132,14 @@ MESSAGE(STATUS "----------------------------------------------------------------
 
 ###############################################################################
 # Change these lines to increase performance if your GPU's compute capability is higher
-# GPU-Voxels requires GPU CUDA capabilities >= 3.0
-SET(ICMAKER_CUDA_COMPUTE_VERSION 30)
-#SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
+# GPU-Voxels requires GPU CUDA capabilities >= 2.0
+#SET(ICMAKER_CUDA_COMPUTE_VERSION 20)
+SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
 
-#SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} --ptxas-options=-v) #nvcc outputs register and memory usage data for each kernel
-SET(ICMAKER_CUDA_CPPDEFINES ${ICMAKER_CUDA_CPPDEFINES} -Xcompiler=-Wall)
-SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler=-Wall")
-#SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler=-Wall --maxrregcount=31") # uncomment this to compile for JetsonTX1
+SET(ICMAKER_CUDA_PTXAS_VERBOSE "") # "--resource-usage") #nvcc outputs register and memory usage data for each kernel
+SET(ICMAKER_CUDA_WALL "-Xcompiler=-Wall")
+SET(ICMAKER_CUDA_MAXREGS "--maxrregcount=63") # set to 31 to compile for JetsonTX1; N*blocksize must be smaller than max registers per block
+SET(ICMAKER_CUDA_DEBUG "-lineinfo") # "-lineinfo") #"-g -G") # -G disables optimization. use -lineinfo for profiling
 
 # Enable position independent code
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
@@ -149,10 +151,9 @@ ELSE()
  SET(ICMAKER_CUDA_THRUST_DEBUG "" )
 ENDIF()
 
-SET(ICMAKER_CUDA_CPPDEFINES "-gencode=arch=compute_${ICMAKER_CUDA_COMPUTE_VERSION},code=compute_${ICMAKER_CUDA_COMPUTE_VERSION} ${ICMAKER_CUDA_THRUST_DEBUG}")
+SET(ICMAKER_CUDA_CPPDEFINES "${ICMAKER_CUDA_DEBUG} ${ICMAKER_CUDA_MAXREGS} ${ICMAKER_CUDA_PTXAS_VERBOSE} -gencode=arch=compute_${ICMAKER_CUDA_COMPUTE_VERSION},code=compute_${ICMAKER_CUDA_COMPUTE_VERSION} ${ICMAKER_CUDA_THRUST_DEBUG} ${ICMAKER_CUDA_WALL}")
 
 MESSAGE("ICMAKER_CUDA_CPPDEFINES: ${ICMAKER_CUDA_CPPDEFINES}")
-MESSAGE("CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 
 ###############################################################################
 # Remove vtk definitions (Macro copied from PCL)

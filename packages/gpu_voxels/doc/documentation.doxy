@@ -14,10 +14,11 @@
  * \section req_libs Required libraries to build GPU-Voxels
  * The software is tested on 64 Bit Ubuntu Linux Trusty (14.04) and Xenial (16.04). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:
  * <ul>
- * <li>CUDA &gt; 6.5</li>
+ * <li>CUDA &gt; 7.5 or 8.0 (9.1 not fully supported yet)</li>
  * <li>PCL</li>
  * <li>OpenNI</li>
  * <li>Boost</li>
+ * <li>TinyXML (libtinyxml-dev)</li>
  * </ul>
  *
  * For the visualizer you will also need:
@@ -28,6 +29,12 @@
  * <li>GLUT (freeglut3 Version: 2.8.1-1, freeglut3-dev Version: 2.8.1-1)</li>
  * </ul>
  *  
+ * \section enablingc11 Enabling C++11
+ * C++11 is not enabled by default. To compile in C++11 mode add this to the top of packages/gpu_voxels/CMakeLists.txt: SET(CMAKE_CXX_STANDARD 11)
+ *
+ * \section known_iss Known issues
+ * There is a known bug in GLM on Ubuntu 16.04 that has to be patched to allow usage of the visualizer. Apply the patch described <a href="https://github.com/g-truc/glm/issues/530">here</a> to /usr/include/glm/detail/func_common.inl
+ *
  * \section add_tools Additional Tools
  * As soon as you want to experiment with your own geometrical models, you will have to “voxelize” them. Models are represented as dense pointclouds in GPU-Voxels. I am using the really nice tool <b><em>binvox </em></b>to perform this task on the GPU. You can download it at <a title="Binvox" href="http://www.patrickmin.com/binvox/" target="_blank">http://www.patrickmin.com/binvox/</a>
  * \n\n

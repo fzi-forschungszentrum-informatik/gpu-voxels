@@ -72,13 +72,15 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     kernel_preprocessDepthImage<<<num_blocks, num_threads>>>
     (D_PTR(d_depth_image_free_space), data_width, data_height, free_space_data);
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   }
   if (process_object_data)
   {
     kernel_preprocessDepthImage<<<num_blocks, num_threads>>>
     (D_PTR(d_depth_image), data_width, data_height, object_data);
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   }
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
   PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Preprocessing", prefix);
 
   // transform depth image to point cloud in sensor coordinate system
@@ -90,6 +92,7 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
         D_PTR(d_free_space_points),
         D_PTR(d_sensor),
         free_space_data.m_invalid_measure);
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   }
 
   if (process_object_data)
@@ -99,8 +102,8 @@ void Sensor::_processDepthImage(const DepthData* h_sensor_data,
         D_PTR(d_object_points),
         D_PTR(d_sensor),
         object_data.m_invalid_measure);
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   }
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ToPointCloud", prefix);
 
   if (data_equals && free_space_data.m_process_data)
@@ -270,11 +273,13 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //    kernel_preprocessDepthImage<<<num_blocks, num_threads>>>
 //    (D_PTR(d_depth_image_free_space), data_width, data_height, free_space_data);
+//    CHECK_CUDA_ERROR();
 //  }
 //  if (process_object_data)
 //  {
 //    kernel_preprocessDepthImage<<<num_blocks, num_threads>>>
 //    (D_PTR(d_depth_image), data_width, data_height, object_data);
+//    CHECK_CUDA_ERROR();
 //  }
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "Preprocessing", prefix);
@@ -288,6 +293,7 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //        D_PTR(free_space_points),
 //        D_PTR(d_sensor),
 //        free_space_data.m_invalid_measure);
+//    CHECK_CUDA_ERROR();
 //  }
 //
 //  if (process_object_data)
@@ -297,6 +303,7 @@ void Sensor::processSensorData(const DepthData* h_sensor_data,
 //        D_PTR(object_points),
 //        D_PTR(d_sensor),
 //        object_data.m_invalid_measure);
+//    CHECK_CUDA_ERROR();
 //  }
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //  PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ToPointCloud", prefix);

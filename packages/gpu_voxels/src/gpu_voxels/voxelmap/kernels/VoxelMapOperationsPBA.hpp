@@ -1,7 +1,8 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
+// -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
 /*
-
 ===============================================================================
 
 Copyright (c) 2010, School of Computing, National University of Singapore.
@@ -39,6 +40,7 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 
 */
+// -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
 /*!\file

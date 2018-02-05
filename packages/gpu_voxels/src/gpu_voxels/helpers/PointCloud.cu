@@ -175,6 +175,7 @@ bool PointCloud::operator==(const PointCloud& other) const
 
   kernelCompareMem<<<m_blocks, m_threads_per_block>>>(m_points_dev, other.m_points_dev,
                                                       m_points_size * sizeof(Vector3f), dev_equality_results);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   // copy back the whole array
@@ -280,6 +281,7 @@ void PointCloud::transform(const Matrix4f *transform, PointCloud *transformed_cl
       m_points_dev,
       transformed_dev,
       m_points_size);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
@@ -313,6 +315,7 @@ void PointCloud::scale(const Vector3f* scaling, PointCloud* transformed_cloud)
       m_points_dev,
       transformed_dev,
       m_points_size);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }

@@ -294,7 +294,7 @@ public:
   __host__
   friend std::istream& operator>>(std::istream& in, BitVector<num_bits>& dt)
   {
-    //TODO: Check the lenghts of the input stream!
+    //TODO: Check the lengths of the input stream!
     typename BitVector<num_bits>::item_type byte;
     std::bitset<num_bits> bs;
     in >> bs;

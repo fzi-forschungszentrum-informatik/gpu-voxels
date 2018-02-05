@@ -13,7 +13,17 @@
 //----------------------------------------------------------------------/*
 
 #define CUB_STDERR
+#if __CUDACC_VER_MAJOR__ < 9
 #include <thrust/system/cuda/detail/cub.h>
+namespace cub = thrust::system::cuda::detail::cub_;
+#else // Cuda 9 or higher
+#define THRUST_CUB_NS_PREFIX namespace thrust {   namespace cuda_cub {
+#define THRUST_CUB_NS_POSTFIX }   }
+#include <thrust/system/cuda/detail/cub/device/device_radix_sort.cuh>
+#undef CUB_NS_PREFIX
+#undef CUB_NS_POSTFIX
+namespace cub = thrust::cuda_cub::cub;
+#endif
 
 #include <thrust/sort.h>
 #include <thrust/unique.h>
@@ -31,7 +41,6 @@
 #include <algorithm>    // std::random_shuffle
 
 using namespace std;
-namespace cub = thrust::system::cuda::detail::cub_;
 
 namespace gpu_voxels {
 namespace NTree {
@@ -55,6 +64,7 @@ OctreeVoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, voxel
   time = getCPUTime();
 
   kernel_transformKinectPoints<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(D_PTR(d_point_cloud), num_points, D_PTR(d_tmp_voxel), D_PTR(d_sensor), voxel_dimension);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   LOGGING_INFO(OctreeLog, "kernel_transformKinectPoints: " <<  timeDiff(time, getCPUTime()) << " ms" << endl);
@@ -67,6 +77,7 @@ OctreeVoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, voxel
 
   thrust::device_vector<OctreeVoxelID> count_voxel(NUM_BLOCKS * NUM_THREADS_PER_BLOCK);
   kernel_countVoxel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(D_PTR(d_tmp_voxel), num_points, D_PTR(count_voxel));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   LOGGING_INFO(OctreeLog, "kernel_countVoxel: " <<  timeDiff(time, getCPUTime()) << " ms" << endl);
@@ -82,6 +93,7 @@ OctreeVoxelID transformKinectPointCloud(gpu_voxels::Vector3f* point_cloud, voxel
   voxel.resize(num_voxel);
 
   kernel_combineEqualVoxel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(D_PTR(d_tmp_voxel), num_voxel, D_PTR(count_voxel), D_PTR(voxel), D_PTR(d_sensor));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   LOGGING_INFO(OctreeLog, "kernel_combineEqualVoxel: " <<  timeDiff(time, getCPUTime()) << " ms" << endl);
@@ -112,6 +124,7 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
                                                                    D_PTR(d_tmp_voxel_id),
                                                                    d_sensor,
                                                                    resolution);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "ToWorldCoordinates", prefix);
@@ -161,6 +174,7 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
 
   thrust::device_vector<voxel_count> count_voxel(num_blocks + 1, 0);
   kernel_voxelize<true> <<<num_blocks, 32>>>(D_PTR(d_tmp_voxel_id), num_points, D_PTR(count_voxel), NULL);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   thrust::exclusive_scan(count_voxel.begin(), count_voxel.end(), count_voxel.begin());
@@ -175,6 +189,7 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   kernel_voxelize<false> <<<num_blocks, 32>>>(D_PTR(d_tmp_voxel_id), num_points, D_PTR(count_voxel), D_PTR(d_voxel));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   num_threads = 128; //have to use max. 32 threads for kernel_voxelize()
@@ -184,6 +199,7 @@ voxel_count transformKinectPointCloud_simple(gpu_voxels::Vector3f* d_point_cloud
   num_voxel,
   D_PTR(d_voxel),
   d_sensor);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   PERF_MON_PRINT_INFO_P(temp_timer, "Voxelize", prefix);
   PERF_MON_ADD_DATA_NONTIME_P("NumVoxel", num_voxel, prefix);
@@ -408,7 +424,7 @@ struct Comp_is_valid_point
   __forceinline__
   bool operator()(gpu_voxels::Vector3f v)
   {
-    return !isnan(v.x) & !isnan(v.y) & !isnan(v.z);
+    return !::isnan(v.x) & !::isnan(v.y) & !::isnan(v.z);
   }
 }
 ;

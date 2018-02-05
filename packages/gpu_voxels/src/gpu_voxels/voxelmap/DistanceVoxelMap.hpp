@@ -102,8 +102,9 @@ void DistanceVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
 }
 
 bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset) {
-  //TODO: perform synchronization; ideally at ros callback level? encapsulates all voxelmap operations?
-  //lockBoth(this, m, "merge");
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
 
   //TODO: ensure this->getDimensions == other->getDimensions
 
@@ -126,8 +127,6 @@ bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other
         probVoxelOccupied()
       );
 
-//  unlockBoth(this, m, "merge");
-
   return true;
 }
 
@@ -136,7 +135,7 @@ bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other
  */
 void DistanceVoxelMap::jumpFlood3D(int block_size, int debug, bool logging_reinit) {
 
-  if (this->m_dim.x % 2 || this->m_dim.y % 2) 
+  if (this->m_dim.x % 2 || this->m_dim.y % 2)
   {
     LOGGING_ERROR(VoxelmapLog, "jumpFlood3D: dimX and dimY cannot be odd numbers" << endl);
     return;
@@ -180,6 +179,7 @@ void DistanceVoxelMap::jumpFlood3D(int block_size, int debug, bool logging_reini
         (
           buffers[1 - output_buffer_idx], buffers[output_buffer_idx], this->m_dim, step_width
         );
+    CHECK_CUDA_ERROR();
 
     output_buffer_idx = 1 - output_buffer_idx;
   }
@@ -236,6 +236,7 @@ void DistanceVoxelMap::exactDistances3D(std::vector<Vector3f>& points) {
       this->m_dev_data, this->m_dim,
       this->m_voxel_side_length, d_points, points.size()
     );
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   HANDLE_CUDA_ERROR(cudaFree(d_points));
@@ -277,7 +278,7 @@ void DistanceVoxelMap::exactDistances3D(std::vector<Vector3f>& points) {
  */
 void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, uint32_t arg_m1_blocksize, uint32_t arg_m2_blocksize, uint32_t arg_m3_blocksize, bool detailtimer) {
 
-  if (this->m_dim.x != this->m_dim.y || this->m_dim.x % 64) 
+  if (this->m_dim.x != this->m_dim.y || this->m_dim.x % 64)
   {
     LOGGING_ERROR(VoxelmapLog, "parallelBanding3D: dimX and dimY must be equal; they also must be divisible by 64" << endl);
     //return; //TODO: check whether this is the right check; why not 32?
@@ -390,6 +391,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
   kernelPBAphase1FloodZ
       <<< m1_grid_size, m1_block_size >>>
       (distance_map_begin, distance_map_begin, this->m_dim, this->m_dim.z / m1); //distance_map is output
+  CHECK_CUDA_ERROR();
   // -> blöcke enthalten gelbe vertikale balken, solange min 1 obstacle enthalten
 
 #ifdef IC_PERFORMANCE_MONITOR
@@ -403,6 +405,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
     kernelPBAphase1PropagateInterband
         <<< m1_grid_size, m1_block_size >>>
         (distance_map_begin, initial_map.begin(), this->m_dim, this->m_dim.z / m1); //buffer b to a
+    CHECK_CUDA_ERROR();
     // -> initial_map enthält obstacle infos und interband head/tail infos
   }
 
@@ -417,6 +420,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
     kernelPBAphase1Update
           <<< m1_grid_size, m1_block_size >>>
           (initial_map.begin(), distance_map_begin, this->m_dim, this->m_dim.z / m1); //buffer to b; a is Links (top,bottom), b is Color (voxel)
+    CHECK_CUDA_ERROR();
   }
   // end of phase 1: distance_map contains the S_ij obstacle information
 
@@ -439,6 +443,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
   kernelPBAphase2ProximateBackpointers
       <<< m2_grid_size, m2_block_size >>>
      (distance_map_begin, initial_map.begin(), this->m_dim, this->m_dim.y / m2); //output stack/singly linked list with backpointers; some elements are skipped
+  CHECK_CUDA_ERROR();
 
 #ifdef IC_PERFORMANCE_MONITOR
   if (sync_always) HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
@@ -453,6 +458,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
     kernelPBAphase2CreateForwardPointers
         <<< m2_grid_size, m2_block_size >>>
         (initial_map.begin(), forward_ptrs_begin, this->m_dim, this->m_dim.y / m2); //read stack, write forward pointers
+    CHECK_CUDA_ERROR();
   }
 
 #ifdef IC_PERFORMANCE_MONITOR
@@ -469,6 +475,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
     kernelPBAphase2MergeBands
         <<< m2_merge_grid_size, m2_block_size >>>
         (initial_map.begin(), forward_ptrs_begin, this->m_dim, this->m_dim.y / band_count); //update both stack and forward_ptrs
+    CHECK_CUDA_ERROR();
 
     if (detailtimer) LOGGING_INFO(VoxelmapLog, "kernelPBAphase2MergeBands finished merging with band_size " << (this->m_dim.y / band_count) << endl);
 
@@ -521,6 +528,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
   kernelPBAphase3Distances
       <<< m3_grid_size, m3_block_size >>>
         (initialTexObj, distance_map_begin, this->m_dim);
+  CHECK_CUDA_ERROR();
       //  (initial_map.begin(), distance_map_begin, this->m_dim);
   // phase 3 done: distance_map contains final result
 
@@ -537,6 +545,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
   dim3 transpose_grid(this->m_dim.x / transpose_block.x, this->m_dim.y / transpose_block.y, this->m_dim.z); //maximum blockDim.y/z is 64K
   kernelPBA3DTransposeXY<<<transpose_grid, transpose_block>>>
                         (distance_map_begin); //optimise: remove thrust wrapper?
+  CHECK_CUDA_ERROR();
 
 #ifdef IC_PERFORMANCE_MONITOR
   if (sync_always) HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
@@ -550,6 +559,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
   kernelPBAphase2ProximateBackpointers
       <<< m2_grid_size, m2_block_size >>>
      (distance_map_begin, initial_map.begin(), this->m_dim, this->m_dim.y / m2); //output stack/singly linked list with backpointers; some elements are skipped
+  CHECK_CUDA_ERROR();
 
 #ifdef IC_PERFORMANCE_MONITOR
   if (sync_always) HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
@@ -561,6 +571,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
     kernelPBAphase2CreateForwardPointers
         <<< m2_grid_size, m2_block_size >>>
         (initial_map.begin(), forward_ptrs_begin, this->m_dim, this->m_dim.y / m2); //read stack, write forward pointers
+    CHECK_CUDA_ERROR();
   }
 
 #ifdef IC_PERFORMANCE_MONITOR
@@ -577,6 +588,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
     kernelPBAphase2MergeBands
         <<< m2_merge_grid_size, m2_block_size >>>
         (initial_map.begin(), forward_ptrs_begin, this->m_dim, this->m_dim.y / band_count); //update both stack and forward_ptrs
+    CHECK_CUDA_ERROR();
 
     if (detailtimer) LOGGING_INFO(VoxelmapLog, "kernelPBAphase2MergeBands finished merging with band_size " << (this->m_dim.y / band_count) << endl);
 
@@ -595,6 +607,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
       <<< m3_grid_size, m3_block_size >>>
 //      (initial_map.begin(), distance_map_begin, this->m_dim);
       (initialTexObj, distance_map_begin, this->m_dim);
+  CHECK_CUDA_ERROR();
   // phase 3 done: distance_map contains final result
 
   //second phase2&3 done
@@ -606,6 +619,7 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
 
   kernelPBA3DTransposeXY<<<transpose_grid, transpose_block>>>
                         (distance_map_begin);
+  CHECK_CUDA_ERROR();
 
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //  //copy back distance_map to m_dev_data

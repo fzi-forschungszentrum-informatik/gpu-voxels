@@ -642,6 +642,7 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
 
   // Launch kernel to copy data into the OpenGL buffer.
   // fill_vbo_without_precounting<<< dim3(1,1,1), dim3(1,1,1)>>>(/**/
+  // CHECK_CUDA_ERROR();
   if (context->m_voxelMap->getMapType() == MT_BITVECTOR_VOXELMAP)
   {
     if(BIT_VECTOR_LENGTH > MAX_DRAW_TYPES)
@@ -662,6 +663,7 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
         thrust::raw_pointer_cast(indices.data()),/**/
         thrust::raw_pointer_cast(m_cur_context->m_d_draw_types.data()),/**/
         thrust::raw_pointer_cast(m_cur_context->m_d_prefixes.data()));/**/
+    CHECK_CUDA_ERROR();
 
   }
   else if(context->m_voxelMap->getMapType() == MT_PROBAB_VOXELMAP)
@@ -680,6 +682,7 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
         thrust::raw_pointer_cast(indices.data()),/**/
         thrust::raw_pointer_cast(m_cur_context->m_d_draw_types.data()),/**/
         thrust::raw_pointer_cast(m_cur_context->m_d_prefixes.data()));/**/
+    CHECK_CUDA_ERROR();
   }
   else if(context->m_voxelMap->getMapType() == MT_DISTANCE_VOXELMAP)
   {
@@ -697,6 +700,7 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
         thrust::raw_pointer_cast(indices.data()),/**/
         thrust::raw_pointer_cast(m_cur_context->m_d_draw_types.data()),/**/
         thrust::raw_pointer_cast(m_cur_context->m_d_prefixes.data()));/**/
+    CHECK_CUDA_ERROR();
   }
   else
   {
@@ -815,6 +819,7 @@ void Visualizer::fillGLBufferWithCubelist(CubelistContext* context, uint32_t ind
         thrust::raw_pointer_cast(indices.data()),/**/
         thrust::raw_pointer_cast(m_cur_context->m_d_draw_types.data()),/**/
         thrust::raw_pointer_cast(m_cur_context->m_d_prefixes.data()));/**/
+    CHECK_CUDA_ERROR();
 
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     HANDLE_CUDA_ERROR(cudaGraphicsUnmapResources(1, &context->m_cuda_ressources, 0));
@@ -857,6 +862,7 @@ void Visualizer::calculateNumberOfCubeTypes(CubelistContext* context)
       thrust::raw_pointer_cast(context->m_d_num_voxels_per_type.data()),
       thrust::raw_pointer_cast(m_cur_context->m_d_draw_types.data()),/**/
       thrust::raw_pointer_cast(m_cur_context->m_d_prefixes.data()));/**/
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -2794,6 +2800,7 @@ std::stringstream returnString;
       find_cubes_by_coordinates<<<vm_context->m_num_blocks, vm_context->m_threads_per_block>>>(vm_context->getCubesDevicePointer(),
                                                                                                vm_context->getNumberOfCubes(),
                                                                                                n_pos, d_found_cube, d_found_flag);
+      CHECK_CUDA_ERROR();
 
 
       HANDLE_CUDA_ERROR(cudaDeviceSynchronize());

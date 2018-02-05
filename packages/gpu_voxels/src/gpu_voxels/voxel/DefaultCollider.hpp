@@ -27,6 +27,7 @@
 
 #include "DefaultCollider.h"
 #include <gpu_voxels/voxel/BitVoxel.hpp>
+#include <gpu_voxels/voxel/CountingVoxel.hpp>
 
 namespace gpu_voxels {
 

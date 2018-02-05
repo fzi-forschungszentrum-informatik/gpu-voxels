@@ -255,7 +255,7 @@ void VoxelMapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const 
 
   if (voxelmap::ProbVoxelMap* _voxelmap = dynamic_cast<voxelmap::ProbVoxelMap*>(m_voxelMap))
   {
-    // HACK by AH: the bitvector lenght was 0 ?! But that template wasn't instantiated...
+    // HACK by AH: the bitvector length was 0 ?! But that template wasn't instantiated...
     _voxelmap->insertSensorData<BIT_VECTOR_LENGTH>((const gpu_voxels::Vector3f*) h_point_cloud, true, false, eBVM_OCCUPIED, NULL);
   }
   else

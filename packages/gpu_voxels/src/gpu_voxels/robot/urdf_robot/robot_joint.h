@@ -63,6 +63,10 @@
 #include "gpu_voxels/helpers/cuda_datatypes.h"
 #include "gpu_voxels/robot/urdf_robot/node.h"
 #include <boost/shared_ptr.hpp>
+#if __CUDACC_VER_MAJOR__ >= 9
+#undef __CUDACC_VER__
+#define __CUDACC_VER__ 90000
+#endif
 #include <Eigen/Geometry>
 #include <kdl/frames.hpp>
 

@@ -14,7 +14,7 @@
 
 
 #include "VoxelList.hpp"
-//#include "TemplateVoxelList.hpp"
+// #include "TemplateVoxelList.hpp"
 #include <gpu_voxels/voxelmap/VoxelMap.hpp>
 
 namespace gpu_voxels {
@@ -29,6 +29,8 @@ namespace voxellist {
 // Explicit instantiation of template class to link against from other files where this template is used
 template class BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>;
 template class BitVoxelList<BIT_VECTOR_LENGTH, OctreeVoxelID>;
+
+class CountingVoxelList;
 
 template size_t BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>::collideWithTypeMask(
                                                               const TemplateVoxelMap< BitVoxel<BIT_VECTOR_LENGTH> >*,

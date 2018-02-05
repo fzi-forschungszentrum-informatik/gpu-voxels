@@ -56,7 +56,12 @@ template<std::size_t branching_factor, std::size_t level_count, class InnerNode,
 class AbstractLoadBalancer
 {
 protected:
+#if __cplusplus > 199711L
+// initializing "static const float" is not in C++98. C++11 offers "static constexpr float"
+  static constexpr float DEFAULT_IDLE_THESHOLD = 2.0f/3.0f;
+#else
   static const float DEFAULT_IDLE_THESHOLD = 2.0f/3.0f;
+#endif
 public:
   /**
    * @brief AbstractLoadBalancer constructor. Default parameters choosen by resulting in good performance of experimental evaluations for GTX Titan.

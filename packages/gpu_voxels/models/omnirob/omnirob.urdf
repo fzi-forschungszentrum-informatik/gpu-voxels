@@ -4,9 +4,6 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="omniRob" xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller" xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface" xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor" xmlns:xacro="http://ros.org/wiki/xacro">
-  <!-- Required arguments: 
-       name_prefix : a prefix for all the frames as workaround for the tf_prefix
-  -->
   <link name="base_link"/>
   <link name="omnirob_base_x"/>
   <link name="omnirob_base_y"/>
@@ -107,14 +104,6 @@
     <parent link="omnirob_left_lwr_base_link"/>
     <child link="omnirob_left_lwr_1_link"/>
   </joint>
-  <joint name="omnirob_left_lwr_0_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_left_lwr_base_link"/>
-    <child link="omnirob_left_lwr_1_link_dummy"/>
-  </joint>
-  <link name="omnirob_left_lwr_1_link_dummy"/>
   <link name="omnirob_left_lwr_1_link">
     <inertial>
       <mass value="2.0"/>
@@ -129,7 +118,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 -0.008"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_a_convex.stl"/>
       </geometry>
@@ -144,14 +133,6 @@
     <parent link="omnirob_left_lwr_1_link"/>
     <child link="omnirob_left_lwr_2_link"/>
   </joint>
-  <joint name="omnirob_left_lwr_1_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_left_lwr_1_link"/>
-    <child link="omnirob_left_lwr_2_link_dummy"/>
-  </joint>
-  <link name="omnirob_left_lwr_2_link_dummy"/>
   <link name="omnirob_left_lwr_2_link">
     <inertial>
       <mass value="2.0"/>
@@ -166,7 +147,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.2"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 0.0"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_b_convex.stl"/>
       </geometry>
@@ -181,14 +162,6 @@
     <parent link="omnirob_left_lwr_2_link"/>
     <child link="omnirob_left_lwr_3_link"/>
   </joint>
-  <joint name="omnirob_left_lwr_2_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_left_lwr_2_link"/>
-    <child link="omnirob_left_lwr_3_link_dummy"/>
-  </joint>
-  <link name="omnirob_left_lwr_3_link_dummy"/>
   <link name="omnirob_left_lwr_3_link">
     <inertial>
       <mass value="2.0"/>
@@ -203,7 +176,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 -0.008"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_a_convex.stl"/>
       </geometry>
@@ -218,14 +191,6 @@
     <parent link="omnirob_left_lwr_3_link"/>
     <child link="omnirob_left_lwr_4_link"/>
   </joint>
-  <joint name="omnirob_left_lwr_3_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_left_lwr_3_link"/>
-    <child link="omnirob_left_lwr_4_link_dummy"/>
-  </joint>
-  <link name="omnirob_left_lwr_4_link_dummy"/>
   <link name="omnirob_left_lwr_4_link">
     <inertial>
       <mass value="2.0"/>
@@ -240,7 +205,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.2"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 0.0"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_b_convex.stl"/>
       </geometry>
@@ -255,14 +220,6 @@
     <parent link="omnirob_left_lwr_4_link"/>
     <child link="omnirob_left_lwr_5_link"/>
   </joint>
-  <joint name="omnirob_left_lwr_4_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_left_lwr_4_link"/>
-    <child link="omnirob_left_lwr_5_link_dummy"/>
-  </joint>
-  <link name="omnirob_left_lwr_5_link_dummy"/>
   <link name="omnirob_left_lwr_5_link">
     <inertial>
       <mass value="2.0"/>
@@ -277,7 +234,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 -0.008"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_last_convex.stl"/>
       </geometry>
@@ -292,14 +249,6 @@
     <parent link="omnirob_left_lwr_5_link"/>
     <child link="omnirob_left_lwr_6_link"/>
   </joint>
-  <joint name="omnirob_left_lwr_5_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_left_lwr_5_link"/>
-    <child link="omnirob_left_lwr_6_link_dummy"/>
-  </joint>
-  <link name="omnirob_left_lwr_6_link_dummy"/>
   <link name="omnirob_left_lwr_6_link">
     <inertial>
       <mass value="0.2"/>
@@ -329,14 +278,6 @@
     <parent link="omnirob_left_lwr_6_link"/>
     <child link="omnirob_left_lwr_7_link"/>
   </joint>
-  <joint name="omnirob_left_lwr_6_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_left_lwr_6_link"/>
-    <child link="omnirob_left_lwr_7_link_dummy"/>
-  </joint>
-  <link name="omnirob_left_lwr_7_link_dummy"/>
   <link name="omnirob_left_lwr_7_link">
     <inertial>
       <mass value="0.2"/>
@@ -500,14 +441,6 @@
     <parent link="omnirob_right_lwr_base_link"/>
     <child link="omnirob_right_lwr_1_link"/>
   </joint>
-  <joint name="omnirob_right_lwr_0_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_right_lwr_base_link"/>
-    <child link="omnirob_right_lwr_1_link_dummy"/>
-  </joint>
-  <link name="omnirob_right_lwr_1_link_dummy"/>
   <link name="omnirob_right_lwr_1_link">
     <inertial>
       <mass value="2.0"/>
@@ -522,7 +455,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 -0.008"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_a_convex.stl"/>
       </geometry>
@@ -537,14 +470,6 @@
     <parent link="omnirob_right_lwr_1_link"/>
     <child link="omnirob_right_lwr_2_link"/>
   </joint>
-  <joint name="omnirob_right_lwr_1_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_right_lwr_1_link"/>
-    <child link="omnirob_right_lwr_2_link_dummy"/>
-  </joint>
-  <link name="omnirob_right_lwr_2_link_dummy"/>
   <link name="omnirob_right_lwr_2_link">
     <inertial>
       <mass value="2.0"/>
@@ -559,7 +484,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.2"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 0.0"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_b_convex.stl"/>
       </geometry>
@@ -574,14 +499,6 @@
     <parent link="omnirob_right_lwr_2_link"/>
     <child link="omnirob_right_lwr_3_link"/>
   </joint>
-  <joint name="omnirob_right_lwr_2_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_right_lwr_2_link"/>
-    <child link="omnirob_right_lwr_3_link_dummy"/>
-  </joint>
-  <link name="omnirob_right_lwr_3_link_dummy"/>
   <link name="omnirob_right_lwr_3_link">
     <inertial>
       <mass value="2.0"/>
@@ -596,7 +513,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 -0.008"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_a_convex.stl"/>
       </geometry>
@@ -611,14 +528,6 @@
     <parent link="omnirob_right_lwr_3_link"/>
     <child link="omnirob_right_lwr_4_link"/>
   </joint>
-  <joint name="omnirob_right_lwr_3_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_right_lwr_3_link"/>
-    <child link="omnirob_right_lwr_4_link_dummy"/>
-  </joint>
-  <link name="omnirob_right_lwr_4_link_dummy"/>
   <link name="omnirob_right_lwr_4_link">
     <inertial>
       <mass value="2.0"/>
@@ -633,7 +542,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.2"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 0.0"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_b_convex.stl"/>
       </geometry>
@@ -648,14 +557,6 @@
     <parent link="omnirob_right_lwr_4_link"/>
     <child link="omnirob_right_lwr_5_link"/>
   </joint>
-  <joint name="omnirob_right_lwr_4_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_right_lwr_4_link"/>
-    <child link="omnirob_right_lwr_5_link_dummy"/>
-  </joint>
-  <link name="omnirob_right_lwr_5_link_dummy"/>
   <link name="omnirob_right_lwr_5_link">
     <inertial>
       <mass value="2.0"/>
@@ -670,7 +571,7 @@
       <material name="Kuka/Orange"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+      <origin rpy="0 0 3.14159265359" xyz="0 0 -0.008"/>
       <geometry>
         <mesh filename="package://lwr_description/meshes/convex/arm_segment_last_convex.stl"/>
       </geometry>
@@ -685,14 +586,6 @@
     <parent link="omnirob_right_lwr_5_link"/>
     <child link="omnirob_right_lwr_6_link"/>
   </joint>
-  <joint name="omnirob_right_lwr_5_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_right_lwr_5_link"/>
-    <child link="omnirob_right_lwr_6_link_dummy"/>
-  </joint>
-  <link name="omnirob_right_lwr_6_link_dummy"/>
   <link name="omnirob_right_lwr_6_link">
     <inertial>
       <mass value="0.2"/>
@@ -722,14 +615,6 @@
     <parent link="omnirob_right_lwr_6_link"/>
     <child link="omnirob_right_lwr_7_link"/>
   </joint>
-  <joint name="omnirob_right_lwr_6_joint_stiffness" type="revolute">
-    <axis xyz="0 0 1"/>
-    <limit effort="0" lower="0" upper="5000" velocity="20000"/>
-    <safety_controller k_position="30" k_velocity="30" soft_lower_limit="0" soft_upper_limit="5000"/>
-    <parent link="omnirob_right_lwr_6_link"/>
-    <child link="omnirob_right_lwr_7_link_dummy"/>
-  </joint>
-  <link name="omnirob_right_lwr_7_link_dummy"/>
   <link name="omnirob_right_lwr_7_link">
     <inertial>
       <mass value="0.2"/>

@@ -249,7 +249,6 @@ Minor changes:
 - Deleted some examples that were not usable.
 - Removed PointCloudOperations as they were unused.
 
-
 V 0.93 (2016-12-24):
 ====================
 API breaking changes:
@@ -299,3 +298,106 @@ Other changes:
 - Updated icmaker build tools
 - Updated QT include dirs in icl_core
 - icl_performance_monitor got some new functions
+
+V 1.0 (2017-04-27):
+====================
+Added mouse GUI for visualizer (GVL4TW edition)
+
+API breaking changes:
+- PrimitiveArrays
+  - Fixed the interface by adding metric AND Voxel commands. Fixes issue 41.
+  - Renamed the enums for the PrimitiveArray types.
+
+Major changes:
+- Changes in CUDA CMake setup
+- addMap() now returns a GpuVoxelsMapSharedPtr. Fixes issue 43.
+  Throws a std::string in case of error (thanks to Herbert Piertrzyk).
+- Generalized collide function of VoxelLists to work with VoxelMaps. Fixes issue 33.
+- Fixed relative paths in URDF loding. Fixes issue 30.
+- Visualizer:
+  - Added a Right-Click-Menu in the visualizer (thanks to Herbert Piertrzyk). Fixes issue 35.
+  - Added a bunch of info text overlays (thanks to Herbert Piertrzyk). Fixes issue 26.
+- Implemented converter to create BitVectorVoxels from DistanceVoxels.
+- Added a scaling function for PointClouds.
+
+Minor changes:
+- Improved API stability for DistanceMap computation (Thanks to Christian Jülg).
+- New boost test cases:
+  - Transformation of PointClouds
+  - Collide functions for VoxelLists with VoxelMaps
+  - Improved tests for DistanceMaps
+- New examples:
+  - PrimitiveArray interfaces
+- Added div operator for Vector3i / float
+- Added mul operator for Vector3f * Vector3f
+- Added abs operator for Vector3f
+- Added setters for rotations and translations for Matrix4f
+- Fixed the SharedMemory transactions between Provider and Visualizer
+- Right click info for Voxels in visualizer now also works on VoxelLists
+
+Other changes:
+- New coarse model of the SCHUNK SVH hand
+- Documentation updates
+- More CMake output, when libs can not be found
+
+V 1.1 (2018-01-12):
+====================
+New Year Release: 
+Lots of fixes and better C++11 compatibility. Partial Cuda 9.1 support.
+
+Known issues:
+- Octrees are broken on Pascal GPUs
+  - confirmed on Titan Xp and GTX 1080 Ti
+- the GLM in Ubuntu 16.04 has to be patched to allow usage of the visualizer.
+  - see https://github.com/g-truc/glm/issues/530
+  - patch for /usr/include/glm/detail/func_common.inl in packages/gpu_voxels/doc/glm_fix_issu530.patch
+- Cuda 9.1
+  - many incompatibilities are fixed, but there are still failing tests in the voxellist and octree test-suites
+
+API breaking changes:
+- GpuVoxels
+  - addMap returns null-initialized shared_ptr if map already exists
+  - lockSelf, lockBoth & Co removed, replaced by exception-safe lock_guard
+  constructs to improve debugging
+- TinyXML
+  - use system version from APT package libtinyxml-dev
+
+Major changes:
+- Changes in CUDA CMake setup
+  - uncomment SET(CMAKE_CXX_STANDARD 11) at the top of CMakeLists.txt to activate C++11 mode
+  - set -maxrregcount=63 to avoid errors on desktop GPUs with 1024 threads per block
+  - always use ICMAKER_CUDA_CPPDEFINES to pass parameters to nvcc
+- Added OMPL planning example gvl_ompl_planning  (Thanks to Andreas Hermann)
+  - requires C++11
+  - incompatible with GPU-Voxels built with PCL 1.7
+- Added model "ur10_coarse" voxelized at 9mm
+- Added CountingVoxelList to offer pointcloud density filtering  (Thanks to Herbert Pietrzyk)
+  - Use remove_underpopulated(minimum_count) to remove outliers
+  - Use subtractFromCountingVoxelList to remove the robot and static objects
+- Added BitVoxelMap collision with ProbVoxelmap
+- ProbVoxelMap
+  - insert() parses BitVoxelMeaning to allow freeing single voxels
+  - SVCollider checks for noneButEmpty instead of isZero
+- Fix CUDA 9 incompatibilities, issue 63
+  - version macro
+  - cub namespace
+  - __ballot vs __ballot_sync
+
+Minor changes:
+- DistanceVoxelTest uses double buffering of DistanceVoxelMap to avoid flickering
+- ProbVoxelMap: Speed up the clearing of ProbVoxelMap by using memset instead of ctor calls for every voxel
+- C++11 fixes
+  - icl_core_logging operator<< stringstream bug
+  - various fixes collected by dybedal in issue 55
+- VoxelList collision
+  - added test cases and examples
+- fixed memory leaks in TemplateVoxelList
+- fixed PCL dependency of examples and helpers, see issue 61
+- fix computeLinearLoad returning grid and block size 0
+- added many checks after kernel launches to improve error discovery
+
+Other changes:
+- Documentation updates
+
+
+

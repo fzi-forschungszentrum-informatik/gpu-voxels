@@ -40,7 +40,7 @@ namespace robot {
 class RobotToGPU : public Robot
 {
 public:
-  RobotToGPU(const std::string &_path, const bool &use_model_path);
+  RobotToGPU(const float voxel_side_length, const std::string &_path, const bool &use_model_path);
   ~RobotToGPU();
 
   /**

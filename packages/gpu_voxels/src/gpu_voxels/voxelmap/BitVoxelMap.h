@@ -35,7 +35,7 @@ namespace voxelmap {
 
 template<std::size_t length>
 class BitVoxelMap: public TemplateVoxelMap<BitVoxel<length> >,
-    public CollidableWithBitVectorVoxelMap, public CollidableWithProbVoxelMap, public CollidableWithTypesBitVectorVoxelMap
+    public CollidableWithBitVectorVoxelMap, public CollidableWithProbVoxelMap, public CollidableWithTypesBitVectorVoxelMap, public CollidableWithTypesProbVoxelMap
 {
 public:
   typedef BitVoxel<length> Voxel;
@@ -51,14 +51,25 @@ public:
   virtual void clearBits(BitVector<length> bits);
 
   /**
-   * @brief Collides two Bit-Voxelmaps and delivers the Voxelmeanings that lie in collision
+   * @brief Collides two Bit-Voxelmaps and delivers the Voxelmeanings that lie in collision, if those are set in both maps.
    * \param other The map to collide with
    * \param collider The collider kernel to use
    * \param colliding_meanings The result vector in which the colliding meanings are set to 1
    * \param sv_offset Offset which is added while checking to ignore the first bits
    */
   template<class Collider>
-  uint32_t collisionCheckBitvector(BitVoxelMap<length>* other, Collider collider,
+  uint32_t collisionCheckBitvector(const BitVoxelMap<length>* other, Collider collider,
+                                   BitVector<length>& colliding_meanings, const uint16_t sv_offset = 0);
+
+  /**
+   * @brief Collides the Bit-Voxelmap with a probabilistic map and delivers the Voxelmeanings that lie in collision, if probabilistic voxel is occupied.
+   * \param other The map to collide with
+   * \param collider The collider kernel to use
+   * \param colliding_meanings The result vector in which the colliding meanings are set to 1
+   * \param sv_offset Offset which is added while checking to ignore the first bits
+   */
+  template<class Collider>
+  uint32_t collisionCheckBitvector(const voxelmap::ProbVoxelMap* other, Collider collider,
                                    BitVector<length>& colliding_meanings, const uint16_t sv_offset = 0);
 
   void triggerAddressingTest(Vector3ui dimensions, float voxel_side_length, size_t nr_of_tests, bool *success);
@@ -80,6 +91,7 @@ public:
   size_t collideWith(const voxelmap::BitVectorVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWith(const voxelmap::ProbVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWithTypes(const voxelmap::BitVectorVoxelMap* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+  size_t collideWithTypes(const voxelmap::ProbVoxelMap* map, BitVectorVoxel& types_in_collision, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
 
 protected:
   virtual void clearVoxelMapRemoteLock(const uint32_t bit_index);

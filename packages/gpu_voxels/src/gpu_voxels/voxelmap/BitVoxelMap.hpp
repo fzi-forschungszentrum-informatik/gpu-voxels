@@ -57,9 +57,8 @@ BitVoxelMap<length>::~BitVoxelMap()
 template<std::size_t length>
 void BitVoxelMap<length>::clearBit(const uint32_t bit_index)
 {
-  this->lockSelf("BitVoxelMap::clearBit");
+  lock_guard guard(this->m_mutex);
   clearVoxelMapRemoteLock(bit_index);
-  this->unlockSelf("BitVoxelMap::clearBit");
 }
 
 template<std::size_t length>
@@ -67,27 +66,30 @@ void BitVoxelMap<length>::clearVoxelMapRemoteLock(const uint32_t bit_index)
 {
   kernelClearVoxelMap<<<this->m_blocks, this->m_threads>>>(this->m_dev_data, this->m_voxelmap_size,
                                                            bit_index);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 template<std::size_t length>
 void BitVoxelMap<length>::clearBits(BitVector<length> bits)
 {
-  this->lockSelf("BitVoxelMap::clearBits");
+  lock_guard guard(this->m_mutex);
 
   kernelClearVoxelMap<<<this->m_blocks, this->m_threads>>>(this->m_dev_data, this->m_voxelmap_size, bits);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-
-  this->unlockSelf("BitVoxelMap::clearBits");
 }
 
 template<std::size_t length>
 template<class Collider>
-uint32_t BitVoxelMap<length>::collisionCheckBitvector(BitVoxelMap<length>* other, Collider collider,
+uint32_t BitVoxelMap<length>::collisionCheckBitvector(const BitVoxelMap<length>* other, Collider collider,
                                                       BitVector<length>& colliding_meanings,
                                                       const uint16_t sv_offset)
 {
-  this->lockBoth(this, other, "BitVoxelMap::collisionCheckBitvector");
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
+
   uint32_t threads_per_block = 1024;
   //calculate number of blocks
   uint32_t number_of_blocks;
@@ -102,7 +104,8 @@ uint32_t BitVoxelMap<length>::collisionCheckBitvector(BitVoxelMap<length>* other
 
   kernelCollideVoxelMapsBitvector<<<number_of_blocks, threads_per_block,
                                     sizeof(BitVector<length> ) * threads_per_block>>>(
-      this->m_dev_data, this->m_voxelmap_size, other->getDeviceDataPtr(), collider, result_ptr_dev, num_collisions_dev, sv_offset);
+      this->m_dev_data, this->m_voxelmap_size, other->getConstDeviceDataPtr(), collider, result_ptr_dev, num_collisions_dev, sv_offset);
+  CHECK_CUDA_ERROR();
 
   //copying result from device
   uint16_t num_collisions_h[number_of_blocks];
@@ -128,9 +131,62 @@ uint32_t BitVoxelMap<length>::collisionCheckBitvector(BitVoxelMap<length>* other
 
   HANDLE_CUDA_ERROR(cudaFree(result_ptr_dev));
   HANDLE_CUDA_ERROR(cudaFree(num_collisions_dev));
-  this->unlockBoth(this, other, "BitVoxelMap::collisionCheckBitvector");
   return result_num_collisions;
 }
+
+template<std::size_t length>
+template<class Collider>
+uint32_t BitVoxelMap<length>::collisionCheckBitvector(const voxelmap::ProbVoxelMap* other, Collider collider,
+                                                      BitVector<length>& colliding_meanings,
+                                                      const uint16_t sv_offset)
+{
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
+
+  uint32_t threads_per_block = 1024;
+  //calculate number of blocks
+  uint32_t number_of_blocks;
+  number_of_blocks = (this->m_voxelmap_size + threads_per_block - 1) / threads_per_block;
+
+  BitVector<length>* result_ptr_dev;
+  HANDLE_CUDA_ERROR(cudaMalloc((void** )&result_ptr_dev, sizeof(BitVector<length> ) * number_of_blocks));
+
+  uint16_t* num_collisions_dev;
+  HANDLE_CUDA_ERROR(
+      cudaMalloc((void** )&num_collisions_dev, number_of_blocks * sizeof(uint16_t)));
+
+  kernelCollideVoxelMapsBitvector<<<number_of_blocks, threads_per_block,
+                                    sizeof(BitVector<length> ) * threads_per_block>>>(
+      this->m_dev_data, this->m_voxelmap_size, other->getConstDeviceDataPtr(), collider, result_ptr_dev, num_collisions_dev, sv_offset);
+  CHECK_CUDA_ERROR();
+
+  //copying result from device
+  uint16_t num_collisions_h[number_of_blocks];
+  BitVector<length> result_array[number_of_blocks];
+  for (uint32_t i = 0; i < number_of_blocks; ++i)
+  {
+    result_array[i] = BitVector<length>();
+  }
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(&(result_array[0]), result_ptr_dev, sizeof(BitVector<length> ) * number_of_blocks,
+                 cudaMemcpyDeviceToHost));
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(&(num_collisions_h[0]), num_collisions_dev, sizeof(uint16_t) * number_of_blocks,
+                 cudaMemcpyDeviceToHost));
+  uint32_t result_num_collisions = 0;
+  for (uint32_t i = 0; i < number_of_blocks; ++i)
+  {
+    colliding_meanings |= result_array[i];
+    result_num_collisions += num_collisions_h[i];
+  }
+
+  HANDLE_CUDA_ERROR(cudaFree(result_ptr_dev));
+  HANDLE_CUDA_ERROR(cudaFree(num_collisions_dev));
+  return result_num_collisions;
+}
+
 
 template<std::size_t length>
 size_t BitVoxelMap<length>::collideWith(const BitVectorVoxelMap *map, float coll_threshold, const Vector3i &offset)
@@ -151,6 +207,13 @@ size_t BitVoxelMap<length>::collideWithTypes(const BitVectorVoxelMap *map, BitVe
 {
   SVCollider collider(coll_threshold);
   return this->collisionCheckBitvector((BitVoxelMap*)map, collider, types_in_collision.bitVector());
+}
+
+template<std::size_t length>
+size_t BitVoxelMap<length>::collideWithTypes(const voxelmap::ProbVoxelMap* map, BitVectorVoxel& types_in_collision, float coll_threshold, const Vector3i &offset)
+{
+  SVCollider collider(coll_threshold);
+  return this->collisionCheckBitvector(map, collider, types_in_collision.bitVector());
 }
 
 
@@ -176,11 +239,10 @@ void BitVoxelMap<length>::shiftLeftSweptVolumeIDs(uint8_t shift_size)
     LOGGING_ERROR_C(VoxelmapLog, BitVoxelMap, "Maximum shift size is 56! Higher shift number requested. Not performing shift operation." << endl);
     return;
   }
-  this->lockSelf("BitVoxelMap::shiftLeftSweptVolumeIDs");
+  lock_guard guard(this->m_mutex);
   kernelShiftBitVector<<<this->m_blocks, this->m_threads>>>(this->m_dev_data, this->m_voxelmap_size, shift_size);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-
-  this->unlockSelf("BitVoxelMap::shiftLeftSweptVolumeIDs");
 }
 
 } // end of namespace

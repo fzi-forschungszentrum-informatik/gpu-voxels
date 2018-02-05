@@ -207,6 +207,7 @@ void balanceWorkStacks(WorkItem* dev_work_stacks_in, WorkItem* dev_work_stacks_o
                                                                           stack_size_per_task,
                                                                           sums_per_level,
                                                                           inter_stack_offsets);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   //printf("kernelCountElements: %f ms\n", timeDiff(time1, getCPUTime()));

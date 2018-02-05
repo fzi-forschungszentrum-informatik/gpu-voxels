@@ -273,7 +273,7 @@ struct Vector3f
 
 
   /*!
-   * \brief normalize normalizes this vector to unit lenght
+   * \brief normalize normalizes this vector to unit length
    */
   __device__ __host__
   inline void normalize()

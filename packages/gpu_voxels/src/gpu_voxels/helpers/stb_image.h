@@ -1,3 +1,12 @@
+// -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This software is dual-licensed to the public domain and under the following
+// license: you are granted a perpetual, irrevocable license to copy, modify,
+// publish, and distribute this file as you see fit.
+//
+// -- END LICENSE BLOCK ------------------------------------------------
+
 /* stb_image - v2.12 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 

@@ -63,7 +63,7 @@ void createRightClickMenu()
   glutAddMenuEntry("Clicked Voxel Info", MENU_TEXT_CLICKEDVOXELINFO);
 
   int mapMenu = glutCreateMenu(&menuFunctionWrapper);
-  
+
   std::vector<std::string> voxelmapNames = vis->getVoxelMapNames();
   for(size_t i = 0; i < voxelmapNames.size(); i++)
   {
@@ -162,8 +162,8 @@ void createRightClickMenu()
   glutAddSubMenu("Grid", gridMenu);
   glutAddSubMenu("Render Mode", rendermodeMenu);
   glutAddSubMenu("Draw Map", drawmapMenu);
-  glutAddSubMenu("Depth Test", depthMenu);  
-  glutAddSubMenu("Light", lightMenu);  
+  glutAddSubMenu("Depth Test", depthMenu);
+  glutAddSubMenu("Light", lightMenu);
   glutAddSubMenu("Visibility Trigger", visibilityMenu);
 
   glutAttachMenu(GLUT_RIGHT_BUTTON);
@@ -297,7 +297,7 @@ void registerVoxelmapFromSharedMemory(uint32_t index)
       }
       LOGGING_INFO(
           Visualization,
-          "Providing a "<< typeToString(map_type) << " called \""<< map_name << "\" with side_lenght " << voxel_side_length << " and dimension [" << dim.x << ", " << dim.y << ", " << dim.z << "]" << endl);
+          "Providing a "<< typeToString(map_type) << " called \""<< map_name << "\" with side_length " << voxel_side_length << " and dimension [" << dim.x << ", " << dim.y << ", " << dim.z << "]" << endl);
       vis->registerVoxelMap(voxel_map, index, map_name);
     }
   } catch (interprocess_exception& e)

@@ -41,9 +41,6 @@
 #include <thrust/reduce.h>
 #include <thrust/iterator/constant_iterator.h>
 
-#include <thrust/system/cuda/detail/cub.h>
-namespace cub = thrust::system::cuda::detail::cub_;
-
 // gpu_voxels
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
@@ -1967,7 +1964,7 @@ static void kernel_packByteMap_MemEfficient_Coa2(voxel_count* num_this_level, vo
       }
 
       bool occupied = (((is_occupied >> (i * 16)) & is_free_mask) == is_free_mask);
-      uint32_t all_votes = __ballot(occupied);
+      uint32_t all_votes = BALLOT(occupied);
 
       if (lane_id == 0)
         atomicAnd(&shared_votes[i], all_votes);
@@ -2225,7 +2222,7 @@ static void kernel_removeDuplicates(OctreeVoxelID* free_space, voxel_count num_v
     else
     {
 // vote to compute offset within the block
-      uint32_t votes = __ballot(is_no_duplicate);
+      uint32_t votes = BALLOT(is_no_duplicate);
       if (is_no_duplicate)
       {
         uint32_t my_index = __popc(votes << (32 - thread_id));
@@ -2324,7 +2321,7 @@ static void kernel_packVoxel(OctreeVoxelID* free_space, voxel_count num_voxel, v
 //          || (getZOrderPrefix<branching_factor>(my_voxel_id, level)
 //              != getZOrderPrefix<branching_factor>(free_space[my_id - 1], level));
     }
-    votes = __brev(__ballot(has_new_parent));
+    votes = __brev(BALLOT(has_new_parent));
 
     bool is_this_level = false;
     uint32_t num_childs_with_same_parent = 0;
@@ -2381,7 +2378,7 @@ static void kernel_packVoxel(OctreeVoxelID* free_space, voxel_count num_voxel, v
     {
 // ##### handle next level #####
       bool next_level_vote = (num_childs_split_parent == 0) & (is_active) & has_new_parent & !is_this_level;
-      uint32_t next_level_votes = __ballot(next_level_vote);
+      uint32_t next_level_votes = BALLOT(next_level_vote);
       if (next_level_vote)
       {
         uint32_t next_level_index = __popc(next_level_votes << (32 - thread_id));
@@ -2420,7 +2417,7 @@ static void kernel_packVoxel(OctreeVoxelID* free_space, voxel_count num_voxel, v
             != getZOrderPrefix<branching_factor>(free_space[my_id - 1], level));
       __syncthreads();
 
-      votes = __brev(__ballot(has_new_parent));
+      votes = __brev(BALLOT(has_new_parent));
       if (thread_id == 0)
       {
         shared_ends_at_split = false;

@@ -116,7 +116,7 @@ public:
    * \param map_type Choose between a representation: Octree, Voxelmap,
    * Voxellist are possible
    * \param map_name The name of the map for later identification
-   * \return Returns true, if adding was successful, false otherwise
+   * \return Returns shared_ptr to the added map if adding was successful, otherwise returns empty shared_ptr
    */
   GpuVoxelsMapSharedPtr addMap(const MapType map_type, const std::string &map_name);
 

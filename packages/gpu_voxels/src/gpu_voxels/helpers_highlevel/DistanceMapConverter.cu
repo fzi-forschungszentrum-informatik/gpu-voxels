@@ -96,10 +96,6 @@ void kernelConvertToBitVectorVoxellist(const free_space_t *free_space_list, cons
  * More than 255 Units free: All SV-IDs set + Undefined Bit set.
  *
  */
-
-
-
-
 struct transform_to_bitvoxel : public thrust::unary_function< thrust::tuple<free_space_t, MapVoxelID >,
     thrust::tuple<MapVoxelID, Vector3ui, BitVectorVoxel> >
 {
@@ -165,7 +161,7 @@ size_t extract_given_distances(const voxelmap::DistanceVoxelMap &dist_map,
   // Step 1: Create an Vector containing the free-space distances of all voxels:
   thrust::device_vector<free_space_t> distances(dist_map.getVoxelMapSize());
   dist_map.extract_distances(thrust::raw_pointer_cast(distances.data()), 0);
-  // Step 2: Count distances that match criteria and allocate a Bitvecor-Voxellist of that lenght
+  // Step 2: Count distances that match criteria and allocate a Bitvecor-Voxellist of that length
   size_t num_matching_voxels = thrust::count_if(distances.begin(), distances.end(), in_range(min_dist, max_dist));
   result.resize(num_matching_voxels);
   thrust::device_vector<free_space_t> matching_distances_dists(num_matching_voxels);
@@ -191,6 +187,7 @@ size_t extract_given_distances(const voxelmap::DistanceVoxelMap &dist_map,
 //                                                                       thrust::raw_pointer_cast(matching_distances_ids.data()),
 //                                                                       num_matching_voxels, dist_map.getDimensions(),
 //                                                                       result.getDeviceIdPtr(), result.getDeviceCoordPtr(), result.getDeviceDataPtr());
+//  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   return num_matching_voxels;

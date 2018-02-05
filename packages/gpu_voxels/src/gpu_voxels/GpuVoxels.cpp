@@ -163,18 +163,17 @@ bool GpuVoxels::modifyPrimitives(const std::string &array_name, const std::vecto
 
 GpuVoxelsMapSharedPtr GpuVoxels::addMap(const MapType map_type, const std::string &map_name)
 {
+  GpuVoxelsMapSharedPtr map_shared_ptr;
+  VisProviderSharedPtr vis_map_shared_ptr;
+
   // check if map with same name already exists
   ManagedMapsIterator it = m_managed_maps.find(map_name);
   if (it != m_managed_maps.end())
   {
     LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Map with name '" << map_name << "' already exists." << endl);
-    std::stringstream ss;
-    ss << "Map with name '" << map_name << "' already exists." << endl;
-    throw ss.str();
-  }
 
-  GpuVoxelsMapSharedPtr map_shared_ptr;
-  VisProviderSharedPtr vis_map_shared_ptr;
+    return map_shared_ptr;  // null-initialized shared_ptr!
+  }
 
   switch (map_type)
   {
@@ -208,8 +207,8 @@ GpuVoxelsMapSharedPtr GpuVoxels::addMap(const MapType map_type, const std::strin
 
     case MT_BITVECTOR_MORTON_VOXELLIST:
     {
-      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
-      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED;
+      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLEMENTED << endl);
+      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLEMENTED;
     }
 
     case MT_BITVECTOR_VOXELMAP:
@@ -222,10 +221,21 @@ GpuVoxelsMapSharedPtr GpuVoxels::addMap(const MapType map_type, const std::strin
       break;
     }
 
+    case MT_COUNTING_VOXELLIST:
+    {
+      voxellist::CountingVoxelList *orig_list =
+          new voxellist::CountingVoxelList(m_dim, m_voxel_side_length, MT_COUNTING_VOXELLIST);
+      VisTemplateVoxelList<CountingVoxel, uint32_t> *vis_list =
+          new VisTemplateVoxelList<CountingVoxel, uint32_t>(orig_list, map_name);
+      map_shared_ptr = GpuVoxelsMapSharedPtr(orig_list);
+      vis_map_shared_ptr = VisProviderSharedPtr(vis_list);
+      break;
+    }
+
     case MT_PROBAB_VOXELLIST:
     {
-      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
-      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED;
+      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLEMENTED << endl);
+      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLEMENTED;
     }
 
     case MT_PROBAB_OCTREE:
@@ -240,8 +250,8 @@ GpuVoxelsMapSharedPtr GpuVoxels::addMap(const MapType map_type, const std::strin
 
     case MT_PROBAB_MORTON_VOXELLIST:
     {
-      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED << endl);
-      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED;
+      LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, GPU_VOXELS_MAP_TYPE_NOT_IMPLEMENTED << endl);
+      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLEMENTED;
     }
 
     case MT_DISTANCE_VOXELMAP:
@@ -257,7 +267,7 @@ GpuVoxelsMapSharedPtr GpuVoxels::addMap(const MapType map_type, const std::strin
     default:
     {
       LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "THIS TYPE OF MAP IS UNKNOWN!" << endl);
-      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED;
+      throw GPU_VOXELS_MAP_TYPE_NOT_IMPLEMENTED;
     }
   }
 
@@ -370,7 +380,7 @@ bool GpuVoxels::addRobot(const std::string &robot_name, const std::string &path_
 
   m_managed_robots.insert(
       std::pair<std::string, RobotInterfaceSharedPtr>(
-          robot_name, RobotInterfaceSharedPtr(new robot::UrdfRobot(path_to_urdf_file, use_model_path))));
+          robot_name, RobotInterfaceSharedPtr(new robot::UrdfRobot(m_voxel_side_length, path_to_urdf_file, use_model_path))));
 
   return true;
 }

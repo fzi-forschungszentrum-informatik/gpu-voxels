@@ -69,14 +69,17 @@ void AbstractLoadBalancer<branching_factor, level_count, InnerNode, LeafNode, Wo
       std::size_t num_work_tasks = 0;
       while (total_work_items > 0)
       {
-        HANDLE_CUDA_ERROR(cudaMemset(m_dev_tasks_idle_count, 0, sizeof(uint32_t)));
+        if (!HANDLE_CUDA_ERROR(cudaMemset(m_dev_tasks_idle_count, 0, sizeof(uint32_t)))) break; // avoid error spam
         doWork();
-        HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+        if (!HANDLE_CUDA_ERROR(cudaDeviceSynchronize())) break; // avoid error spam
 
         ++num_work_tasks;
 
         uint32_t idle_count;
-        HANDLE_CUDA_ERROR(cudaMemcpy(&idle_count, m_dev_tasks_idle_count, sizeof(uint32_t), cudaMemcpyDeviceToHost));
+        if (!HANDLE_CUDA_ERROR(cudaMemcpy(&idle_count, m_dev_tasks_idle_count, sizeof(uint32_t), cudaMemcpyDeviceToHost)))
+        {
+          break; // avoid error spam
+        }
 
         // Perform load balancing step if necessary
         if (idle_count >= (NUM_TASKS * IDLE_THESHOLD))

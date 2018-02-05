@@ -29,37 +29,6 @@ namespace gpu_voxels
 namespace distance_map_converter
 {
 
-
-void thrust_test();
-
-
-
-
-
-struct is_odd
-{
-  __host__ __device__
-  bool operator()(const int &x)
-  {
-    return x & 1;
-  }
-};
-
-
-struct all_ok
-{
-
-  __host__ __device__
-  all_ok()  {}
-
-  __host__ __device__
-  bool operator()(const free_space_t &dist) const
-  {
-    return true;
-  }
-};
-
-
 struct in_range
 {
   free_space_t min_dist;
@@ -78,8 +47,6 @@ struct in_range
     return (dist >= min_dist && dist <= max_dist);
   }
 };
-
-
 
 struct in_range_tuple
 {

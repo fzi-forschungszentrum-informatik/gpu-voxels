@@ -112,6 +112,7 @@ void Intersect<branching_factor, level_count, InnerNode, LeafNode, InnerNode2, L
   // Call the templated kernel function. It's behavior is defined by the given KernelConfig.
   size_t dynamic_shared_mem_size = sizeof(typename KernelConfig::SharedMem) + sizeof(typename KernelConfig::SharedVolatileMem);
   kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS, dynamic_shared_mem_size>>>(kernel_params);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,

@@ -183,10 +183,11 @@ void kernelCollideVoxelMapsDebug(Voxel* voxelmap, const uint32_t voxelmap_size, 
 #undef DISABLE_STORING_OF_COLLISIONS
 }
 
-template<std::size_t length, class Collider>
+
+template<std::size_t length, class OtherVoxel, class Collider>
 __global__
 void kernelCollideVoxelMapsBitvector(BitVoxel<length>* voxelmap, const uint32_t voxelmap_size,
-                                     BitVoxel<length>* other_map, Collider collider,
+                                     const OtherVoxel* other_map, Collider collider,
                                      BitVector<length>* results, uint16_t* num_collisions, const uint16_t sv_offset)
 {
   extern __shared__ BitVector<length> cache[]; //[cMAX_THREADS_PER_BLOCK];

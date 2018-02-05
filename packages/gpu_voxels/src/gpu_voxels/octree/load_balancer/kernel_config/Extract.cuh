@@ -192,18 +192,18 @@ public:
           LeafNode* leafNode = &((LeafNode*) node->getChildPtr())[constants.work_lane];
           is_leaf_vote = (const_extract_selection[leafNode->getStatus()] != 0);
         }
-        uint32_t votes = __ballot(is_leaf_vote);
+        uint32_t votes = BALLOT(is_leaf_vote);
         if ((constants.thread_id % WARP_SIZE) == 0)
           shared_mem->votes_voxel_list_last_level[constants.warp_id] += __popc(votes);
       }
     }
 
     // compute offsets needed to keep the level ordering of the stack and so assure the max. memory usage of it
-    uint32_t votes_last_level = __ballot(is_last_level);
-    uint32_t votes_is_part = __ballot(is_part);
-    uint32_t votes_is_active = __ballot(variables.is_active);
-    uint32_t votes_is_min_level = __ballot(is_min_level);
-    uint32_t votes_is_selected = __ballot(is_selected);
+    uint32_t votes_last_level = BALLOT(is_last_level);
+    uint32_t votes_is_part = BALLOT(is_part);
+    uint32_t votes_is_active = BALLOT(variables.is_active);
+    uint32_t votes_is_min_level = BALLOT(is_min_level);
+    uint32_t votes_is_selected = BALLOT(is_selected);
     uint32_t votes_new_queue_items = ~votes_last_level & votes_is_active & votes_is_part
         & ~votes_is_min_level;
     uint32_t votes_voxel_list = votes_is_selected & ((~votes_is_part & votes_is_active) | votes_is_min_level);
@@ -317,7 +317,7 @@ public:
             leafNode = &((LeafNode*) node->getChildPtr())[constants.work_lane];
             is_selected = (const_extract_selection[leafNode->getStatus()] != 0);
           }
-          uint32_t leaf_votes = __ballot(is_selected);
+          uint32_t leaf_votes = BALLOT(is_selected);
           if (is_selected)
           {
             uint32_t warpLocalIndex = __popc(leaf_votes << (WARP_SIZE - (constants.thread_id % WARP_SIZE)));

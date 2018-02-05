@@ -31,7 +31,8 @@
 #include <gpu_voxels/octree/RobotNodes.h>
 
 //including cub.h will place all of cub in "thrust::system::cuda::detail::cub_"
-//we con't want to include all of cub here, because gcc will get confused by device code
+//we don't want to include all of cub here, because gcc will get confused by device code
+#if CUDA_VERSION < 9000
 #define CUB_NS_PREFIX namespace thrust { namespace system { namespace cuda { namespace detail {
 #define CUB_NS_POSTFIX                  }                  }                }                  }
 #define cub cub_
@@ -40,7 +41,14 @@
 #undef CUB_NS_PREFIX
 #undef CUB_NS_POSTFIX
 namespace cub = thrust::system::cuda::detail::cub_;
-
+#else // Cuda 9 or higher
+#define THRUST_CUB_NS_PREFIX namespace thrust {   namespace cuda_cub {
+#define THRUST_CUB_NS_POSTFIX }  }
+#include <thrust/system/cuda/detail/cub/util_type.cuh>
+#undef CUB_NS_PREFIX
+#undef CUB_NS_POSTFIX
+namespace cub = thrust::cuda_cub::cub;
+#endif
 
 namespace gpu_voxels {
 namespace NTree {

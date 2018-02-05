@@ -60,9 +60,12 @@
 #include <string>
 #include <map>
 #include "gpu_voxels/robot/urdf_robot/node.h"
-#include "gpu_voxels/robot/urdf_robot/robot_link.h"
 #include "gpu_voxels/robot/urdf_robot/robot_joint.h"
 #include "gpu_voxels/helpers/MetaPointCloud.h"
+#if __CUDACC_VER_MAJOR__ >= 9
+#undef __CUDACC_VER__
+#define __CUDACC_VER__ 90000
+#endif
 #include <Eigen/Geometry>
 #include <kdl/frames.hpp>
 #include <boost/filesystem.hpp>
@@ -93,6 +96,7 @@ public:
              const std::string& parent_joint_name,
              bool visual,
              bool collision,
+             const float discretization_distance,
              const boost::filesystem::path &path_to_pointclouds,
              MetaPointCloud& link_pointclouds);
 
@@ -139,6 +143,7 @@ private:
   node* collision_node_;           ///< The scene node the collision meshes are attached to
   node* offset_node;
 
+  float discretization_distance_;
   MetaPointCloud& link_pointclouds_;
   bool pose_calculated_;
   boost::filesystem::path path_to_pointclouds_;

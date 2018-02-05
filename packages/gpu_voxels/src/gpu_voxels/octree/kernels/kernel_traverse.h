@@ -52,11 +52,11 @@ void compute_new_status(const NodeStatus status, const bool do_final_computation
   // ##### Ballot has a problem if its called right after another #####
   // Leads to wrong _ballot() result values
   // printf() before/after/between solves the problem !?
-  uint32_t free_votes = __ballot(status & ns_FREE);
-  uint32_t unknown_votes = __ballot(status & ns_UNKNOWN);
-  uint32_t occupied_votes = __ballot(status & ns_OCCUPIED);
-  uint32_t static_votes = __ballot(status & ns_STATIC_MAP);
-  uint32_t dynamic_votes = __ballot(status & ns_DYNAMIC_MAP);
+  uint32_t free_votes = BALLOT(status & ns_FREE);
+  uint32_t unknown_votes = BALLOT(status & ns_UNKNOWN);
+  uint32_t occupied_votes = BALLOT(status & ns_OCCUPIED);
+  uint32_t static_votes = BALLOT(status & ns_STATIC_MAP);
+  uint32_t dynamic_votes = BALLOT(status & ns_DYNAMIC_MAP);
 
   if (do_final_computation)
   {

@@ -33,6 +33,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/concept/assert.hpp>
 #include <boost/type_traits/is_convertible.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/lock_guard.hpp>
 #include <stdint.h> // for fixed size datatypes
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
@@ -43,6 +45,7 @@ namespace gpu_voxels {
 
 class GpuVoxelsMap;
 typedef boost::shared_ptr<GpuVoxelsMap> GpuVoxelsMapSharedPtr;
+typedef boost::recursive_timed_mutex::scoped_lock lock_guard;
 
 class GpuVoxelsMap
 {
@@ -96,15 +99,6 @@ public:
   {
     return dynamic_cast<const T*>(this);
   }
-
-  //mutex locking and unlocking
-  void lockSelf(const std::string& function_name) const;
-  void unlockSelf(const std::string& function_name) const;
-
-  void lockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, const std::string& function_name) const;
-  void unlockBoth(const GpuVoxelsMap* map1, const GpuVoxelsMap* map2, const std::string& function_name) const;
-
-
 
   /*!
    * \brief getMapType returns the type of the map
@@ -270,11 +264,15 @@ public:
    */
   virtual Vector3f getMetricDimensions() const = 0;
 
+public:
+  // public to allow lock_guard(OtherMapTypePtr->m_mutex)
+  mutable boost::recursive_timed_mutex m_mutex;
+
 protected:
   MapType m_map_type;
 
 private:
-  mutable boost::recursive_timed_mutex m_mutex;
+
 };
 
 } // end of namespace

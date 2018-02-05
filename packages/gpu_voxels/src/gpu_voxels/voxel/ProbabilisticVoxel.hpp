@@ -75,9 +75,20 @@ Probability ProbabilisticVoxel::getOccupancy() const
 }
 
 __host__ __device__
-void ProbabilisticVoxel::insert(const uint32_t voxel_meaning)
+void ProbabilisticVoxel::insert(const BitVoxelMeaning voxel_meaning)
 {
-  m_occupancy = MAX_PROBABILITY;
+  switch(voxel_meaning) {
+    case eBVM_FREE : m_occupancy = MIN_PROBABILITY;
+      break;
+    case eBVM_COLLISION :
+    case eBVM_OCCUPIED : m_occupancy = MAX_PROBABILITY;
+      break;
+    case eBVM_UNKNOWN :
+    case eBVM_UNDEFINED :
+      m_occupancy = UNKNOWN_PROBABILITY;
+      break;
+    default : m_occupancy = UNKNOWN_PROBABILITY;
+  }
 }
 
 __host__ __device__

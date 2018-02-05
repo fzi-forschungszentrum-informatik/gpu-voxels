@@ -61,6 +61,7 @@
 
 #include "gpu_voxels/logging/logging_robot.h"
 #include "gpu_voxels/helpers/PointcloudFileHandler.h"
+#include "gpu_voxels/helpers/GeometryGeneration.h"
 #include "gpu_voxels/robot/urdf_robot/robot.h"
 #include "gpu_voxels/robot/urdf_robot/robot_link.h"
 #include "gpu_voxels/robot/urdf_robot/robot_joint.h"
@@ -74,7 +75,7 @@ RobotLink::RobotLink(Robot* robot,
                       const urdf::LinkConstPtr& link,
                       const std::string& parent_joint_name,
                       bool visual,
-                      bool collision,
+                      bool collision, const float discretization_distance,
                       const boost::filesystem::path &path_to_pointclouds,
                       MetaPointCloud& link_pointclouds)
 : robot_( robot )
@@ -82,6 +83,7 @@ RobotLink::RobotLink(Robot* robot,
 , parent_joint_name_( parent_joint_name )
 , visual_node_( NULL )
 , collision_node_( NULL )
+, discretization_distance_(discretization_distance)
 , link_pointclouds_(link_pointclouds)
 , pose_calculated_(false)
 , path_to_pointclouds_(path_to_pointclouds)
@@ -155,7 +157,7 @@ RobotLink::RobotLink(Robot* robot,
     desc << "  This link has NO geometry.";
   }
 
-  LOGGING_DEBUG_C(RobotLog, RobotLink, desc << endl);
+  LOGGING_DEBUG_C(RobotLog, RobotLink, desc.str() << endl);
 
 }
 
@@ -182,36 +184,37 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
   gpu_voxels::Vector3f scale;
 
   KDL::Vector offset_pos = KDL::Vector(origin.position.x, origin.position.y, origin.position.z);
-
-  // Rotational offset of Meshes is NOT supported in GPU-Voxels yet!!
   KDL::Rotation offset_rot = KDL::Rotation::Quaternion(origin.rotation.x, origin.rotation.y, origin.rotation.z, origin.rotation.w);
   KDL::Frame offset_pose = KDL::Frame(offset_rot, offset_pos);
+
+  PointCloud link_cloud;
 
   switch (geom.type)
   {
   case urdf::Geometry::SPHERE:
   {
-    LOGGING_WARNING_C(RobotLog, RobotLink,
-                      "Link " << std::string(link->name) <<
-                      " has SPHERE geometry, which is not supported!" << endl);
+    const urdf::Sphere& sphere = static_cast<const urdf::Sphere&>(geom);
+    link_cloud.update(geometry_generation::createSphereOfPoints(Vector3f(0), sphere.radius, discretization_distance_));
+    entity->setHasData(true);
     break;
   }
   case urdf::Geometry::BOX:
   {
-    LOGGING_WARNING_C(RobotLog, RobotLink,
-                      "Link " << link->name <<
-                      " has BOX geometry, which is not supported!" << endl);
+    const urdf::Box& box = static_cast<const urdf::Box&>(geom);
+    Vector3f half_dim(box.dim.x / 2.0, box.dim.y / 2.0, box.dim.z / 2.0);
+    link_cloud.update(geometry_generation::createBoxOfPoints((Vector3f(0) - half_dim), (Vector3f(0) + half_dim), discretization_distance_));
     break;
   }
   case urdf::Geometry::CYLINDER:
   {
-    LOGGING_WARNING_C(RobotLog, RobotLink,
-                      "Link " << link->name <<
-                      " has CYLINDER geometry, which is not supported!" << endl);
+    const urdf::Cylinder& cylinder = static_cast<const urdf::Cylinder&>(geom);
+    link_cloud.update(geometry_generation::createCylinderOfPoints(Vector3f(0), cylinder.radius, cylinder.length, discretization_distance_));
+    entity->setHasData(true);
     break;
   }
   case urdf::Geometry::MESH:
   {
+    std::vector<Vector3f> tmp_vec3f_cloud;
     const urdf::Mesh& mesh = static_cast<const urdf::Mesh&>(geom);
 
     if ( mesh.filename.empty() )
@@ -222,21 +225,17 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
     fs::path p(mesh.filename);
     fs::path pc_file = path_to_pointclouds_ / fs::path(p.stem().string() + std::string(".binvox"));
 
-    std::vector<Vector3f> link_cloud;
-    Vector3f mesh_offset(origin.position.x, origin.position.y, origin.position.z);
-
-
     LOGGING_DEBUG_C(RobotLog, RobotLink, "Loading pointcloud of link " << pc_file.string() << endl);
     if(!file_handling::PointcloudFileHandler::Instance()->loadPointCloud(
-         pc_file.string(), false, link_cloud, false, mesh_offset, 1.0))
+         pc_file.string(), false, tmp_vec3f_cloud, false, Vector3f(0), 1.0))
     {
       LOGGING_ERROR_C(RobotLog, RobotLink,
                       "Could not read file [" << pc_file.string() <<
                       "]. Adding single point instead..." << endl);
-      link_cloud.push_back(Vector3f());
-
+      tmp_vec3f_cloud.push_back(Vector3f());
     }
-    link_pointclouds_.addCloud(link_cloud, false, name_);
+
+    link_cloud.update(tmp_vec3f_cloud);
     entity->setHasData(true);
 
     break;
@@ -250,6 +249,15 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
 
   if ( entity )
   {
+    double roll, pitch, yaw;
+    offset_rot.GetRPY(roll, pitch, yaw);
+
+    Matrix4f trafo(Matrix4f::createFromRotationAndTranslation(Matrix3f::createFromRPY(roll, pitch, yaw),
+                                                              Vector3f(origin.position.x, origin.position.y, origin.position.z)));
+    link_cloud.transformSelf(&trafo);
+
+    link_pointclouds_.addCloud(link_cloud, false, name_);
+
     offset_node->setScale(scale);
     offset_node->setPose(offset_pose);
   }

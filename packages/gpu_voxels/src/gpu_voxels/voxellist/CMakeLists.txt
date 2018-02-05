@@ -18,6 +18,7 @@ ICMAKER_ADD_HEADERS(
   AbstractVoxelList.h
   TemplateVoxelList.h
   BitVoxelList.h
+  CountingVoxelList.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -36,6 +37,8 @@ ICMAKER_ADD_CUDA_FILES(
   TemplateVoxelList.hpp
   BitVoxelList.h
   BitVoxelList.hpp
+  CountingVoxelList.h
+  CountingVoxelList.hpp
   )
 
 # removing unknown pragma warnings due to OpenNI spam
@@ -52,7 +55,7 @@ ICMAKER_DEPENDENCIES(
   gpu_voxels_core
   gpu_voxels_voxel
   gpu_voxels_voxelmap
-  
+
   CUDA
   Boost_SYSTEM
   )

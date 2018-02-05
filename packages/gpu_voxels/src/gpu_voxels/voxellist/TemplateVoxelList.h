@@ -1,6 +1,15 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This program is free software licensed under the CDDL
+// (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
+// You can find a copy of this license in LICENSE.txt in the top
+// directory of the source code.
+//
+// © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
+//
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -136,6 +145,9 @@ public:
   virtual bool subtract(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3f &metric_offset = Vector3f());
   virtual bool subtract(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3i &voxel_offset = Vector3i());
 
+  virtual bool subtractFromCountingVoxelList(const TemplateVoxelList<BitVectorVoxel, VoxelIDType> *other, const Vector3f &metric_offset = Vector3f());
+  virtual bool subtractFromCountingVoxelList(const TemplateVoxelList<BitVectorVoxel, VoxelIDType> *other, const Vector3i &voxel_offset = Vector3i());
+
   virtual void resize(size_t new_size);
 
   virtual void shrinkToFit();
@@ -168,7 +180,13 @@ public:
    * @param collision_stencil Binary vector storing the collisions. Has to be the size of 'this'
    * @return Number of collisions
    */
-  virtual size_t collideVoxellists(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3i &offset,
+  // virtual size_t collideVoxellists(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3i &offset,
+  //                                  thrust::device_vector<bool>& collision_stencil) const;
+
+  size_t collideVoxellists(const TemplateVoxelList<BitVectorVoxel, VoxelIDType> *other, const Vector3i &offset,
+                                   thrust::device_vector<bool>& collision_stencil) const;
+
+  size_t collideVoxellists(const TemplateVoxelList<CountingVoxel, VoxelIDType> *other, const Vector3i &offset,
                                    thrust::device_vector<bool>& collision_stencil) const;
 
   /**
@@ -201,20 +219,37 @@ public:
   /**
    * @brief screendump Prints ALL elemets of the list to the screen
    */
-  void screendump(bool with_voxel_content = true) const;
+  virtual void screendump(bool with_voxel_content = true) const;
 
   struct VoxelToCube
   {
     VoxelToCube() {}
 
     __host__ __device__
-    Cube operator()(const Vector3ui& coords, const Voxel& voxel) const {
-      // TODO: This is too much specialized. Create a getType() method for each voxel type
-      // TODO: Pass correct voxel size
+    Cube operator()(const Vector3ui& coords, const BitVectorVoxel& voxel) const {
+
       return Cube(1, coords, voxel.bitVector());
+    }
+    __host__ __device__
+    Cube operator()(const Vector3ui& coords, const CountingVoxel& voxel) const {
+
+      if (voxel.getCount() > 1)
+      {
+        return Cube(1, coords, eBVM_OCCUPIED);
+      }
+      else
+      {
+        return Cube(1, coords, eBVM_FREE);
+      }
     }
   };
 
+  /* ======== Variables with content on device ======== */
+  /* Follow the Thrust paradigm: Struct of Vectors */
+  /* need to be public in order to be accessed by TemplateVoxelLists with other template arguments*/
+  thrust::device_vector<VoxelIDType> m_dev_id_list;  // contains the voxel adresses / morton codes (This can not be a Voxel*, as Thrust can not sort pointers)
+  thrust::device_vector<Vector3ui> m_dev_coord_list; // contains the voxel metric coordinates
+  thrust::device_vector<Voxel> m_dev_list;           // contains the actual data: bitvector or probability
 protected:
 
   virtual void make_unique();
@@ -230,12 +265,6 @@ protected:
   bool* m_collision_check_results;
   //! result array for collision check with counter
   uint16_t* m_collision_check_results_counter;
-
-  /* ======== Variables with content on device ======== */
-  /* Follow the Thrust paradigm: Struct of Vectors */
-  thrust::device_vector<VoxelIDType> m_dev_id_list;  // contains the voxel adresses / morton codes (This can not be a Voxel*, as Thrust can not sort pointers)
-  thrust::device_vector<Vector3ui> m_dev_coord_list; // contains the voxel metric coordinates
-  thrust::device_vector<Voxel> m_dev_list;           // contains the actual data: bitvector or probability
 
 
   //! results of collision check on device

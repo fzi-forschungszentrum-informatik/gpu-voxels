@@ -54,7 +54,7 @@ void ProbVoxelMap::insertSensorData(const Vector3f* points, const bool enable_ra
                                     const bool cut_real_robot, const BitVoxelMeaning voxel_meaning,
                                     BitVoxel<length>* robot_map)
 {
-  this->lockSelf("ProbVoxelMap::insertSensorData");
+  lock_guard guard(this->m_mutex);
   //  printf("got lock ----------------------------------------------------\n");
   //  if (enable_raycasting)
   //  {
@@ -76,17 +76,20 @@ void ProbVoxelMap::insertSensorData(const Vector3f* points, const bool enable_ra
 //    computeLinearLoad(m_voxelmap_size, &blocks, &threads);
 //    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //    kernelClearVoxelMap<<<blocks, threads>>>(m_dev_data, m_voxelmap_size, eBVM_OCCUPIED);
+//    CHECK_CUDA_ERROR();
     // ---
 //    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     kernelInsertSensorData<<<m_blocks_sensor_operations, m_threads_sensor_operations>>>(
         m_dev_data, m_voxelmap_size, m_dim, m_voxel_side_length, m_dev_sensor,
         m_dev_transformed_sensor_data, cut_real_robot, robot_map, voxel_meaning, RayCaster());
+    CHECK_CUDA_ERROR();
   }
   else
   {
     kernelInsertSensorData<<<m_blocks_sensor_operations, m_threads_sensor_operations>>>(
         m_dev_data, m_voxelmap_size, m_dim, m_voxel_side_length, m_dev_sensor,
         m_dev_transformed_sensor_data, cut_real_robot, robot_map, voxel_meaning, DummyRayCaster());
+    CHECK_CUDA_ERROR();
   }
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -96,9 +99,6 @@ void ProbVoxelMap::insertSensorData(const Vector3f* points, const bool enable_ra
 
 //  printf(" ...done in %f ms!\n", m_elapsed_time);
 //  printf("update counter: %u\n", m_update_counter);
-
-//  printf("releasing lock ----------------------------------------------------\n");
-  this->unlockSelf("ProbVoxelMap::insertSensorData");
 }
 
 bool ProbVoxelMap::insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test)

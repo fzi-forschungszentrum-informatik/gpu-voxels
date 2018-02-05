@@ -26,4 +26,5 @@
 
 namespace gpu_voxels {
   template class VisTemplateVoxelList<BitVectorVoxel, uint32_t>;
+  template class VisTemplateVoxelList<CountingVoxel, uint32_t>;
 } // namespace gpu_voxels

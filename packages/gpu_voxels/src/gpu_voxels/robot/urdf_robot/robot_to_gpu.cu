@@ -37,7 +37,7 @@ namespace gpu_voxels {
 namespace robot {
 
 
-RobotToGPU::RobotToGPU(const std::string &_path, const bool &use_model_path) :
+RobotToGPU::RobotToGPU(const float voxel_side_length, const std::string &_path, const bool &use_model_path) :
   Robot()
 {
   // here we explicitely specify the path to URDF to handle relative paths:
@@ -49,7 +49,7 @@ RobotToGPU::RobotToGPU(const std::string &_path, const bool &use_model_path) :
 
   // for the robot itself we pass the path where we expect the binvox files:
   boost::filesystem::path path_to_pointclouds = path_to_urdf.parent_path();
-  Robot::load(*model_interface_shrd_ptr, path_to_pointclouds, true, true);
+  Robot::load(*model_interface_shrd_ptr, path_to_pointclouds, 0.4 * voxel_side_length, true, true);
 
   // allocate a copy of the pointcloud, which will hold the transformed version
   m_link_pointclouds_transformed = new MetaPointCloud(*Robot::getLinkPointclouds());

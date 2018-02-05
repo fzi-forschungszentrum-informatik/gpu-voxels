@@ -37,7 +37,7 @@ echo "====== Step 2: Executing BinVox final run... ======"
 echo "==================================================="
 echo "Params are:"
 echo "Bounding Box of input mesh: Min: [ ${MIN_X}, ${MIN_Y}, ${MIN_Z} ] Max: [ ${MAX_X}, ${MAX_Y}, ${MAX_Z} ]"
-echo "Bounding Box maximum side lenght: ${LENGTH} ==> Voxelcube sidelength in Voxels: ${NUM_VOXELS}"
+echo "Bounding Box maximum side length: ${LENGTH} ==> Voxelcube sidelength in Voxels: ${NUM_VOXELS}"
 echo ""
 
 echo "         --------- Final-Run Output -----------"

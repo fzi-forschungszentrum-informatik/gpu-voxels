@@ -20,6 +20,7 @@ ICMAKER_ADD_HEADERS(
   SVCollider.h
   ProbabilisticVoxel.h
   DistanceVoxel.h
+  CountingVoxel.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -40,6 +41,8 @@ ICMAKER_ADD_CUDA_FILES(
   ProbabilisticVoxel.hpp
   DistanceVoxel.h
   DistanceVoxel.hpp
+  CountingVoxel.h
+  CountingVoxel.hpp
   )
 
 # removing unknown pragma warnings due to OpenNI spam

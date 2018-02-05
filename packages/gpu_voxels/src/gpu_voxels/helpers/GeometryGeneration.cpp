@@ -105,6 +105,57 @@ std::vector<Vector3f> createBoxOfPoints(Vector3f min, Vector3f max, float delta)
 }
 
 
+std::vector<Vector3f> createSphereOfPoints(Vector3f center, float radius, float delta)
+{
+  std::vector<Vector3f> sphere_cloud;
+  Vector3f bbox_min(center - Vector3f(radius));
+  Vector3f bbox_max(center + Vector3f(radius));
+  Vector3f point;
+
+  for(float x_dim = bbox_min.x; x_dim <= bbox_max.x; x_dim += delta)
+  {
+    for(float y_dim = bbox_min.y; y_dim <= bbox_max.y; y_dim += delta)
+    {
+      for(float z_dim = bbox_min.z; z_dim <= bbox_max.z; z_dim += delta)
+      {
+        point = Vector3f(x_dim, y_dim, z_dim);
+
+        if((center - point).length() <= radius)
+        {
+          sphere_cloud.push_back(point);
+        }
+      }
+    }
+  }
+  return sphere_cloud;
+}
+
+std::vector<Vector3f> createCylinderOfPoints(Vector3f center, float radius, float length_along_z, float delta)
+{
+  std::vector<Vector3f> cylinder_cloud;
+  Vector3f bbox_min(center - Vector3f(radius, radius, length_along_z / 2.0));
+  Vector3f bbox_max(center + Vector3f(radius, radius, length_along_z / 2.0));
+  Vector3f point;
+
+  for(float x_dim = bbox_min.x; x_dim <= bbox_max.x; x_dim += delta)
+  {
+    for(float y_dim = bbox_min.y; y_dim <= bbox_max.y; y_dim += delta)
+    {
+      for(float z_dim = bbox_min.z; z_dim <= bbox_max.z; z_dim += delta)
+      {
+        point = Vector3f(x_dim, y_dim, z_dim);
+
+        if( sqrt ((center.x - point.x) * (center.x - point.x) +
+                  (center.y - point.y) * (center.y - point.y)) <= radius )
+        {
+          cylinder_cloud.push_back(point);
+        }
+      }
+    }
+  }
+  return cylinder_cloud;
+}
+
 void createEquidistantPointsInBox(const size_t max_nr_points,
                                   const Vector3ui max_coords,
                                   const float side_length,

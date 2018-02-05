@@ -93,7 +93,7 @@ void kernel_voxelize(OctreeVoxelID* voxelInput, const voxel_count numVoxel, voxe
     }
     else
     {
-      uint32_t new_voxel_votes = __ballot(is_new_voxel);
+      uint32_t new_voxel_votes = BALLOT(is_new_voxel);
       if (is_new_voxel)
       {
         const uint32_t my_write_pos = shared_write_position

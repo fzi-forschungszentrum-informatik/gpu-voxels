@@ -40,10 +40,10 @@ void computeLinearLoad(const uint32_t nr_of_items, uint32_t* blocks, uint32_t* t
   {
       LOGGING_ERROR(
           Gpu_voxels_helpers,
-          "Number of Items is 0. Blocks and Threads per Block is set to 0. This will lead to a Cuda ERROR" << endl);
+          "Number of Items is 0. Blocks and Threads per Block is set to 1. Size 0 would lead to a Cuda ERROR" << endl);
 
-      *blocks = 0;
-      *threads_per_block = 0;
+      *blocks = 1;
+      *threads_per_block = 1;
       return;
   }
 

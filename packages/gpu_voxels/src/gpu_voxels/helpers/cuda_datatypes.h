@@ -29,6 +29,14 @@
 #include "gpu_voxels/helpers/cuda_vectors.h"
 #include "gpu_voxels/helpers/cuda_matrices.h"
 
+// __ballot has been replaced by __ballot_sync in Cuda9
+#if(__CUDACC_VER_MAJOR__ >= 9)
+#define FULL_MASK 0xffffffff
+#define BALLOT(PREDICATE) __ballot_sync(FULL_MASK, PREDICATE)
+#else
+#define BALLOT(PREDICATE) __ballot(PREDICATE)
+#endif
+
 namespace gpu_voxels {
 
 

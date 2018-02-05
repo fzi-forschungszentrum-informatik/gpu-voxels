@@ -35,9 +35,9 @@ const struct {
     std::string urdf;
     std::string trajectories;
 } roboTemplates[] = {
-    {"HoLLiE_1","hollie.urdf","hollie.traj"},
-    {"HoLLiE_2","hollie.urdf","hollie2.traj"},
-    {"HoLLiE_3","hollie.urdf","hollie3.traj"}
+    {"HoLLiE_1","hollie/hollie.urdf","hollie.traj"},
+    {"HoLLiE_2","hollie/hollie.urdf","hollie2.traj"},
+    {"HoLLiE_3","hollie/hollie.urdf","hollie3.traj"}
 };
 
 int main(int argc, char **argv)

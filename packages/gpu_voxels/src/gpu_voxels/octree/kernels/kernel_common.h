@@ -31,8 +31,33 @@
 #include <gpu_voxels/voxel/BitVoxel.h>
 #include <gpu_voxels/voxel/ProbabilisticVoxel.h>
 
-#include <thrust/system/cuda/detail/cub.h>
+#if CUDA_VERSION < 9000
+#define CUB_NS_PREFIX namespace thrust { namespace system { namespace cuda { namespace detail {
+#define CUB_NS_POSTFIX                  }                  }                }                  }
+#define cub cub_
+#include <thrust/system/cuda/detail/cub/util_type.cuh>
+#undef cub
+#undef CUB_NS_PREFIX
+#undef CUB_NS_POSTFIX
 namespace cub = thrust::system::cuda::detail::cub_;
+#else // Cuda 9 or higher
+#define THRUST_CUB_NS_PREFIX namespace thrust {   namespace cuda_cub {
+#define THRUST_CUB_NS_POSTFIX }  }
+#include <thrust/system/cuda/detail/cub/util_type.cuh>
+#undef CUB_NS_PREFIX
+#undef CUB_NS_POSTFIX
+namespace cub = thrust::cuda_cub::cub;
+#endif
+
+// __ballot has been replaced by __ballot_sync in Cuda9
+#if(__CUDACC_VER_MAJOR__ >= 9)
+#define FULL_MASK 0xffffffff
+#define BALLOT(PREDICATE) __ballot_sync(FULL_MASK, PREDICATE)
+#define ANYWARP(PREDICATE) __any_sync(FULL_MASK, PREDICATE)
+#else
+#define BALLOT(PREDICATE) __ballot(PREDICATE)
+#define ANYWARP(PREDICATE) __any(PREDICATE)
+#endif
 
 #include <cuda_runtime.h>
 
@@ -75,7 +100,7 @@ uint32_t thread_prefix(volatile uint32_t* shr_sum, const uint32_t tid, uint32_t&
                                                   const bool pred)
 {
   assert(tid < (32 * 32));
-  uint32_t warp_votes = __ballot(pred); // warp vote
+  uint32_t warp_votes = BALLOT(pred); // warp vote
   if (tid % WARP_SIZE == tid / WARP_SIZE)
     shr_sum[tid / WARP_SIZE] = __popc(warp_votes); // population count
   if(NUM_WARPS > 1)
@@ -123,7 +148,7 @@ bool any_thread(const bool pred)
   if(NUM_WARPS > 1)
     return __syncthreads_or(pred);
   else
-    return __any(pred);
+    return ANYWARP(pred);
 }
 
 template<std::size_t branching_factor, typename T1, typename T2>
@@ -327,11 +352,11 @@ __forceinline__ void _bottomUpUpdate(T1* node, T2* parent_node, volatile uint8_t
   // Leads to wrong _ballot() result values
   // printf() before/after/between solves the problem !?
   // works after some refactoring with no substantial change!!
-  const uint32_t free_votes = __ballot(status & ns_FREE);
-  const uint32_t unknown_votes = __ballot(status & ns_UNKNOWN);
-  const uint32_t occupied_votes = __ballot(status & ns_OCCUPIED);
-  const uint32_t static_votes = __ballot(status & ns_STATIC_MAP);
-  const uint32_t dynamic_votes = __ballot(status & ns_DYNAMIC_MAP);
+  const uint32_t free_votes = BALLOT(status & ns_FREE);
+  const uint32_t unknown_votes = BALLOT(status & ns_UNKNOWN);
+  const uint32_t occupied_votes = BALLOT(status & ns_OCCUPIED);
+  const uint32_t static_votes = BALLOT(status & ns_STATIC_MAP);
+  const uint32_t dynamic_votes = BALLOT(status & ns_DYNAMIC_MAP);
 
   if ((thread_id % branching_factor) == 0)
   {
@@ -525,7 +550,7 @@ bool maxMinReduction(const Environment::InnerNode::RayCastType my_value,
   volatile uint16_t* my_shared_mem = (volatile uint16_t*) shared_memory;
 
   const bool is_valid = is_active && isValidValue(my_value);
-  const uint32_t warp_votes = __ballot(is_valid);
+  const uint32_t warp_votes = BALLOT(is_valid);
 
   if (branching_factor > WARP_SIZE)
   {
@@ -841,7 +866,7 @@ void _bottomUpUpdateProb(T1* node, T2* parent_node, volatile uint8_t* shared_mem
 //    my_shared_mem[thread_id] = (Probability) max(my_shared_mem[thread_id], my_shared_mem[thread_id + 1]);
 
 //  const Probability max_occupancy = my_shared_mem[parent_node_id];
-  const uint32_t all_votes = __ballot((max_occupancy == my_occupancy) & !(node->hasStatus(ns_PART)));
+  const uint32_t all_votes = BALLOT((max_occupancy == my_occupancy) & !(node->hasStatus(ns_PART)));
 
   if (node_index == 0)
   {

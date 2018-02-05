@@ -64,6 +64,10 @@
 #include "gpu_voxels/helpers/MetaPointCloud.h"
 #include <string>
 #include <map>
+#if __CUDACC_VER_MAJOR__ >= 9
+#undef __CUDACC_VER__
+#define __CUDACC_VER__ 90000
+#endif
 #include <Eigen/Geometry>
 #include <urdf_model/model.h>
 #include <kdl/frames_io.hpp>
@@ -98,11 +102,13 @@ public:
    * \brief Loads meshes/primitives from a robot description.  Calls clear() before loading.
    *
    * @param urdf The robot description to read from
+   * @param path_to_pointclouds The filesystem path to the pointclouds
+   * @param discretization_distance Point distance when sampling geometric URDF primitives
    * @param visual Whether or not to load the visual representation
    * @param collision Whether or not to load the collision representation
    */
   void load( const urdf::ModelInterface &urdf, const boost::filesystem::path &path_to_pointclouds,
-             bool visual = true, bool collision = true);
+             const float discretization_distance, bool visual = true, bool collision = true);
 
   /**
    * \brief Clears all data loaded from a URDF

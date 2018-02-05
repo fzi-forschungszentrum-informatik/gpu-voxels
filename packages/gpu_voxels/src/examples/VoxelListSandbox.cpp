@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Voxellist1 size: " << gvl->getMap("myVoxelList")->getDimensions().x << " voxels" << std::endl;
 
-  // We load the model of a coordinate system.
+/*  // We load the model of a coordinate system.
   if (!gvl->insertPointCloudFromFile("myVoxelList2", "coordinate_system_100.binvox", true,
                                      gpu_voxels::BitVoxelMeaning(24), true, Vector3f(0, 0, 0),1.0))
   {
@@ -89,6 +89,7 @@ int main(int argc, char* argv[])
   }
 
   //std::cout << "Voxellist2 size: " << gvl->getMap("myVoxelList2")->getDimensions().x << " voxels" << std::endl;
+*/
 
   size_t num_colls;
 

@@ -96,6 +96,7 @@ ICMAKER_INTERNAL_DEPENDENCIES(
 
 ICMAKER_EXTERNAL_DEPENDENCIES(
   CUDA
+  PCL
   )
 
 ICMAKER_BUILD_PROGRAM()
@@ -321,6 +322,7 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_PROGRAM()
 
+
 #------------- Example Program voxellist sandbox ------------
 ICMAKER_SET("voxellist_sandbox" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 
@@ -452,6 +454,7 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
   Boost_SYSTEM
   CUDA
   OpenNI
+  PCL
   )
 
 ICMAKER_BUILD_PROGRAM()
@@ -487,6 +490,65 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_PROGRAM()
 
+#------------- Example Program for the usage of gpu_voxels ------------
+ICMAKER_SET("counting_sandbox" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
+
+ICMAKER_ADD_HEADERS(
+  )
+
+ICMAKER_ADD_SOURCES(
+  VoxelListCountingSandbox.cpp
+  )
+
+ICMAKER_ADD_CUDA_FILES(
+  )
+
+ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_EXAMPLES_COLLISION_)
+ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
+
+ICMAKER_INTERNAL_DEPENDENCIES(
+  icl_core
+  icl_core_config
+  icl_core_logging
+  gpu_voxels
+  )
+
+ICMAKER_EXTERNAL_DEPENDENCIES(
+  CUDA
+  )
+
+ICMAKER_BUILD_PROGRAM()
+
+#------------- Example Program for the usage of gpu_voxels ------------
+ICMAKER_SET("counting_voxellist" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
+
+ICMAKER_ADD_HEADERS(
+  )
+
+ICMAKER_ADD_SOURCES(
+  CountingVoxelList.cpp
+  )
+
+ICMAKER_ADD_CUDA_FILES(
+  )
+
+ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_EXAMPLES_COLLISION_)
+ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
+
+ICMAKER_INTERNAL_DEPENDENCIES(
+  icl_core
+  icl_core_config
+  icl_core_logging
+  gpu_voxels
+  )
+
+ICMAKER_EXTERNAL_DEPENDENCIES(
+  CUDA
+  )
+
+ICMAKER_BUILD_PROGRAM()
 
 #------------- adding examples in subdirectories ------------
 ADD_SUBDIRECTORY(swept_fitter)

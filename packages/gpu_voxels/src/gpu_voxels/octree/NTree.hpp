@@ -53,8 +53,23 @@
 #include <thrust/fill.h>
 #include <thrust/extrema.h>
 
-#include <thrust/system/cuda/detail/cub.h>
+#if CUDA_VERSION < 9000
+#define CUB_NS_PREFIX namespace thrust { namespace system { namespace cuda { namespace detail {
+#define CUB_NS_POSTFIX                  }                  }                }                  }
+#define cub cub_
+#include <thrust/system/cuda/detail/cub/device/device_radix_sort.cuh>
+#undef cub
+#undef CUB_NS_PREFIX
+#undef CUB_NS_POSTFIX
 namespace cub = thrust::system::cuda::detail::cub_;
+#else // Cuda 9 or higher
+#define THRUST_CUB_NS_PREFIX namespace thrust {   namespace cuda_cub {
+#define THRUST_CUB_NS_POSTFIX }  }
+#include <thrust/system/cuda/detail/cub/device/device_radix_sort.cuh>
+#undef CUB_NS_PREFIX
+#undef CUB_NS_POSTFIX
+namespace cub = thrust::cuda_cub::cub;
+#endif
 
 // Internal dependencies
 #include <gpu_voxels/octree/load_balancer/LoadBalancer.cuh>
@@ -382,6 +397,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::toVoxelCoordinat
   d_voxels.resize(num_points);
   thrust::device_vector<Vector3f> d_points = h_points;
   kernel_toVoxels<<<numBlocks, numThreadsPerBlock>>>(D_PTR(d_points), num_points, D_PTR(d_voxels), float(m_resolution / 1000.0f));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
@@ -426,6 +442,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
   PERF_MON_START(temp_timer);
   thrust::device_vector<OctreeVoxelID> d_voxels(num_points);
   kernel_toMortonCode<<<num_blocks, num_threads_per_block>>>(D_PTR(d_points), num_points, D_PTR(d_voxels));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   if(!free_bounding_box)
   {
@@ -537,6 +554,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
     kernel_countNodes<branching_factor, level_count, InnerNode, LeafNode> <<<numBlocks, num_threads_per_block>>>(
         D_PTR(d_voxels), num_points,
         level, D_PTR(nodeCount));
+        CHECK_CUDA_ERROR();
         HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
         uint32_t lastThread = ceil(double(num_points) / ceil(double(num_points) / (numBlocks * num_threads_per_block)))
@@ -586,6 +604,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
         {
           this->allocLeafNodes += branching_factor * numNodes;
           kernel_clearNodes<LeafNode, false> <<<numBlocks, num_threads_per_block>>>(branching_factor * numNodes, (LeafNode*) nodes);
+          CHECK_CUDA_ERROR();
           HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef DEBUG_MODE
         LOGGING_DEBUG(OctreeDebugLog, "clearNodes done L0" <<  endl);
@@ -593,6 +612,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
         kernel_setNodes<LeafNode, InnerNode, branching_factor> <<<numBlocks, num_threads_per_block>>>(
             D_PTR(d_voxels), num_points, level, D_PTR(nodeCount),
             (LeafNode*) nodes, D_PTR(nodeIds), (InnerNode*) childNodes);
+        CHECK_CUDA_ERROR();
         HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef DEBUG_MODE
         LOGGING_DEBUG(OctreeDebugLog, "setNodes done L0" <<  endl);
@@ -607,20 +627,23 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::build(
         if (level == 1)
         {
           kernel_clearNodes<InnerNode, true> <<<numBlocks, num_threads_per_block>>>(branching_factor * numNodes, (InnerNode*) nodes );
+          CHECK_CUDA_ERROR();
           HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
           kernel_setNodes<InnerNode, LeafNode, branching_factor> <<<numBlocks, num_threads_per_block>>>(
               D_PTR(d_voxels), num_points, level, D_PTR(nodeCount),
               (InnerNode*) nodes, D_PTR(nodeIds), (LeafNode*) childNodes);
+          HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
         }
         else
         {
           kernel_clearNodes<InnerNode, false> <<<numBlocks, num_threads_per_block>>>(branching_factor * numNodes, (InnerNode*) nodes);
+          CHECK_CUDA_ERROR();
           HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
           kernel_setNodes<InnerNode, InnerNode,branching_factor> <<<numBlocks, num_threads_per_block>>>(
               D_PTR(d_voxels), num_points, level, D_PTR(nodeCount),
               (InnerNode*) nodes, D_PTR(nodeIds), (InnerNode*) childNodes);
+          HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
         }
-        HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef DEBUG_MODE
         LOGGING_DEBUG(OctreeDebugLog, "setNodes done" <<  endl);
 #endif
@@ -669,6 +692,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::print()
   thrust::device_vector<InnerNode> stack1(1000000);
   thrust::device_vector<InnerNode> stack2(1000000);
   kernel_print<branching_factor, level_count, InnerNode, LeafNode> <<<1, 1>>>(m_root, D_PTR(stack1), D_PTR(stack2));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
@@ -678,6 +702,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::print2()
   thrust::device_vector<MyTripple<InnerNode*, OctreeVoxelID, bool> > stack1(10000000);
   thrust::device_vector<MyTripple<InnerNode*, OctreeVoxelID, bool> > stack2(10000000);
   kernel_print2<branching_factor, level_count, InnerNode, LeafNode> <<<1, 1>>>(m_root, D_PTR(stack1), D_PTR(stack2));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
@@ -690,6 +715,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::find(
   kernel_find<branching_factor, level_count, InnerNode, LeafNode> <<<numBlocks, numThreadsPerBlock>>>(
       m_root, D_PTR(voxel), voxel.size(),
       resultNode, D_PTR(resultNodeType));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
@@ -701,6 +727,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
 //  thrust::device_vector<Vector3ui> d_points = h_voxel;
 //  thrust::device_vector<voxel_id> voxel(h_voxel.size());
 //  kernel_toMortonCode <<<numBlocks, numThreadsPerBlock>>> (D_PTR(d_points), h_voxel.size(), D_PTR(voxel));
+//  CHECK_CUDA_ERROR();
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //  d_points.clear();
 //  d_points.shrink_to_fit();
@@ -708,6 +735,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
 //  thrust::sort(voxel.begin(), voxel.end());
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //  kernel_intersect<<<numBlocks, numThreadsPerBlock>>>(m_root, D_PTR(voxel), h_voxel.size(), D_PTR(d_num_collisions));
+//  CHECK_CUDA_ERROR();
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //  voxel_count collisions = thrust::reduce(d_num_collisions.begin(), d_num_collisions.end());
 //  return collisions;
@@ -720,6 +748,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
   t = getCPUTime();
   kernel_intersect<branching_factor, level_count, InnerNode, LeafNode> <<<numBlocks, numThreadsPerBlock>>>(
       m_root, D_PTR(d_voxel), h_voxel.size(),D_PTR(d_num_collisions));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   LOGGING_INFO(OctreeLog, "kernel_intersect(): " << timeDiff(t, getCPUTime()) << " ms" <<  endl);
   t = getCPUTime();
@@ -762,6 +791,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
 //      D_PTR(d_voxelTypeFlags),
 //      min_level,
 //      offset);
+//   CHECK_CUDA_ERROR();
 //
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //
@@ -817,6 +847,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
       D_PTR(d_voxelTypeFlags),
       min_level,
       offset);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -878,6 +909,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
       D_PTR(d_voxelTypeFlags),
       min_level,
       offset);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -941,6 +973,7 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
       D_PTR(d_num_collisions_w_unknown),
       D_PTR(d_voxelTypeFlags),
       min_level);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -1012,6 +1045,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::find(
   thrust::device_vector<FindResult<LeafNode> > result(resultNode.size());
   kernel_find<branching_factor, level_count, InnerNode, LeafNode> <<<numBlocks, numThreadsPerBlock>>>(
       m_root, D_PTR(voxel), voxel.size(), D_PTR(result));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   resultNode = result;
 }
@@ -1057,31 +1091,39 @@ voxel_count NTree<branching_factor, level_count, InnerNode, LeafNode>::intersect
   kernel_intersect_wo_stack_coalesced<branching_factor, level_count, InnerNode, LeafNode, o_InnerNode,
   o_LeafNode> <<<numBlocks, numThreadsPerBlock, sMem>>>(m_root, *other,D_PTR(numConflicts),
       splitLevel);
+  CHECK_CUDA_ERROR();
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #endif
 
 #ifdef WITHOUT_STACK
   kernel_intersect_wo_stack<<<numBlocks, numThreadsPerBlock>>>(*robot, *environment,
       D_PTR(numConflicts), splitLevel);
+  CHECK_CUDA_ERROR();
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #endif
 
 #ifdef SMALL_STACK
   kernel_intersect_smallStack<<<numBlocks, numThreadsPerBlock>>>(*robot, *environment,
       D_PTR(numConflicts),
       D_PTR(stack), splitLevel);
+  CHECK_CUDA_ERROR();
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #endif
 
 #ifdef SHARED_STACK
   kernel_intersect_shared<<<numBlocks, numThreadsPerBlock,sMem>>>(*robot, *environment,
       D_PTR(numConflicts) , splitLevel);
+  CHECK_CUDA_ERROR();
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #endif
 
 #ifdef DEFAULT
   kernel_intersect<branching_factor, level_count, InnerNode, LeafNode, o_InnerNode, o_LeafNode> <<<
       numBlocks, numThreadsPerBlock>>>(m_root, other->m_root, D_PTR(numConflicts),
   D_PTR(stack), splitLevel);
-
-#endif
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+#endif
 
   LOGGING_INFO(OctreeLog, "kernel_intersect: " << timeDiff(time, getCPUTime()) << " ms" <<  endl);
 
@@ -1191,6 +1233,7 @@ OctreeVoxelID NTree<branching_factor, level_count, InnerNode, LeafNode>::interse
 //// ##### ray cast #####
 //  kernel_rayInsert<false, false, branching_factor> <<<numBlocks, numThreadsPerBlock>>>(D_PTR(d_occupied_voxel),kinect_points,
 //      sensor_origin, D_PTR(d_free_space), D_PTR(d_voxel_count), max_depth_in_voxel * numThreadsPerBlock);
+//  CHECK_CUDA_ERROR();
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //  printf("Ray cast: %f ms\n", timeDiff(time, getCPUTime()));
 //
@@ -1231,6 +1274,7 @@ OctreeVoxelID NTree<branching_factor, level_count, InnerNode, LeafNode>::interse
 ////  d_num_voxel_wo_duplicates.back() = 0;
 ////  kernel_removeDuplicates<true> <<< numBlocks, numThreadsPerBlock >>>(
 ////      D_PTR(d_free_space), max_size_free_space, NULL, D_PTR(d_num_voxel_wo_duplicates));
+////  CHECK_CUDA_ERROR();
 ////  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 ////  thrust::exclusive_scan(d_num_voxel_wo_duplicates.begin(), d_num_voxel_wo_duplicates.end(),
 ////                         d_num_voxel_wo_duplicates.begin());
@@ -1240,6 +1284,7 @@ OctreeVoxelID NTree<branching_factor, level_count, InnerNode, LeafNode>::interse
 ////  thrust::device_vector<voxel_id> d_free_space_wo_duplicates(num_free_wo_duplicates);
 ////  kernel_removeDuplicates<false> <<< numBlocks, numThreadsPerBlock >>>(D_PTR(d_free_space), max_size_free_space,
 ////      D_PTR(d_free_space_wo_duplicates), D_PTR(d_num_voxel_wo_duplicates));
+////  CHECK_CUDA_ERROR();
 ////  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 ////  d_free_space.clear();
 ////  d_free_space.shrink_to_fit();
@@ -1281,6 +1326,7 @@ OctreeVoxelID NTree<branching_factor, level_count, InnerNode, LeafNode>::interse
 //    kernel_packVoxel<branching_factor, true> <<<numBlocks, numThreadsPerBlock>>>(
 //        D_PTR(d_free_space_wo_duplicates), num_free_wo_duplicates,
 //        D_PTR(d_num_voxel_this_level), D_PTR(d_num_voxel_next_level), l, NULL, NULL);
+//    CHECK_CUDA_ERROR();
 //    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //    // TODO use only one array to do the scan for both and then use an offset since it's more efficient
 //    thrust::exclusive_scan(d_num_voxel_this_level.begin(), d_num_voxel_this_level.end(),
@@ -1312,6 +1358,7 @@ OctreeVoxelID NTree<branching_factor, level_count, InnerNode, LeafNode>::interse
 //        D_PTR(d_free_space_wo_duplicates), num_free_wo_duplicates,
 //        D_PTR(d_num_voxel_this_level), D_PTR(d_num_voxel_next_level),
 //        l, d_free_space_this_level, D_PTR(d_free_space_next_level));
+//    CHECK_CUDA_ERROR();
 //    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //    printf("kernel_packVoxel() level %u: %f ms\n", l, timeDiff(time_loop, getCPUTime()));
 //
@@ -1350,9 +1397,11 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map_an
   // cudaProfilerStart();
   //  kernel_packByteMap_MemEfficient_Coa2<branching_factor, true> <<<numBlocks, 128>>>(
   //      D_PTR(d_num_voxel_this_level), D_PTR(d_num_voxel_next_level), map_properties);
+  // CHECK_CUDA_ERROR();
   kernel_packMortonL0Map<NUM_THREADS_PER_BLOCK, branching_factor, true, false, PACKING_OF_VOXEL, InnerNode> <<<
       numBlocks,
       NUM_THREADS_PER_BLOCK>>>(D_PTR(d_num_voxel_this_level), D_PTR(d_num_voxel_next_level), map_properties);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   //  cudaProfilerStop();
 #ifdef FREESPACE_MESSAGES
@@ -1377,11 +1426,13 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map_an
   thrust::device_vector<OctreeVoxelID> d_free_space_next_level(num_next_level);
   //  kernel_packByteMap_MemEfficient_Coa2<branching_factor, false> <<<numBlocks, 128>>>(
   //      D_PTR(d_num_voxel_this_level), D_PTR(d_num_voxel_next_level),map_properties, D_PTR(d_this_level_index), D_PTR(d_next_level_index),d_free_space_this_level,D_PTR(d_free_space_next_level));
+  //  CHECK_CUDA_ERROR();
   kernel_packMortonL0Map<NUM_THREADS_PER_BLOCK, branching_factor, false, false, PACKING_OF_VOXEL, InnerNode> <<<
       numBlocks,
       NUM_THREADS_PER_BLOCK>>>(D_PTR(d_num_voxel_this_level),
   D_PTR(d_num_voxel_next_level), map_properties, D_PTR(d_this_level_index), D_PTR(d_next_level_index),
   d_free_space_this_level, D_PTR(d_free_space_next_level), NULL, NULL);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 #ifdef FREESPACE_MESSAGES
@@ -1473,6 +1524,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map_an
     kernel_packVoxel<branching_factor, true> <<<numBlocks, 32>>>(D_PTR(d_free_space),num_free_space,
     D_PTR(d_num_voxel_this_level), D_PTR(
         d_num_voxel_next_level), l, NULL, NULL);
+    CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     // TODO use only one array to do the scan for both and then use an offset since it's more efficient
     thrust::exclusive_scan(d_num_voxel_this_level.begin(), d_num_voxel_this_level.end(),
@@ -1508,6 +1560,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map_an
     D_PTR(d_num_voxel_this_level), D_PTR(
         d_num_voxel_next_level),
     l, d_free_space_this_level, D_PTR(d_free_space_next_level));
+    CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef FREESPACE_MESSAGES
     LOGGING_DEBUG(OctreeFreespaceLog, "kernel_packVoxel_count() level " << l << ": " << timeDiff(time_loop, getCPUTime()) << " ms" << endl);
@@ -1577,6 +1630,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
         D_PTR(d_num_voxel_this_level),
         D_PTR(d_num_voxel_next_level),
         this_level_map);
+    CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 #ifdef IC_PERFORMANCE_MONITOR
@@ -1655,6 +1709,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
         d_this_level_basic_data,
         NULL,
         next_level_map);
+    CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 #ifdef IC_PERFORMANCE_MONITOR
@@ -1795,6 +1850,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
 //  kernel_split_voxel_vector<false, false, false, true> <<<numBlocks, numThreadsPerBlock>>>(
 //      D_PTR(d_occupied_voxel), num_voxel, NULL,
 //      NULL, NULL, D_PTR(d_x), D_PTR(d_y), D_PTR(d_z));
+//  CHECK_CUDA_ERROR();
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //#ifdef FREESPACE_MESSAGES
 //  printf("kernel_split_voxel_vector(): %f ms\n", timeDiff(time, getCPUTime()));
@@ -1876,6 +1932,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::packVoxel_Map(
 //  time = getCPUTime();
 //  kernel_rayInsert<branching_factor, InnerNode> <<<numBlocks, numThreadsPerBlock>>>(sensor_origin,
 //                                                                                    D_PTR(d_voxel_count),map_properties);
+//  CHECK_CUDA_ERROR();
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //
 //#ifdef FREESPACE_MESSAGES
@@ -1921,6 +1978,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::computeFreeSpace
   kernel_split_voxel_vector<false, false, false, true> <<<num_blocks, num_threads>>>(
       D_PTR(d_occupied_voxel), num_voxel, NULL,
       NULL, NULL, D_PTR(d_x), D_PTR(d_y), D_PTR(d_z));
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef FREESPACE_MESSAGES
   LOGGING_DEBUG(OctreeFreespaceLog, "kernel_split_voxel_vector(): " << timeDiff(time_total, getCPUTime() << " ms" << endl);
@@ -1985,6 +2043,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::computeFreeSpace
   time = getCPUTime();
   kernel_rayInsert<branching_factor, InnerNode> <<<numBlocks, numThreadsPerBlock>>>(sensor_origin,
                                                                                     D_PTR(d_voxel_count),map_properties);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   PERF_MON_PRINT_AND_RESET_INFO_P(temp_timer, "RayCast", prefix);
@@ -2035,6 +2094,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(Octr
                                           D_PTR(d_traversalLevels),
                                           target_level
                                           );
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 #ifdef INSERT_MESSAGES
@@ -2088,6 +2148,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(Octr
   kernel_insert_initNeededNodes<branching_factor, level_count, LeafNode, false> <<<numBlocks,
                                                                                    numThreadsPerBlock>>>(
       leafNodes, nLeafNodes);
+  CHECK_CUDA_ERROR();
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize()); //TODO: safe to remove synchronization?
   //HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //printf("init level 1\n");
 
@@ -2095,6 +2157,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(Octr
   kernel_insert_initNeededNodes<branching_factor, level_count, InnerNode, true> <<<numBlocks,
                                                                                    numThreadsPerBlock>>>(
       innerNodes_ptr, numNodes);
+  CHECK_CUDA_ERROR();
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize()); //TODO: safe to remove synchronization?
   //HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   innerNodes_ptr += numNodes;
 
@@ -2109,6 +2173,8 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(Octr
       kernel_insert_initNeededNodes<branching_factor, level_count, InnerNode, false> <<<numBlocks,
                                                                                         numThreadsPerBlock>>>(
           innerNodes_ptr, numNodes);
+      CHECK_CUDA_ERROR();
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize()); //TODO: safe to remove synchronization?
       //HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     }
     innerNodes_ptr = (InnerNode*) &innerNodes_ptr[numNodes];
@@ -2130,6 +2196,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(Octr
       D_PTR(d_traversalNodes),
       D_PTR(d_traversalLevels),
       target_level);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 // update counter
@@ -2157,6 +2224,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
   kernel_split_voxel_vector<true, true, false, false> <<<numBlocks, numThreadsPerBlock>>>(
       D_PTR(d_voxel_vector),num_voxel, D_PTR(d_voxel_id),
       D_PTR(d_occupancy), NULL, NULL, NULL, NULL);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef INSERT_MESSAGES
   LOGGING_DEBUG(OctreeInsertLog, "kernel_split_voxel_vector(): " << timeDiff(time, getCPUTime()) << " ms" << endl);
@@ -2203,6 +2271,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
 #else
     kernel_propagate_bottom_up_simple<branching_factor, level_count, InnerNode, LeafNode> <<<1, 1>>>(
         this->m_root, D_PTR(d_voxel_id), num_voxel, 0);
+    CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef INSERT_MESSAGES
     LOGGING_DEBUG(OctreeInsertLog, "kernel_propagate_bottom_up_simple(): " << timeDiff(time, getCPUTime()) << " ms" << endl);
@@ -2284,6 +2353,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
 //  computeFreeSpaceViaRayCast(d_voxel_vector, sensor_origin, h_packed_levels2);
 
 //  kernel_checkBlub<<<1,1>>>(h_packed_levels[0].first, h_packed_levels2[0].second, h_packed_levels2[0].first);
+//  CHECK_CUDA_ERROR();
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 #ifdef LOAD_BALANCING_PROPAGATE
@@ -2367,6 +2437,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
   kernel_split_voxel_vector<true, true, false, false> <<<numBlocks, numThreadsPerBlock>>>(
       D_PTR(d_object_voxel), num_voxel_object, D_PTR(d_voxel_id_object),
       D_PTR(d_occupancy_object), NULL, NULL, NULL, NULL);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 // scale voxel data if necessary
@@ -2415,12 +2486,14 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxel(
 //  printf("\n ## propagate bottom-up ##\n");
 //  time = getCPUTime();
 //  kernel_propagate_bottom_up_simple<branching_factor, level_count, InnerNode, LeafNode> <<<1,1>>>(this->root, D_PTR(d_voxel_id), num_voxel, 0);
+//  CHECK_CUDA_ERROR();
 //  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //  for (int32_t l = 0; l < level_count - 1; ++l)
 //  {
 //    if (h_packed_levels[l].second > 0)
 //    {
 //      kernel_propagate_bottom_up_simple<branching_factor, level_count, InnerNode, LeafNode> <<<1,1>>>(this->root, h_packed_levels[l].first, h_packed_levels[l].second, l);
+//      CHECK_CUDA_ERROR();
 //      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 //    }
 //  }
@@ -2491,6 +2564,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate_bottom
   kernel_split_voxel_vector<true, false, false, false> <<<numBlocks, numThreadsPerBlock>>>(
       D_PTR(d_voxel_vector),num_voxel, D_PTR(d_voxel_id),
       NULL, NULL,NULL,NULL,NULL);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   LOGGING_DEBUG(OctreeLog, "kernel_split_voxel_vector(): " << timeDiff(time, getCPUTime()) << " ms" << endl);
 
@@ -2499,6 +2573,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate_bottom
 
 // Has the bug of setting already free voxel to unknown due to a missing top-down propagate step,
 // which sets the status of the new nodes to it's parent node's status
+// TODO: does not call the kernel. investigate!
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate_bottom_up(OctreeVoxelID* d_voxel_id,
                                                                                     voxel_count num_voxel,
@@ -2524,6 +2599,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::propagate_bottom
 //    kernel_propagate_bottom_up<branching_factor, level_count, InnerNode, LeafNode> <<<numBlocks,
 //                                                                                      32>>>(
 //        m_root, d_voxel_id, num_voxel, l);
+//  CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 #ifdef PROPAGATE_MESSAGES
     LOGGING_DEBUG(OctreePropagateLog, "kernel_propagate_bottom_up(level = " << l << "): " << timeDiff(time_loop, getCPUTime()) << " ms" << endl);
@@ -2542,6 +2618,7 @@ bool NTree<branching_factor, level_count, InnerNode, LeafNode>::checkTree()
   uint8_t* ptr = NULL;
   HANDLE_CUDA_ERROR(cudaMalloc(&ptr, 128));
   kernel_checkTree<branching_factor, level_count, InnerNode, LeafNode> <<<1, 1>>>(m_root, ptr);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
 //bool e = (uint8_t) error[0];
@@ -3070,6 +3147,7 @@ void NTree<branching_factor, level_count, InnerNode, LeafNode>::free_bounding_bo
     uint32_t num_threads = 128;
     uint32_t num_blocks = num_voxel / num_threads + 1;
     kernel_splitCoordinates<<<num_blocks, num_threads>>>(D_PTR(d_points), num_voxel, D_PTR(d_x), D_PTR(d_y), D_PTR(d_z));
+    CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     d_points.clear();
     d_points.shrink_to_fit();

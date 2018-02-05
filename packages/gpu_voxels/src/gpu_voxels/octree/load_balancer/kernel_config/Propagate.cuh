@@ -236,7 +236,7 @@ public:
     // handle InnerNodes for bottom-up step
     if (variables.is_active & (lastLevel | !is_top_down_mode))
     {
-      const uint32_t is_ready_votes = __ballot(!node->hasFlags(nf_NEEDS_UPDATE));
+      const uint32_t is_ready_votes = BALLOT(!node->hasFlags(nf_NEEDS_UPDATE));
       const uint8_t my_is_ready_votes = (is_ready_votes
           >> (branching_factor * (constants.warp_lane / branching_factor))) & constants.work_lane_mask;
       if (my_is_ready_votes == constants.work_lane_mask)
@@ -267,8 +267,8 @@ public:
     {
       {
         uint32_t all_insert_votes[2];
-        all_insert_votes[0] = __ballot(insert_bottom_up_work_item);
-        all_insert_votes[1] = __ballot(insert_top_down_work_item);
+        all_insert_votes[0] = BALLOT(insert_bottom_up_work_item);
+        all_insert_votes[1] = BALLOT(insert_top_down_work_item);
         if (constants.warp_lane <= 1)
         {
           const uint32_t index = constants.warp_id + constants.warp_lane * (constants.num_warps + 1);

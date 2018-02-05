@@ -96,7 +96,7 @@ bool IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size,
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,
      int vft_size, bool set_collision_flag, bool compute_voxelTypeFlags, class VoxelType>
 void IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size, set_collision_flag, compute_voxelTypeFlags, VoxelType>::doWork()
-{    
+{
   // Passing of template types needed by the kernel function through the helper struct KernelConfig
   typedef IntersectVMapKernelConfig<
             RunConfig::NUM_TRAVERSAL_THREADS,
@@ -129,6 +129,7 @@ void IntersectVMap<branching_factor, level_count, InnerNode, LeafNode, vft_size,
   // Call the templated kernel function. It's behavior is defined by the given KernelConfig.
   size_t dynamic_shared_mem_size = sizeof(typename KernelConfig::SharedMem) + sizeof(typename KernelConfig::SharedVolatileMem);
   kernelLBWorkConcept<KernelConfig><<<Base::NUM_TASKS, RunConfig::NUM_TRAVERSAL_THREADS, dynamic_shared_mem_size>>>(kernel_params);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 template<std::size_t branching_factor, std::size_t level_count, class InnerNode, class LeafNode,

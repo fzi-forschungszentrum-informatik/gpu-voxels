@@ -1,6 +1,15 @@
 // this is for emacs file handling -*- mode: c++; indent-tabs-mode: nil -*-
 
 // -- BEGIN LICENSE BLOCK ----------------------------------------------
+// This file is part of the GPU Voxels Software Library.
+//
+// This program is free software licensed under the CDDL
+// (COMMON DEVELOPMENT AND DISTRIBUTION LICENSE Version 1.0).
+// You can find a copy of this license in LICENSE.txt in the top
+// directory of the source code.
+//
+// © Copyright 2014 FZI Forschungszentrum Informatik, Karlsruhe, Germany
+//
 // -- END LICENSE BLOCK ------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -56,7 +65,7 @@ template<std::size_t length>
 __host__ __device__
 bool SVCollider::collide(const ProbabilisticVoxel& v1, const BitVoxel<length>& v2) const
 {
-  return v1.getOccupancy() >= m_threshold1 && !v2.bitVector().isZero();
+  return v1.getOccupancy() >= m_threshold1 && !v2.bitVector().noneButEmpty();
 }
 
 template<std::size_t length>
@@ -66,16 +75,14 @@ bool SVCollider::collide(const BitVoxel<length>& v1, const ProbabilisticVoxel& v
   return collide(v2, v1);
 }
 
+//template<std::size_t length>
+//__host__ __device__
+//bool SVCollider::collide(const BitVoxel<length>& v1, const BitVoxel<length>& v2) const
+//{
+//  BitVector<length> collisions;
 
-template<std::size_t length>
-__host__ __device__
-bool SVCollider::collide(const BitVoxel<length>& v1, const BitVoxel<length>& v2) const
-{
-  BitVector<length> collisions;
-
-  return collide(v1, v2, &collisions);
-}
-
+//  return collide(v1, v2, &collisions);
+//}
 
 template<std::size_t length>
 __host__ __device__
@@ -84,6 +91,32 @@ bool SVCollider::collide(const BitVoxel<length>& v1, const BitVoxel<length>& v2,
 {
   return bitMarginCollisionCheck<length>(v1.bitVector(), v2.bitVector(), collisions, m_type_range, sv_offset);
 }
+
+
+template<std::size_t length>
+__host__ __device__
+bool SVCollider::collide(const BitVoxel<length>& v1, const ProbabilisticVoxel& v2, BitVector<length>* collisions, const uint32_t sv_offset) const
+{
+    if((v2.getOccupancy() >= m_threshold2) && (!v1.bitVector().noneButEmpty()))
+    {
+        *collisions |= v1.bitVector();
+        return true;
+    }
+    return false;
+}
+
+template<std::size_t length>
+__host__ __device__
+bool SVCollider::collide(const ProbabilisticVoxel& v1, const BitVoxel<length>& v2, BitVector<length>* collisions, const uint32_t sv_offset) const
+{
+    if((v1.getOccupancy() >= m_threshold1) && (!v2.bitVector().noneButEmpty()))
+    {
+        *collisions |= v2.bitVector();
+        return true;
+    }
+    return false;
+}
+
 
 template<class OtherVoxel>
 __host__ __device__

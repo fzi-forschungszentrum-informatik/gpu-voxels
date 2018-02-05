@@ -71,7 +71,7 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCloud(
     const std::vector<Vector3f> &point_cloud, BitVoxelMeaning voxelType)
 {
-  this->lockSelf("GvlNtree::insertPointCloud");
+  lock_guard guard(this->m_mutex);
   if (voxelType != eBVM_OCCUPIED)
     LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
   else
@@ -83,13 +83,12 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCl
 
     insertVoxelData(d_voxels);
   }
-  this->unlockSelf("GvlNTree::insertPointCloud");
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning)
 {
-  this->lockSelf("GvlNtree::insertPointCloud");
+  lock_guard guard(this->m_mutex);
 
   if (voxel_meaning != eBVM_OCCUPIED)
     LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
@@ -98,12 +97,11 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCl
     thrust::device_vector<Vector3ui> d_voxels(pointcloud.getPointCloudSize());
 
     kernel_toVoxels<<<this->numBlocks, this->numThreadsPerBlock>>>(pointcloud.getConstDevicePointer(), pointcloud.getPointCloudSize(), D_PTR(d_voxels), float(this->m_resolution / 1000.0f));
+    CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
     insertVoxelData(d_voxels);
   }
-
-  this->unlockSelf("GvlNtree::insertPointCloud");
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
@@ -111,7 +109,7 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCl
     const std::vector<Vector3f> &point_cloud_in_sensor_coords, const Matrix4f &sensor_pose,
     uint32_t free_space_resolution, uint32_t occupied_space_resolution)
 {
-  this->lockSelf("GvlNtree::insertPointCloudWithFreespaceCalculation");
+  lock_guard guard(this->m_mutex);
   m_sensor.free_space_data.m_voxel_side_length = free_space_resolution;
   m_sensor.object_data.m_voxel_side_length = occupied_space_resolution;
 
@@ -131,7 +129,6 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCl
   this->insertVoxel(*m_d_free_space_voxel2, *m_d_object_voxel2, sensor_origin,
                     free_space_resolution, occupied_space_resolution);
 
-  this->unlockSelf("GvlNtree::insertPointCloudWithFreespaceCalculation");
   //CAUTION: Check for needs_rebuild after inserting new data!
 }
 
@@ -187,13 +184,15 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
     LOGGING_ERROR_C(OctreeLog, NTree, "resolution_level(" << resolution_level << ") greater than octree height!" <<  endl);
     return SSIZE_MAX;
   }
-  this->lockBoth(this, map, "GvlNTree::collideWithResolution");
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
   //voxelmap::BitVectorVoxelMap* _voxelmap = dynamic_cast<voxelmap::BitVectorVoxelMap*>(map);
   voxelmap::BitVectorVoxelMap* _voxelmap = (voxelmap::BitVectorVoxelMap*)map;
   if (_voxelmap == NULL)
     LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelMap' failed!" << endl);
   size_t temp = this->template intersect_sparse<true, false, false, BitVectorVoxel>(*_voxelmap, NULL, 0, offset, NULL);
-  this->unlockBoth(this, map, "GvlNTree::collideWithResolution()");
   return temp;
 }
 
@@ -206,14 +205,16 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
     LOGGING_ERROR_C(OctreeLog, NTree, "resolution_level(" << resolution_level << ") greater than octree height!" <<  endl);
     return SSIZE_MAX;
   }
-  this->lockBoth(this, map, "GvlNTree::collideWithResolution");
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
   //voxelmap::ProbVoxelMap* _voxelmap = dynamic_cast<voxelmap::ProbVoxelMap*>(map);
   voxelmap::ProbVoxelMap* _voxelmap = (voxelmap::ProbVoxelMap*)map;
   if (_voxelmap == NULL)
     LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'VoxelList' failed!" << endl);
   size_t temp = this->template intersect_sparse<true, false, false, ProbabilisticVoxel>(
       *_voxelmap, NULL, 0, offset, NULL);
-  this->unlockBoth(this, map, "GvlNTree::collideWithResolution()");
   return temp;
 }
 
@@ -221,18 +222,20 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithResolution(
     const voxellist::BitVectorVoxelList *map, float coll_threshold, const uint32_t resolution_level, const Vector3i &offset)
 {
-  this->lockBoth(this, map, "GvlNTree::collideWithResolution");
   if(resolution_level >= level_count)
   {
     LOGGING_ERROR_C(OctreeLog, NTree, "resolution_level(" << resolution_level << ") greater than octree height!" <<  endl);
     return SSIZE_MAX;
   }
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
   //voxellist::BitVectorVoxelList* _voxellist = dynamic_cast<voxellist::BitVectorVoxelList*>(map);
   voxellist::BitVectorVoxelList* _voxellist = (voxellist::BitVectorVoxelList*)map;
   if (_voxellist == NULL)
     LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelList' failed!" << endl);
   size_t temp = this->template intersect_sparse<true, false, false, BitVectorVoxel>(*_voxellist, NULL, 0, offset, NULL);
-  this->unlockBoth(this, map, "GvlNTree::collideWithResolution()");
   return temp;
 }
 
@@ -240,13 +243,16 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithResolution(
     const GvlNTreeDet *map, float coll_threshold, const uint32_t resolution_level, const Vector3i &offset)
 {
-  this->lockBoth(this, map, "GvlNTree::collideWithResolution");
-  const bool save_collisions = true;
   if(resolution_level >= level_count)
   {
     LOGGING_ERROR_C(OctreeLog, NTree, "resolution_level(" << resolution_level << ") greater than octree height!" <<  endl);
     return SSIZE_MAX;
   }
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
+  const bool save_collisions = true;
   //NTreeDet* _ntree = dynamic_cast<NTreeDet*>(map);
   NTreeDet* _ntree = (NTreeDet*)map;
   if (_ntree == NULL)
@@ -254,7 +260,6 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
   if(offset != Vector3i())
     LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OFFSET_ON_WRONG_DATA_STRUCTURE << endl);
   size_t temp = this->template intersect_load_balance<>(_ntree, resolution_level, DefaultCollider(), save_collisions);
-  this->unlockBoth(this, map, "GvlNTree::collideWithResolution()");
   return temp;
 }
 
@@ -262,13 +267,16 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithResolution(
     const GvlNTreeProb *map, float coll_threshold, const uint32_t resolution_level, const Vector3i &offset)
 {
-  this->lockBoth(this, map, "GvlNTree::collideWithResolution");
-  const bool save_collisions = true;
   if(resolution_level >= level_count)
   {
     LOGGING_ERROR_C(OctreeLog, NTree, "resolution_level(" << resolution_level << ") greater than octree height!" <<  endl);
     return SSIZE_MAX;
   }
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
+  const bool save_collisions = true;
   //NTreeProb* _ntree = dynamic_cast<NTreeProb*>(map);
   NTreeProb* _ntree = (NTreeProb*)map;
   if (_ntree == NULL)
@@ -276,7 +284,6 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
   if(offset != Vector3i())
     LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OFFSET_ON_WRONG_DATA_STRUCTURE << endl);
   size_t temp = this->template intersect_load_balance<>(_ntree, resolution_level, DefaultCollider(), save_collisions);
-  this->unlockBoth(this, map, "GvlNTree::collideWithResolution()");
   return temp;
 }
 
@@ -284,12 +291,15 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithResolution(
     const voxellist::BitVectorMortonVoxelList *map, float coll_threshold, const uint32_t resolution_level, const Vector3i &offset)
 {
-  this->lockBoth(this, map, "GvlNTree::collideWithResolution");
   if(resolution_level >= level_count)
   {
     LOGGING_ERROR_C(OctreeLog, NTree, "resolution_level(" << resolution_level << ") greater than octree height!" <<  endl);
     return SSIZE_MAX;
   }
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
   //voxellist::BitVectorMortonVoxelList* _voxellist = dynamic_cast<voxellist::BitVectorMortonVoxelList*>(map);
   voxellist::BitVectorMortonVoxelList* _voxellist = (voxellist::BitVectorMortonVoxelList*)map;
   if (_voxellist == NULL)
@@ -299,7 +309,6 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
 
   // This previously used "intersect<BIT_VECTOR_LENGTH, true, false>" which itself utilized a more effective kernel.
   size_t temp = this->template intersect_morton<true, false, false, BitVectorVoxel>(*_voxellist);
-  this->unlockBoth(this, map, "GvlNTree::collideWithResolution()");
   return temp;
 }
 
@@ -307,13 +316,15 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithTypes(
     const voxelmap::BitVectorVoxelMap *map, BitVectorVoxel &types_in_collision, float coll_threshold, const Vector3i &offset)
 {
-  this->lockBoth(this, map, "GvlNTree::collideWithTypes");
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
   //voxelmap::BitVectorVoxelMap* _voxelmap = dynamic_cast<voxelmap::BitVectorVoxelMap*>(map);
   voxelmap::BitVectorVoxelMap* _voxelmap = (voxelmap::BitVectorVoxelMap*)map;
   if (_voxelmap == NULL)
     LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelMap' failed!" << endl);
   size_t temp = this->template intersect_sparse<true, true, false, BitVectorVoxel>(*_voxelmap, &types_in_collision, 0, offset, NULL);
-  this->unlockBoth(this, map, "GvlNTree::collideWithTypes");
   return temp;
 }
 
@@ -321,31 +332,35 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithTypes(
     const voxellist::BitVectorVoxelList *map, BitVectorVoxel &types_in_collision, float coll_threshold, const Vector3i &offset)
 {
-  this->lockBoth(this, map, "GvlNTree::collideWithTypes");
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
   //voxellist::BitVectorVoxelList* _voxellist = dynamic_cast<voxellist::BitVectorVoxelList*>(map);
   voxellist::BitVectorVoxelList* _voxellist = (voxellist::BitVectorVoxelList*)map;
   if (_voxellist == NULL)
     LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelList' failed!" << endl);
   size_t temp = this->template intersect_sparse<true, true, false, BitVectorVoxel>(*_voxellist, &types_in_collision, 0, offset, NULL);
-  this->unlockBoth(this, map, "GvlNTree::collideWithTypes");
   return temp;
 }
 
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithTypesConsideringUnknownCells(
-    const GpuVoxelsMapSharedPtr other, BitVectorVoxel& types_in_collision, size_t &num_colls_with_unknown_cells, const Vector3i &offset)
+    const GpuVoxelsMapSharedPtr map, BitVectorVoxel& types_in_collision, size_t &num_colls_with_unknown_cells, const Vector3i &offset)
 {
-  this->lockBoth(this, other.get(), "GvlNtree::collideWithTypesConsideringUnknownCells");
+  boost::lock(this->m_mutex, map->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(map->m_mutex, boost::adopt_lock);
+
   size_t num_collisions = SSIZE_MAX;
   num_colls_with_unknown_cells = SSIZE_MAX;
-  GpuVoxelsMap* map = other.get();
   MapType type = map->getMapType();
   voxel_count tmp_cols_w_unknown;
 
   if (type == MT_BITVECTOR_VOXELMAP)
   {
-    voxelmap::BitVectorVoxelMap* _voxelmap = dynamic_cast<voxelmap::BitVectorVoxelMap*>(map);
+    voxelmap::BitVectorVoxelMap* _voxelmap = dynamic_cast<voxelmap::BitVectorVoxelMap*>(map.get());
     if (_voxelmap == NULL)
       LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelMap' failed!" << endl);
     num_collisions = this->template intersect_sparse<true, true, true, BitVectorVoxel>(*_voxelmap, &types_in_collision, 0, offset, &tmp_cols_w_unknown);
@@ -353,7 +368,7 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
   }
   else if (type == MT_BITVECTOR_VOXELLIST)
   {
-    voxellist::BitVectorVoxelList* _voxellist = dynamic_cast<voxellist::BitVectorVoxelList*>(map);
+    voxellist::BitVectorVoxelList* _voxellist = dynamic_cast<voxellist::BitVectorVoxelList*>(map.get());
     if (_voxellist == NULL)
       LOGGING_ERROR_C(OctreeLog, NTree, "dynamic_cast to 'BitVectorVoxelList' failed!" << endl);
 
@@ -363,18 +378,17 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
   else
     LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
 
-  this->unlockBoth(this, other.get(), "GvlNtree::collideWithTypesConsideringUnknownCells");
   return num_collisions;
 }
 
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWithBitcheck(
-    const GpuVoxelsMapSharedPtr other, const u_int8_t margin, const Vector3i &offset)
+    const GpuVoxelsMapSharedPtr map, const u_int8_t margin, const Vector3i &offset)
 {
   size_t num_collisions = SSIZE_MAX;
 
-  switch (other->getMapType())
+  switch (map->getMapType())
   {
     case MT_BITVECTOR_VOXELMAP:
     {
@@ -407,7 +421,7 @@ template<std::size_t branching_factor, std::size_t level_count, typename InnerNo
 void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertMetaPointCloud(
     const MetaPointCloud &meta_point_cloud, BitVoxelMeaning voxelType)
 {
-  this->lockSelf("GvlNTree::insertMetaPointCloud");
+  lock_guard guard(this->m_mutex);
   if (voxelType != eBVM_OCCUPIED)
     LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
 
@@ -420,10 +434,10 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertMetaPoi
   size_t num_points = meta_point_cloud.getAccumulatedPointcloudSize();
   thrust::device_vector<Vector3ui> d_voxels(num_points);
   kernel_toVoxels<<<this->numBlocks, this->numThreadsPerBlock>>>(d_points, num_points, D_PTR(d_voxels), this->m_resolution / 1000.0f);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   insertVoxelData(d_voxels);
-  this->unlockSelf("GvlNTree::insertMetaPointCloud");
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
@@ -457,18 +471,16 @@ bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::merge(
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 std::size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::getMemoryUsage() const
 {
-  this->lockSelf("GvlNTree::getMemoryUsage");
+  lock_guard guard(this->m_mutex);
   std::size_t temp = this->getMemUsage();
-  this->unlockSelf("GvlNTree::getMemoryUsage");
   return temp;
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::clearMap()
 {
-  this->lockSelf("GvlNTree::clearMap");
+  lock_guard guard(this->m_mutex);
   this->clear();
-  this->unlockSelf("GvlNTree::clearMap");
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
@@ -483,7 +495,7 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::clearBitVoxel
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::writeToDisk(const std::string path)
 {
-  this->lockSelf("GvlNTree::writeToDisk");
+  lock_guard guard(this->m_mutex);
   std::ofstream out(path.c_str());
   if(!out.is_open())
   {
@@ -492,14 +504,13 @@ bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::writeToDisk(c
   }
   this->serialize(out);
   out.close();
-  this->unlockSelf("GvlNTree::writeToDisk");
   return true;
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::readFromDisk(const std::string path)
 {
-  this->lockSelf("GvlNTree::readFromDisk");
+  lock_guard guard(this->m_mutex);
   std::ifstream in(path.c_str());
   if(!in.is_open())
   {
@@ -508,25 +519,22 @@ bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::readFromDisk(
   }
   this->deserialize(in);
   in.close();
-  this->unlockSelf("GvlNTree::readFromDisk");
   return true;
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::needsRebuild() const
 {
-  this->lockSelf("GvlNTree::needsRebuild");
+  lock_guard guard(this->m_mutex);
   bool temp = this->NTree<branching_factor, level_count, InnerNode, LeafNode>::needsRebuild();
-  this->unlockSelf("GvlNTree::needsRebuild");
   return temp;
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::rebuild()
 {
-  this->lockSelf("GvlNTree::Rebuild");
+  lock_guard guard(this->m_mutex);
   this->NTree<branching_factor, level_count, InnerNode, LeafNode>::rebuild();
-  this->unlockSelf("GvlNTree::Rebuild");
   return true;
 }
 
@@ -560,6 +568,7 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertVoxelDa
       thrust::device_vector<OctreeVoxelID> d_voxels_morton(num_points);
       kernel_toMortonCode<<<this->numBlocks, this->numThreadsPerBlock>>>(D_PTR(d_voxels), num_points,
       D_PTR(d_voxels_morton));
+      CHECK_CUDA_ERROR();
       HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
       // Sort and remove duplicates

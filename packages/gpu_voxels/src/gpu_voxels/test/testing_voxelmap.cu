@@ -303,6 +303,64 @@ BOOST_AUTO_TEST_CASE(bitvoxelmap_bitshift)
   }
 }
 
+
+
+/**
+ * @brief Test for collision types
+ *
+ */
+BOOST_AUTO_TEST_CASE(collision_with_types_probab)
+{
+  PERF_MON_START("collision_with_types_probab");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    float side_length = 1.f;
+    BitVectorVoxelMap map_1(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELMAP);
+    ProbVoxelMap map_2(Vector3ui(dimX, dimY, dimZ), side_length, MT_PROBAB_VOXELMAP);
+
+    std::vector<Vector3f> points;
+    points.push_back(Vector3f(2,2,2));
+    points.push_back(Vector3f(2,2,3));
+    points.push_back(Vector3f(2,3,2));
+    points.push_back(Vector3f(2,3,3));
+    points.push_back(Vector3f(3,2,2));
+    points.push_back(Vector3f(3,2,3));
+    points.push_back(Vector3f(3,3,2));
+    points.push_back(Vector3f(3,3,3));
+
+    map_1.insertPointCloud(points, BitVoxelMeaning(eBVM_SWEPT_VOLUME_START+10));
+    map_1.insertPointCloud(points, BitVoxelMeaning(eBVM_SWEPT_VOLUME_START+42));
+    map_1.insertPointCloud(points, BitVoxelMeaning(eBVM_SWEPT_VOLUME_START+99));
+
+    map_2.insertPointCloud(points, eBVM_OCCUPIED);
+
+    size_t num_collisions = 0;
+
+    BitVectorVoxel coll_types;
+    SVCollider collider(0.5);
+    num_collisions = map_1.collideWithTypes(&map_2, coll_types);
+
+    std::cout << "Num colls = " << num_collisions << std::endl;
+    std::cout << "Col types are " << coll_types << std::endl;
+
+
+    BOOST_CHECK(num_collisions == points.size());
+    BOOST_CHECK(coll_types.bitVector().getBit(eBVM_SWEPT_VOLUME_START+10));
+    BOOST_CHECK(coll_types.bitVector().getBit(eBVM_SWEPT_VOLUME_START+42));
+    BOOST_CHECK(coll_types.bitVector().getBit(eBVM_SWEPT_VOLUME_START+99));
+
+    coll_types.bitVector().clearBit(eBVM_SWEPT_VOLUME_START+10);
+    coll_types.bitVector().clearBit(eBVM_SWEPT_VOLUME_START+42);
+    coll_types.bitVector().clearBit(eBVM_SWEPT_VOLUME_START+99);
+
+    BOOST_CHECK(coll_types.bitVector().noneButEmpty());
+
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("collision_with_types_probab", "collision_with_types_probab", "voxelmap");
+  }
+}
+
+
+
 BOOST_AUTO_TEST_CASE(iostream_bitvoxel)
 {
   PERF_MON_START("iostream_bitvoxel");

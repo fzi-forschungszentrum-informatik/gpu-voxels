@@ -35,9 +35,6 @@
 #include <thrust/binary_search.h>
 #include <thrust/system_error.h>
 
-#undef DBG_LOCKING
-//#define DBG_LOCKING
-
 namespace gpu_voxels {
 namespace voxellist {
 
@@ -126,6 +123,10 @@ TemplateVoxelList<Voxel, VoxelIDType>::TemplateVoxelList(const Vector3ui ref_map
 template<class Voxel, class VoxelIDType>
 TemplateVoxelList<Voxel, VoxelIDType>::~TemplateVoxelList()
 {
+  delete[] m_collision_check_results;
+  delete[] m_collision_check_results_counter;
+  HANDLE_CUDA_ERROR(cudaFree(m_dev_collision_check_results));
+  HANDLE_CUDA_ERROR(cudaFree(m_dev_collision_check_results_counter));
 }
 
 
@@ -195,8 +196,8 @@ void TemplateVoxelList<Voxel, VoxelIDType>::make_unique()
     new_end = thrust::unique_by_key(m_dev_id_list.begin(), m_dev_id_list.end(),
                                     thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin(),m_dev_list.begin()) ) );
 
-    size_t new_lenght = thrust::distance(m_dev_id_list.begin(), new_end.first);
-    this->resize(new_lenght);
+    size_t new_length = thrust::distance(m_dev_id_list.begin(), new_end.first);
+    this->resize(new_length);
   }
   catch(thrust::system_error &e)
   {
@@ -206,16 +207,38 @@ void TemplateVoxelList<Voxel, VoxelIDType>::make_unique()
   LOGGING_DEBUG_C(VoxellistLog, TemplateVoxelList, "List size after make_unique: " << m_dev_list.size() << endl);
 }
 
-
 template<class Voxel, class VoxelIDType>
-size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(const TemplateVoxelList<Voxel, VoxelIDType> *other,
+size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(const TemplateVoxelList<CountingVoxel, VoxelIDType> *other,
                                                                 const Vector3i &offset, thrust::device_vector<bool>& collision_stencil) const
 {
-  lockBoth(this, other, "TemplateVoxelList::collideVoxellists");
+  LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "colliding any VoxelList with a CountingVoxelList is no supported! Not performing collision check." << endl);
+  return 0;
+}
+
+struct logicalAND{
+
+  __host__ __device__
+  bool operator()(bool a, bool b)
+  {
+    return a && b;
+  }
+};
+
+template<class Voxel, class VoxelIDType>
+size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(const TemplateVoxelList<BitVectorVoxel, VoxelIDType> *other,
+                                                                const Vector3i &offset, thrust::device_vector<bool>& collision_stencil) const
+{
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
 
   // searching for the elements of "other" in "this". Therefore stencil has to be the size of "this"
   try
   {
+    //will contain a stencil of elements that should be considered for collision checking
+    //TODO: initialise to empty if not CVL
+    thrust::device_vector<bool> filtermask_device(collision_stencil.size());
+
     // if offset is given, we need our own comparison opperator which is a lot slower than the comparison on built in datatypes!
     // See: http://stackoverflow.com/questions/9037906/fast-cuda-thrust-custom-comparison-operator
     if(offset != Vector3i(0))
@@ -223,19 +246,37 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(const TemplateVo
       LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Offset for VoxelList collision not supported! Not performing collision check." << endl);
       return 0;
     }else{
+
+      //only the counting voxellist implements the collision_stencil as a filter mask
+      if (this->m_map_type == MT_COUNTING_VOXELLIST)
+      //if the collision_stencil contains a true value it will be treated as a filter mask
+      {
+        thrust::copy(collision_stencil.begin(), collision_stencil.end(), filtermask_device.begin());
+      }
+
       thrust::binary_search(thrust::device,
                             other->m_dev_id_list.begin(), other->m_dev_id_list.end(),
                             m_dev_id_list.begin(), m_dev_id_list.end(),
                             collision_stencil.begin());
     }
-    unlockBoth(this, other, "TemplateVoxelList::collideVoxellists");
 
-    return thrust::count(collision_stencil.begin(), collision_stencil.end(), true);
+    if (this->m_map_type == MT_COUNTING_VOXELLIST)
+    { // is used to count the collisions, without overriding the collision_stencil, because it is used in the subtract methods
+      thrust::device_vector<bool> count_device(collision_stencil.size());
+
+      //TODO: why does this not zero out all collisions in case of CVL.subtractFromCVL(BVL)?
+      thrust::transform(collision_stencil.begin(), collision_stencil.end(), filtermask_device.begin(), count_device.begin(), logicalAND());
+
+      return thrust::count(count_device.begin(), count_device.end(), true);
+    }
+    else
+    {
+      return thrust::count(collision_stencil.begin(), collision_stencil.end(), true);
+    }
   }
   catch(thrust::system_error &e)
   {
     LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Caught Thrust exception " << e.what() << endl);
-    unlockBoth(this, other, "TemplateVoxelList::collideVoxellists");
     exit(-1);
   }
 }
@@ -243,8 +284,6 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(const TemplateVo
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning)
 {
-  lockSelf("TemplateVoxelList::insertPointCloud");
-
   Vector3f* d_points;
   HANDLE_CUDA_ERROR(cudaMalloc(&d_points, points.size() * sizeof(Vector3f)));
   HANDLE_CUDA_ERROR(
@@ -253,85 +292,87 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const std::vector<V
   insertPointCloud(d_points, points.size(), voxel_meaning);
 
   HANDLE_CUDA_ERROR(cudaFree(d_points));
-
-  unlockSelf("TemplateVoxelList::insertPointCloud");
 }
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning)
 {
-  lockSelf("TemplateVoxelList::insertPointCloud");
-
   insertPointCloud(pointcloud.getConstDevicePointer(), pointcloud.getPointCloudSize(), voxel_meaning);
-
-  unlockSelf("TemplateVoxelList::insertPointCloud");
 }
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const Vector3f *points_d, uint32_t size, const BitVoxelMeaning voxel_meaning)
 {
-  uint32_t offset_new_entries = m_dev_list.size();
+  if (size > 0)
+  {
+    lock_guard guard(this->m_mutex);
 
-  // resize capacity
-  this->resize(offset_new_entries + size);
+    uint32_t offset_new_entries = m_dev_list.size();
 
-  // get raw pointers to the thrust vectors data:
-  Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
-  Vector3ui* dev_coord_list_ptr = thrust::raw_pointer_cast(m_dev_coord_list.data());
-  VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(m_dev_id_list.data());
+    // resize capacity
+    this->resize(offset_new_entries + size);
 
-  // copy points to the gpu
-  uint32_t num_blocks, threads_per_block;
-  computeLinearLoad(size, &num_blocks, &threads_per_block);
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  kernelInsertGlobalPointCloud<<<num_blocks, threads_per_block>>>(dev_id_list_ptr, dev_coord_list_ptr, dev_voxel_list_ptr,
-                                                                  m_ref_map_dim, m_voxel_side_length,
-                                                                  points_d, size, offset_new_entries, voxel_meaning);
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+    // get raw pointers to the thrust vectors data:
+    Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
+    Vector3ui* dev_coord_list_ptr = thrust::raw_pointer_cast(m_dev_coord_list.data());
+    VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(m_dev_id_list.data());
 
-  make_unique();
+    // copy points to the gpu
+    uint32_t num_blocks, threads_per_block;
+    computeLinearLoad(size, &num_blocks, &threads_per_block);
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+    kernelInsertGlobalPointCloud<<<num_blocks, threads_per_block>>>(dev_id_list_ptr, dev_coord_list_ptr, dev_voxel_list_ptr,
+                                                                    m_ref_map_dim, m_voxel_side_length,
+                                                                    points_d, size, offset_new_entries, voxel_meaning);
+    CHECK_CUDA_ERROR();
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+    make_unique();
+  }
 }
 
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, BitVoxelMeaning voxel_meaning)
 {
-  lockSelf("TemplateVoxelList::insertMetaPointCloud");
+    lock_guard guard(this->m_mutex);
 
-  uint32_t total_points = meta_point_cloud.getAccumulatedPointcloudSize();
+    uint32_t total_points = meta_point_cloud.getAccumulatedPointcloudSize();
 
-  uint32_t offset_new_entries = m_dev_list.size();
-  // resize capacity
-  this->resize(offset_new_entries + total_points);
+    if (total_points > 0)
+    {
 
-  // get raw pointers to the thrust vectors data:
-  Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
-  Vector3ui* dev_coord_list_ptr = thrust::raw_pointer_cast(m_dev_coord_list.data());
-  VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(m_dev_id_list.data());
+        uint32_t offset_new_entries = m_dev_list.size();
+        // resize capacity
+        this->resize(offset_new_entries + total_points);
 
-  computeLinearLoad(total_points, &m_blocks, &m_threads);
-  kernelInsertMetaPointCloud<<<m_blocks, m_threads>>>(dev_id_list_ptr, dev_coord_list_ptr, dev_voxel_list_ptr,
-                                                      m_ref_map_dim, m_voxel_side_length,
-                                                      meta_point_cloud.getDeviceConstPointer(),
-                                                      offset_new_entries, voxel_meaning);
-  make_unique();
+        // get raw pointers to the thrust vectors data:
+        Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
+        Vector3ui* dev_coord_list_ptr = thrust::raw_pointer_cast(m_dev_coord_list.data());
+        VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(m_dev_id_list.data());
 
-  unlockSelf("TemplateVoxelList::insertMetaPointCloud");
+        computeLinearLoad(total_points, &m_blocks, &m_threads);
+        kernelInsertMetaPointCloud<<<m_blocks, m_threads>>>(dev_id_list_ptr, dev_coord_list_ptr, dev_voxel_list_ptr,
+                                                            m_ref_map_dim, m_voxel_side_length,
+                                                            meta_point_cloud.getDeviceConstPointer(),
+                                                            offset_new_entries, voxel_meaning);
+        CHECK_CUDA_ERROR();
+        HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+        make_unique();
+    }
 }
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::insertMetaPointCloud(const MetaPointCloud &meta_point_cloud,
                                                     const std::vector<BitVoxelMeaning>& voxel_meanings)
 {
-
-
   if(meta_point_cloud.getNumberOfPointclouds() != voxel_meanings.size())
   {
     LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Number of VoxelMeanings differs from number of Sub-Pointclouds! Not inserting MetaPointCloud!" << endl);
     return;
   }
 
-  lockSelf("TemplateVoxelList::insertMetaPointCloud");
+  lock_guard guard(this->m_mutex);
   uint32_t total_points = meta_point_cloud.getAccumulatedPointcloudSize();
 
   uint32_t offset_new_entries = m_dev_list.size();
@@ -353,56 +394,51 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertMetaPointCloud(const MetaPoint
                                                       m_ref_map_dim, m_voxel_side_length,
                                                       meta_point_cloud.getDeviceConstPointer(),
                                                       offset_new_entries, dev_voxel_meanings);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   HANDLE_CUDA_ERROR(cudaFree(dev_voxel_meanings));
 
   make_unique();
-
-  unlockSelf("TemplateVoxelList::insertMetaPointCloud");
 }
 
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::resize(size_t new_size)
 {
-  lockSelf("TemplateVoxelList::resize");
+  lock_guard guard(this->m_mutex);
   m_dev_list.resize(new_size);
   m_dev_coord_list.resize(new_size);
   m_dev_id_list.resize(new_size);
-  unlockSelf("TemplateVoxelList::resize");
 }
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::shrinkToFit()
 {
-  lockSelf("TemplateVoxelList::shrinkToFit");
+  lock_guard guard(this->m_mutex);
   m_dev_list.shrink_to_fit();
   m_dev_coord_list.shrink_to_fit();
   m_dev_id_list.shrink_to_fit();
-  unlockSelf("TemplateVoxelList::shrinkToFit");
 }
 
 template<class Voxel, class VoxelIDType>
 size_t TemplateVoxelList<Voxel, VoxelIDType>::getMemoryUsage() const
 {
   size_t ret;
-  lockSelf("TemplateVoxelList::getMemoryUsage");
+  lock_guard guard(this->m_mutex);
   ret = (m_dev_list.size() * sizeof(Voxel) +
          m_dev_coord_list.size() * sizeof(Vector3ui) +
          m_dev_id_list.size() * sizeof(VoxelIDType));
-  unlockSelf("TemplateVoxelList::getMemoryUsage");
   return ret;
 }
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::clearMap()
 {
-  lockSelf("TemplateVoxelList::clearMap");
+  lock_guard guard(this->m_mutex);
   m_dev_list.clear();
   m_dev_coord_list.clear();
   m_dev_id_list.clear();
-  unlockSelf("TemplateVoxelList::clearMap");
 }
 
 template<class Voxel, class VoxelIDType>
@@ -412,7 +448,7 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::writeToDisk(const std::string path)
   LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Dumping VoxelList to disk: " <<
                  getDimensions().x << " Voxels ==> " << (getMemoryUsage() * cBYTE2MBYTE) << " MB. ..." << endl);
 
-  lockSelf("TemplateVoxelList::writeToDisk");
+  lock_guard guard(this->m_mutex);
   std::ofstream out(path.c_str());
 
   if(!out.is_open())
@@ -437,14 +473,13 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::writeToDisk(const std::string path)
 
   out.close();
   LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Write to disk done: Extracted "<< num_voxels << " Voxels." << endl);
-  unlockSelf("TemplateVoxelList::writeToDisk");
   return true;
 }
 
 template<class Voxel, class VoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::readFromDisk(const std::string path)
 {
-  lockSelf("TemplateVoxelList::readFromDisk");
+  lock_guard guard(this->m_mutex);
   thrust::host_vector<VoxelIDType> host_id_list;
   thrust::host_vector<Vector3ui> host_coord_list;
   thrust::host_vector<Voxel> host_list;
@@ -458,7 +493,6 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::readFromDisk(const std::string path)
   if(!in.is_open())
   {
     LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file " << path << " failed!"<< endl);
-    unlockSelf("TemplateVoxelList::readFromDisk");
     return false;
   }
 
@@ -466,21 +500,18 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::readFromDisk(const std::string path)
   if(map_type != m_map_type)
   {
     LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file failed: The map type (" << map_type << ") does not match current object (" << m_map_type << ")!" << endl);
-    unlockSelf("TemplateVoxelList::readFromDisk");
     return false;
   }
   in.read((char*)&ref_map_dim, sizeof(Vector3ui));
   if(ref_map_dim != m_ref_map_dim)
   {
     LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file failed: Read reference map dimension (" << ref_map_dim << ") does not match current object (" << m_ref_map_dim << ")!" << endl);
-    unlockSelf("TemplateVoxelList::readFromDisk");
     return false;
   }
   in.read((char*)&voxel_side_length, sizeof(float));
   if(voxel_side_length != m_voxel_side_length)
   {
-    LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file failed: Read Voxel side lenght (" << voxel_side_length << ") does not match current object (" << m_voxel_side_length << ")!" << endl);
-    unlockSelf("TemplateVoxelList::readFromDisk");
+    LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Read from file failed: Read Voxel side length (" << voxel_side_length << ") does not match current object (" << m_voxel_side_length << ")!" << endl);
     return false;
   }
   in.read((char*)&num_voxels, sizeof(uint32_t));
@@ -499,20 +530,33 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::readFromDisk(const std::string path)
   m_dev_id_list = host_id_list;
   m_dev_coord_list = host_coord_list;
   m_dev_list = host_list;
-  unlockSelf("TemplateVoxelList::readFromDisk");
   return true;
 }
 
 template<class Voxel, class VoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning *new_meaning)
 {
+  return false;
+}
+
+template<>
+bool TemplateVoxelList<CountingVoxel, MapVoxelID>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning *new_meaning)
+{
+  return false;
+}
+
+template<>
+bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning *new_meaning)
+{
   switch (other->getMapType())
   {
     case MT_BITVECTOR_VOXELLIST:
     {
-      BitVoxelList<BIT_VECTOR_LENGTH, VoxelIDType>* m = (BitVoxelList<BIT_VECTOR_LENGTH, VoxelIDType>*) other.get();
+      BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>* m = (BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>*) other.get();
 
-      lockBoth(this, m, "TemplateVoxelList::merge");
+      boost::lock(this->m_mutex, m->m_mutex);
+      lock_guard guard(this->m_mutex, boost::adopt_lock);
+      lock_guard guard2(m->m_mutex, boost::adopt_lock);
 
       uint32_t num_new_voxels = m->getDimensions().x;
       uint32_t offset_new_entries = m_dev_list.size();
@@ -532,7 +576,7 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr ot
           thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
           thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.end(),   m_dev_id_list.end()) ),
           thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
-          applyOffsetOperator<VoxelIDType>(m_ref_map_dim, voxel_offset));
+          applyOffsetOperator<MapVoxelID>(m_ref_map_dim, voxel_offset));
       }
 
       // if a new meaning was given, iterate over the voxellist and overwrite the meaning
@@ -544,8 +588,6 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr ot
       }
 
       make_unique();
-
-      unlockBoth(this, m, "TemplateVoxelList::merge");
 
       return true;
     }
@@ -564,11 +606,13 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr ot
   return merge(other, voxel_offset, new_meaning); // does the locking
 }
 
-
 template<class Voxel, class VoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const TemplateVoxelList<Voxel, VoxelIDType> *other, const Vector3i &voxel_offset)
 {
-  lockBoth(this, other, "TemplateVoxelList::subtract");
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
+
   // find the overlapping voxels:
   thrust::device_vector<bool> overlap_stencil(m_dev_id_list.size()); // A stencil of the voxels in collision
   collideVoxellists(other, voxel_offset, overlap_stencil);
@@ -582,9 +626,8 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const TemplateVoxelList<Vox
                               overlap_stencil.begin(),
                               thrust::identity<bool>());
 
-  size_t new_lenght = thrust::distance(m_dev_id_list.begin(), thrust::get<0>(new_end.get_iterator_tuple()));
-  this->resize(new_lenght);
-  unlockBoth(this, other, "TemplateVoxelList::subtract");
+  size_t new_length = thrust::distance(m_dev_id_list.begin(), thrust::get<0>(new_end.get_iterator_tuple()));
+  this->resize(new_length);
 
   return true;
 }
@@ -594,6 +637,40 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const TemplateVoxelList<Vox
 {
   Vector3i voxel_offset = voxelmap::mapToVoxelsSigned(m_voxel_side_length, metric_offset);
   return subtract(other, voxel_offset); // does the locking
+}
+
+
+template<class Voxel, class VoxelIDType>
+bool TemplateVoxelList<Voxel, VoxelIDType>::subtractFromCountingVoxelList(const TemplateVoxelList<BitVectorVoxel, VoxelIDType> *other, const Vector3i &voxel_offset)
+{
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
+
+  // find the overlapping voxels:
+  thrust::device_vector<bool> overlap_stencil(m_dev_id_list.size()); // A stencil of the voxels in collision
+  collideVoxellists(other, voxel_offset, overlap_stencil);
+
+  keyCoordVoxelZipIterator new_end;
+
+
+  // remove the overlapping voxels:
+  new_end = thrust::remove_if(this->getBeginTripleZipIterator(),
+                              this->getEndTripleZipIterator(),
+                              overlap_stencil.begin(),
+                              thrust::identity<bool>());
+
+  size_t new_length = thrust::distance(m_dev_id_list.begin(), thrust::get<0>(new_end.get_iterator_tuple()));
+  this->resize(new_length);
+
+  return true;
+}
+
+template<class Voxel, class VoxelIDType>
+bool TemplateVoxelList<Voxel, VoxelIDType>::subtractFromCountingVoxelList(const TemplateVoxelList<BitVectorVoxel, VoxelIDType> *other, const Vector3f &metric_offset)
+{
+  Vector3i voxel_offset = voxelmap::mapToVoxelsSigned(m_voxel_side_length, metric_offset);
+  return subtractFromCountingVoxelList(other, voxel_offset); // does the locking
 }
 
 
@@ -626,6 +703,8 @@ TemplateVoxelList<Voxel, VoxelIDType>::keyCoordVoxelZipIterator TemplateVoxelLis
 template <class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::extractCubes(thrust::device_vector<Cube>** output_vector) const
 {
+  lock_guard guard(this->m_mutex);
+
   try
   {
     if (*output_vector == NULL)
@@ -664,7 +743,9 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collisionCheckWithCollider(const v
 
   uint32_t number_of_collisions = 0;
 
-  lockBoth(this, other, "TemplateVoxelList::collisionCheckWithCollider");
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
 
   // get raw pointers to the thrust vectors data:
   Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
@@ -678,6 +759,7 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collisionCheckWithCollider(const v
   kernelCollideWithVoxelMap<<<num_blocks, threads_per_block, dynamic_shared_mem_size>>>(dev_id_list_ptr, dev_voxel_list_ptr, getDimensions().x,
                                                                other->getConstDeviceDataPtr(), m_ref_map_dim, collider, offset,
                                                                m_dev_collision_check_results_counter);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_collision_check_results_counter, m_dev_collision_check_results_counter,
@@ -688,9 +770,6 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collisionCheckWithCollider(const v
     number_of_collisions += m_collision_check_results_counter[i];
   }
 
-
-  unlockBoth(this, other, "TemplateVoxelList::collisionCheckWithCollider");
-
   return number_of_collisions;
 }
 
@@ -700,7 +779,7 @@ void TemplateVoxelList<Voxel, VoxelIDType>::screendump(bool with_voxel_content) 
 
   LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Dumping VoxelList with " << getDimensions().x << " entries to screen: " << endl);
 
-  lockSelf("TemplateVoxelList::screendump");
+  lock_guard guard(this->m_mutex);
 
   thrust::host_vector<VoxelIDType> host_id_list = m_dev_id_list;
   thrust::host_vector<Vector3ui> host_coord_list = m_dev_coord_list;
@@ -720,7 +799,6 @@ void TemplateVoxelList<Voxel, VoxelIDType>::screendump(bool with_voxel_content) 
   }
 
   LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "Dumped "<< getDimensions().x << " Voxels." << endl);
-  unlockSelf("TemplateVoxelList::screendump");
 }
 
 
@@ -728,20 +806,20 @@ template <class Voxel, class VoxelIDType>
 template<class OtherVoxel, class OtherVoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::equals(const TemplateVoxelList<OtherVoxel, OtherVoxelIDType> &other) const
 {
-  lockBoth(this, &other, "TemplateVoxelList::equals");
   if((m_ref_map_dim != other.m_ref_map_dim) ||
      (m_voxel_side_length != other.m_voxel_side_length) ||
      (getDimensions()) != other.getDimensions())
   {
     return false;
   }
+  boost::lock(this->m_mutex, other.m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other.m_mutex, boost::adopt_lock);
 
   bool equal = true;
   equal &= thrust::equal(m_dev_list.begin(), m_dev_list.end(), other.m_dev_list.begin());
   equal &= thrust::equal(m_dev_id_list.begin(), m_dev_id_list.end(), other.m_dev_id_list.begin());
   equal &= thrust::equal(m_dev_coord_list.begin(), m_dev_coord_list.end(), other.m_dev_coord_list.begin());
-
-  unlockBoth(this, &other, "TemplateVoxelList::equals");
 
   return equal;
 }

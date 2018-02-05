@@ -60,7 +60,10 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
   }
 
   // allocate structure on device
-  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_dev_ptr_to_point_clouds_struct, sizeof(MetaPointCloudStruct)));
+  if (! HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_dev_ptr_to_point_clouds_struct, sizeof(MetaPointCloudStruct))) )
+  {
+    return;
+  }
 
   // allocate space for array of point clouds sizes on device and save pointers in host local copy:
   HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_dev_ptr_to_cloud_sizes, m_num_clouds * sizeof(uint32_t)));
@@ -256,6 +259,7 @@ bool MetaPointCloud::operator==(const MetaPointCloud& other) const
 
   kernelCompareMem<<<m_blocks, m_threads_per_block>>>(m_dev_ptr_to_accumulated_cloud, other.m_dev_ptr_to_accumulated_cloud,
                                                       m_accumulated_pointcloud_size * sizeof(Vector3f), dev_equality_results);
+  CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   // copy back the whole array
@@ -576,6 +580,7 @@ void MetaPointCloud::debugPointCloud() const
   printf("================== END hostDebugMetaPointCloud DBG ================== \n");
 
   kernelDebugMetaPointCloud<<< 1,1 >>>(m_dev_ptr_to_point_clouds_struct);
+  CHECK_CUDA_ERROR();
 }
 
 void MetaPointCloud::transformSelfSubCloud(uint8_t subcloud_to_transform, const Matrix4f* transformation)
@@ -600,15 +605,18 @@ void MetaPointCloud::transform(const Matrix4f* transformation, MetaPointCloud* t
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_transformation_dev, transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
 
-  computeLinearLoad(getAccumulatedPointcloudSize(),
-                    &m_blocks, &m_threads_per_block);
-  cudaDeviceSynchronize();
-  // transform the cloud via Kernel.
-  kernelTransformCloud<<< m_blocks, m_threads_per_block >>>
-     (m_transformation_dev,
-      m_dev_ptrs_to_addrs[0],
-      transformed_cloud->m_dev_ptrs_to_addrs[0],
-      m_accumulated_pointcloud_size);
+  if (getAccumulatedPointcloudSize() > 0) {
+    computeLinearLoad(getAccumulatedPointcloudSize(),
+                        &m_blocks, &m_threads_per_block);
+    cudaDeviceSynchronize();
+    // transform the cloud via Kernel.
+    kernelTransformCloud<<< m_blocks, m_threads_per_block >>>
+        (m_transformation_dev,
+        m_dev_ptrs_to_addrs[0],
+        transformed_cloud->m_dev_ptrs_to_addrs[0],
+        m_accumulated_pointcloud_size);
+    CHECK_CUDA_ERROR();
+  }
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
@@ -624,15 +632,18 @@ void MetaPointCloud::transformSubCloud(uint8_t subcloud_to_transform, const Matr
   HANDLE_CUDA_ERROR(
       cudaMemcpy(m_transformation_dev, transformation, sizeof(Matrix4f), cudaMemcpyHostToDevice));
 
-  computeLinearLoad(getPointcloudSize(subcloud_to_transform),
-                    &m_blocks, &m_threads_per_block);
-  cudaDeviceSynchronize();
-  // transform the cloud via Kernel.
-  kernelTransformCloud<<< m_blocks, m_threads_per_block >>>
-     (m_transformation_dev,
-      m_dev_ptrs_to_addrs[subcloud_to_transform],
-      transformed_cloud->m_dev_ptrs_to_addrs[subcloud_to_transform],
-      m_point_clouds_local->cloud_sizes[subcloud_to_transform]);
+  if (getPointcloudSize(subcloud_to_transform) > 0) {
+    computeLinearLoad(getPointcloudSize(subcloud_to_transform),
+                        &m_blocks, &m_threads_per_block);
+    cudaDeviceSynchronize();
+    // transform the cloud via Kernel.
+    kernelTransformCloud<<< m_blocks, m_threads_per_block >>>
+        (m_transformation_dev,
+        m_dev_ptrs_to_addrs[subcloud_to_transform],
+        transformed_cloud->m_dev_ptrs_to_addrs[subcloud_to_transform],
+        m_point_clouds_local->cloud_sizes[subcloud_to_transform]);
+    CHECK_CUDA_ERROR();
+  }
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }

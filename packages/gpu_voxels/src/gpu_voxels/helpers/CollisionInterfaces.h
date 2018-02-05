@@ -66,7 +66,6 @@ public:
   /*!
    * \brief collideWithTypes This does a collision check with 'other' and delivers the voxel meanings that are in collision.
    * This is especially useful when colliding swept volumes and one wants to know, which subvolumes lie in collision.
-   * Only available for checks against BitVoxel-Types!
    * \param map The map to do a collision check with.
    * \param meanings_in_collision The voxel meanings in collision.
    * \param coll_threshold The threshold when a collision is counted. Only valid for probabilistic maps.
@@ -124,7 +123,6 @@ public:
   /*!
    * \brief collideWithTypes This does a collision check with 'other' and delivers the voxel meanings that are in collision.
    * This is especially useful when colliding swept volumes and one wants to know, which subvolumes lie in collision.
-   * Only available for checks against BitVoxel-Types!
    * \param map The map to do a collision check with.
    * \param meanings_in_collision The voxel meanings in collision.
    * \param coll_threshold The threshold when a collision is counted. Only valid for probabilistic maps.

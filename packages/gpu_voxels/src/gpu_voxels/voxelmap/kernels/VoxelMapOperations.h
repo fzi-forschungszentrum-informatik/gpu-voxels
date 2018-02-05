@@ -391,10 +391,10 @@ void kernelCollideVoxelMaps(Voxel* voxelmap, const uint32_t voxelmap_size, Other
  * Collide two Voxelmaps but test against the Bitvector of the other voxelmap
  *
  */
-template<std::size_t length, class Collider>
+template<std::size_t length, class OtherVoxel, class Collider>
 __global__
 void kernelCollideVoxelMapsBitvector(BitVoxel<length>* voxelmap, const uint32_t voxelmap_size,
-                                     BitVoxel<length>* other_map, Collider collider,
+                                     const OtherVoxel* other_map, Collider collider,
                                      BitVector<length>* results, uint16_t* num_collisions, const uint16_t sv_offset);
 
 

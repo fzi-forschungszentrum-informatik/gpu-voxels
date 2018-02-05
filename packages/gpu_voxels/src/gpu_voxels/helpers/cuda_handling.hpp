@@ -123,7 +123,7 @@ cudaError_t cuPrintDeviceArray(T* dev_array, unsigned int* device_array_size)
   {
     std::stringstream s;
     s << i << ": " << host_array[i];
-    LOGGING_INFO(Gpu_voxels_helpers, s << endl);
+    LOGGING_INFO(Gpu_voxels_helpers, s.str() << endl);
   }
   LOGGING_INFO(Gpu_voxels_helpers, endl);
   delete[] host_array;

@@ -71,8 +71,11 @@ IF(PCL_FOUND)
   ICMAKER_ADD_SOURCES(
     PcdFileReader.cpp
   )
+  ICMAKER_EXTERNAL_DEPENDENCIES(EXPORT
+    PCL
+  )
 
-  IF(OpenNI_FOUND)
+  IF(OPENNI_FOUND)
     ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_KINECT_SUPPORT_)
     ICMAKER_ADD_SOURCES(
       Kinect.cpp
@@ -80,7 +83,11 @@ IF(PCL_FOUND)
     ICMAKER_ADD_HEADERS(
       Kinect.h
     )
-  ENDIF(OpenNI_FOUND)
+    ICMAKER_EXTERNAL_DEPENDENCIES(EXPORT
+      OpenNI
+    )
+  ENDIF(OPENNI_FOUND)
+
 ENDIF(PCL_FOUND)
 
 # removing unknown pragma warnings due to OpenNI spam

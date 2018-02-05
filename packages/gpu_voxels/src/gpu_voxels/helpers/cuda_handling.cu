@@ -81,12 +81,12 @@ std::string getDeviceInfos()
       {
         tmp_stream << "Device Information of GPU " << i << std::endl
                    << "Model: " << props[i].name << std::endl
-                   << "MultiprozessorCount: " << props[i].multiProcessorCount << std::endl
+                   << "Multi Processor Count: " << props[i].multiProcessorCount << std::endl
                    << "Global Memory: " << cBYTE2MBYTE * props[i].totalGlobalMem << " MB" << std::endl
                    << "Total Constant Memory: " << props[i].totalConstMem << std::endl
-                   << "Shared Memory per Block: " << props[i].sharedMemPerBlock << " Shared Memory per Multiprozessor: " << props[i].sharedMemPerMultiprocessor << std::endl
-                   << "Max Threads per Block " << props[i].maxThreadsPerBlock << " Max Threads per Multiprozessor: " << props[i].maxThreadsPerMultiProcessor << std::endl
-                   << "Registers per Block: " << props[i].regsPerBlock << " Registers per Multiprozessor: " <<props[i].regsPerMultiprocessor << std::endl
+                   << "Shared Memory per Block: " << props[i].sharedMemPerBlock << " Shared Memory per Multi Processor: " << props[i].sharedMemPerMultiprocessor << std::endl
+                   << "Max Threads per Block " << props[i].maxThreadsPerBlock << " Max Threads per Multi Processor: " << props[i].maxThreadsPerMultiProcessor << std::endl
+                   << "Registers per Block: " << props[i].regsPerBlock << " Registers per Multi Processor: " <<props[i].regsPerMultiprocessor << std::endl
                    << "Max grid dimensions: [ " << props[i].maxGridSize[0] << ", " << props[i].maxGridSize[1]  << ", " << props[i].maxGridSize[2] << " ]" << std::endl
                    << "Max Block dimension: [ " << props[i].maxThreadsDim[0] << ", " << props[i].maxThreadsDim[1]  << ", " << props[i].maxThreadsDim[2] << " ]" << std::endl
                    << "Warp Size: " << props[i].warpSize << std::endl << std::endl;

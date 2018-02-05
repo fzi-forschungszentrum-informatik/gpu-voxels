@@ -41,7 +41,7 @@ const uint32_t cMAX_THREADS_PER_BLOCK = 1024;
 
 /*!
  * \brief BIT_VECTOR_LENGTH determines the amount of identifieable subvolumes in BitVoxels
- * The BitVoxelMeaning is stored in a Bit-Vecor of this lenghts.
+ * The BitVoxelMeaning is stored in a Bit-Vecor of this lengths.
  */
 static const std::size_t BIT_VECTOR_LENGTH = 256;
 /*!
@@ -68,11 +68,12 @@ enum MapType {
   MT_PROBAB_VOXELLIST,           // List of     probabilistic Voxels (identified by their Voxelmap-like Pointer adress) that hold a Probability
   MT_PROBAB_OCTREE,              // Octree of   probabilistic Voxels (identified by a Morton Code)                      that hold a Probability
   MT_PROBAB_MORTON_VOXELLIST,    // List of     probabilistic Voxels (identified by a Morton Code)                      that hold a Probability
+  MT_COUNTING_VOXELLIST,         // Voxellist for filtering of noise data with density treshold
 
   MT_DISTANCE_VOXELMAP           // 3D-Array of deterministic Voxels (identified by their Voxelmap-like Pointer adress) that hold a distance and obstacle vector
 };
 
-static const std::string GPU_VOXELS_MAP_TYPE_NOT_IMPLMENETED = "THIS TYPE OF DATA STRUCTURE IS NOT YET IMPLEMENTED!";
+static const std::string GPU_VOXELS_MAP_TYPE_NOT_IMPLEMENTED = "THIS TYPE OF DATA STRUCTURE IS NOT YET IMPLEMENTED!";
 static const std::string GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED = "THIS OPERATION IS NOT SUPPORTED BY THE DATA STRUCTURE!";
 static const std::string GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED = "THIS DATA STRUCTURE ONLY SUPPORTS BITVOXEL MEANING eBVM_OCCUPIED!";
 static const std::string GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED = "THIS OPERATION IS NOT YET SUPPORTED BY THE DATA STRUCTURE!";
@@ -93,6 +94,7 @@ template<std::size_t length>
 class BitVoxel;
 class ProbabilisticVoxel;
 class DistanceVoxel;
+class CountingVoxel;
 
 typedef BitVoxel<BIT_VECTOR_LENGTH> BitVectorVoxel;
 
@@ -176,9 +178,10 @@ template<size_t length, typename VoxelIDType> class BitVoxelList;
 typedef BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID> BitVectorVoxelList;
 typedef BitVoxelList<BIT_VECTOR_LENGTH, OctreeVoxelID> BitVectorMortonVoxelList;
 
+class CountingVoxelList;
+
 }  // end of ns
 // ------------------------------------------------
-
 
 // ------------------ Octree ----------------------
 namespace NTree {

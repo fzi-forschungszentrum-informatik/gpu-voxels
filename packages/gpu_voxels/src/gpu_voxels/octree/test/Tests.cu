@@ -491,10 +491,12 @@ bool insertTest(OctreeVoxelID num_points, OctreeVoxelID num_inserts, bool set_fr
 
 // Allocate memory for points.
   srand(TEST_RAND_SEED);
-  thrust::host_vector<gpu_voxels::Vector3ui> hVoxel = randomPoints(num_points, NUM_VOXEL); //randomPoints(num_points, NUM_VOXEL); //linearVoxel(num_points); //; //
+  thrust::host_vector<gpu_voxels::Vector3ui> hVoxel = randomPoints(num_points, NUM_VOXEL); //linearVoxel(num_points);
+  CHECK_CUDA_ERROR();
 
   printf("create octree....\n");
   NTREE* o = new NTREE(NUM_BLOCKS, NUM_THREADS_PER_BLOCK);
+  CHECK_CUDA_ERROR();
 
   timespec time1 = getCPUTime();
   o->build(hVoxel);
@@ -526,7 +528,6 @@ bool insertTest(OctreeVoxelID num_points, OctreeVoxelID num_inserts, bool set_fr
 //  h_insertVoxel[6] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
 //  t_vec = gpu_voxels::Vector3ui(1, 10, 2);
 //  h_insertVoxel[7] = Voxel(morton_code60(t_vec), t_vec, MAX_PROBABILITY);
-//thrust::host_vector<Voxel> h_insertVoxel = randomVoxel(num_inserts, NUM_VOXEL, MAX_PROBABILITY); //linearVoxel(num_inserts, num_points, MAX_PROBABILITY); // //
 
   time1 = getCPUTime();
   thrust::sort(h_insertVoxel.begin(), h_insertVoxel.end()); // TODO: its slow, since its a comparation based sort and not a radix sort; Try to use radix sort instead; e.g. sort_key_value()

@@ -27,6 +27,7 @@
 
 //#include <gpu_voxels/voxelmap/ProbVoxelMap.h>
 #include <gpu_voxels/voxellist/BitVoxelList.h>
+#include <gpu_voxels/voxellist/CountingVoxelList.h>
 #include <gpu_voxels/helpers/common_defines.h>
 
 namespace gpu_voxels {

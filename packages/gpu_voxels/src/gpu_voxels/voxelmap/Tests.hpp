@@ -89,6 +89,7 @@ void triggerAddressingTest(Vector3ui dimensions, float voxel_side_length,
   kernelAddressingTest<<< num_blocks, threads_per_block >>> (voxelmap_base_adress, dimensions, voxel_side_length,
                                                              thrust::raw_pointer_cast(dev_testpoint_list.data()),
                                                              nr_of_tests, dev_success);
+  CHECK_CUDA_ERROR();
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   HANDLE_CUDA_ERROR(cudaMemcpy(success, dev_success, sizeof(bool), cudaMemcpyDeviceToHost));
 }

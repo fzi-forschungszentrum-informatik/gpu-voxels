@@ -53,7 +53,9 @@ PointcloudFileHandler::~PointcloudFileHandler()
 {
   if(xyz_reader) delete xyz_reader;
   if(binvox_reader) delete binvox_reader;
+#ifdef _BUILD_GVL_WITH_PCL_SUPPORT_
   if(pcd_reader) delete pcd_reader;
+#endif
 }
 
 /*!

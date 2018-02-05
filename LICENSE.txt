@@ -5,6 +5,7 @@ The software in this repository underlies different licenses.
 Please consider the LICENSE.txt in the different package directories.
 
 To clarify this:
-- The Build System (icmaker and according scripts) is distributed under BSD license
+- The Build System (icmaker and accompanying scripts) is distributed under BSD license
 - GPU-Voxels is distributed under the CDDL license
+- PBA kernel code in GPU-Voxels is distributed under the BSD-like license found in LICENSE_PBA.txt
 - icl_core helber library is distributed under CDDL license

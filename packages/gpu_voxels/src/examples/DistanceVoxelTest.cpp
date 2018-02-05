@@ -190,7 +190,7 @@ int main(int argc, char* argv[])
 
   LOGGING_INFO(Gpu_voxels, "pointcloud scaling factor: " << scaling << endl);
 
-  int obstacle_model = 7; //valid: 0,1,2,3,4,5
+  int obstacle_model = 8; //valid: 0-8
 
   if (obstacle_model == 8) {
     pointcloud_filename = "pelican.binvox";

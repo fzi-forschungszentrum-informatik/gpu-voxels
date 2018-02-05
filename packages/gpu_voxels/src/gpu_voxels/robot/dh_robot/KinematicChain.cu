@@ -175,6 +175,7 @@ void KinematicChain::getUpperJointLimits(JointValueMap &upper_limits)
 //    (m_size, (i), m_dev_basis_transformation,
 //        thrust::raw_pointer_cast(&(m_dev_transformations[0])),
 //        dev_point, dev_result);
+//    CHECK_CUDA_ERROR();
 
 //    HANDLE_CUDA_ERROR(cudaMemcpy(&transformed_point, dev_result, sizeof(Vector3f), cudaMemcpyDeviceToHost));
 //    std::stringstream s;

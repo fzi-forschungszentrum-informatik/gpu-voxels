@@ -30,8 +30,8 @@
 namespace gpu_voxels {
 namespace robot {
 
-UrdfRobot::UrdfRobot(const std::string &path, const bool &use_model_path) :
-  RobotToGPU(path, use_model_path)
+UrdfRobot::UrdfRobot(const float voxel_side_length, const std::string &path, const bool &use_model_path) :
+  RobotToGPU(voxel_side_length, path, use_model_path)
 {
 }
 
