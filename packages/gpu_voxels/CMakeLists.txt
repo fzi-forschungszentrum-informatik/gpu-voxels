@@ -9,6 +9,7 @@ SET(GPU_VOXELS_IDE_FOLDER "gpu_voxels")
 
 # --- Global options ---
 
+SET(CUDA_USE_STATIC_CUDA_RUNTIME OFF) # fix for cuda 9.1 thrust cub addArgument runtime segfault
 FIND_PACKAGE(CUDA)
 
 FIND_PACKAGE(Boost COMPONENTS system thread filesystem date_time unit_test_framework chrono)

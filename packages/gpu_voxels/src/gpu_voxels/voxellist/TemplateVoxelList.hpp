@@ -165,7 +165,7 @@ void TemplateVoxelList<Voxel, VoxelIDType>::make_unique()
     thrust::sort_by_key(m_dev_id_list.begin(), m_dev_id_list.end(),
                         thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin(),m_dev_list.begin()) ),
                         thrust::less<VoxelIDType>());
-
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   }
   catch(thrust::system_error &e)
   {
@@ -182,6 +182,7 @@ void TemplateVoxelList<Voxel, VoxelIDType>::make_unique()
                             thrust::make_reverse_iterator( thrust::make_zip_iterator( thrust::make_tuple(m_dev_id_list.begin(), m_dev_list.begin()) ) ),
                             thrust::make_reverse_iterator( thrust::make_zip_iterator( thrust::make_tuple(m_dev_id_list.end(), m_dev_list.end()) ) ),
                             Merge<Voxel, VoxelIDType>() );
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   }
   catch(thrust::system_error &e)
   {
@@ -195,8 +196,9 @@ void TemplateVoxelList<Voxel, VoxelIDType>::make_unique()
     thrust::pair< keyIterator, zipValuesIterator > new_end;
     new_end = thrust::unique_by_key(m_dev_id_list.begin(), m_dev_id_list.end(),
                                     thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin(),m_dev_list.begin()) ) );
-
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     size_t new_length = thrust::distance(m_dev_id_list.begin(), new_end.first);
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     this->resize(new_length);
   }
   catch(thrust::system_error &e)
@@ -252,12 +254,14 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(const TemplateVo
       //if the collision_stencil contains a true value it will be treated as a filter mask
       {
         thrust::copy(collision_stencil.begin(), collision_stencil.end(), filtermask_device.begin());
+        HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
       }
 
       thrust::binary_search(thrust::device,
                             other->m_dev_id_list.begin(), other->m_dev_id_list.end(),
                             m_dev_id_list.begin(), m_dev_id_list.end(),
                             collision_stencil.begin());
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     if (this->m_map_type == MT_COUNTING_VOXELLIST)
@@ -266,6 +270,7 @@ size_t TemplateVoxelList<Voxel, VoxelIDType>::collideVoxellists(const TemplateVo
 
       //TODO: why does this not zero out all collisions in case of CVL.subtractFromCVL(BVL)?
       thrust::transform(collision_stencil.begin(), collision_stencil.end(), filtermask_device.begin(), count_device.begin(), logicalAND());
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
       return thrust::count(count_device.begin(), count_device.end(), true);
     }
@@ -568,6 +573,7 @@ bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::merge(const Gpu
         thrust::make_zip_iterator( thrust::make_tuple(m->m_dev_list.begin(), m->m_dev_coord_list.begin(), m->m_dev_id_list.begin()) ),
         thrust::make_zip_iterator( thrust::make_tuple(m->m_dev_list.end(),   m->m_dev_coord_list.end(),   m->m_dev_id_list.end()) ),
         thrust::make_zip_iterator( thrust::make_tuple(m_dev_list.begin()+offset_new_entries,    m_dev_coord_list.begin()+offset_new_entries,    m_dev_id_list.begin()+offset_new_entries) ) );
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
       // If an offset was given, we have to alter the newly added voxels.
       if(voxel_offset != Vector3i())
@@ -577,6 +583,7 @@ bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::merge(const Gpu
           thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.end(),   m_dev_id_list.end()) ),
           thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
           applyOffsetOperator<MapVoxelID>(m_ref_map_dim, voxel_offset));
+          HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
       }
 
       // if a new meaning was given, iterate over the voxellist and overwrite the meaning
@@ -585,6 +592,7 @@ bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::merge(const Gpu
         BitVectorVoxel fillVoxel;
         fillVoxel.bitVector().setBit(*new_meaning);
         thrust::fill(m_dev_list.begin()+offset_new_entries, m_dev_list.end(), fillVoxel);
+        HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
       }
 
       make_unique();
@@ -625,8 +633,10 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::subtract(const TemplateVoxelList<Vox
                               this->getEndTripleZipIterator(),
                               overlap_stencil.begin(),
                               thrust::identity<bool>());
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   size_t new_length = thrust::distance(m_dev_id_list.begin(), thrust::get<0>(new_end.get_iterator_tuple()));
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   this->resize(new_length);
 
   return true;
@@ -659,8 +669,10 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::subtractFromCountingVoxelList(const 
                               this->getEndTripleZipIterator(),
                               overlap_stencil.begin(),
                               thrust::identity<bool>());
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   size_t new_length = thrust::distance(m_dev_id_list.begin(), thrust::get<0>(new_end.get_iterator_tuple()));
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   this->resize(new_length);
 
   return true;

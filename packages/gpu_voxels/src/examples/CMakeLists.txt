@@ -73,7 +73,6 @@ ICMAKER_BUILD_PROGRAM()
 ICMAKER_SET("shift_vs_transform" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 
 ICMAKER_ADD_HEADERS(
-  ../gpu_voxels/helpers/Kinect.h
   )
 
 ICMAKER_ADD_SOURCES(
@@ -132,12 +131,10 @@ ICMAKER_BUILD_PROGRAM()
 ICMAKER_SET("swept_volume_vs_environment" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 
 ICMAKER_ADD_HEADERS(
-  ../gpu_voxels/helpers/Kinect.h
   )
 
 ICMAKER_ADD_SOURCES(
   SweptVolumeVsEnvironment.cpp
-  ../gpu_voxels/helpers/Kinect.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(
@@ -292,12 +289,10 @@ ICMAKER_BUILD_PROGRAM()
 ICMAKER_SET("robot_vs_environment" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 
 ICMAKER_ADD_HEADERS(
-  ../gpu_voxels/helpers/Kinect.h
   )
 
 ICMAKER_ADD_SOURCES(
   RobotVsEnvironment.cpp
-  ../gpu_voxels/helpers/Kinect.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(
@@ -427,12 +422,10 @@ ICMAKER_SET("distance_kinect_demo" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 add_definitions(-DIC_PERFORMANCE_MONITOR)
 
 ICMAKER_ADD_HEADERS(
-  ../gpu_voxels/helpers/Kinect.h
   )
 
 ICMAKER_ADD_SOURCES(
   DistanceKinectDemo.cpp
-  ../gpu_voxels/helpers/Kinect.cpp
   )
 
 ICMAKER_ADD_CUDA_FILES(

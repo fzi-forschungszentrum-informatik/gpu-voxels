@@ -404,3 +404,21 @@ V1.1.1 (2018-02-05):
 Fix gvl_ompl_planner missing icl_core includes
 
 
+V1.1.2 (2018-02-07):
+====================
+Cuda 9.1 support: all tests pass.
+- Fix Cuda 9.1 linking problem that break voxellist code using Thrust CUB.
+
+Known issues:
+- Octrees are broken on Pascal GPUs
+  - confirmed on Titan Xp and GTX 1080 Ti
+- the GLM in Ubuntu 16.04 has to be patched to allow usage of the visualizer.
+  - see https://github.com/g-truc/glm/issues/530
+  - patch for /usr/include/glm/detail/func_common.inl in packages/gpu_voxels/doc/glm_fix_issu530.patch
+
+Minor changes:
+- added synchronization points after some voxellist Thrust calls
+- removed obsolete explicit Kinect.cpp references in src/examples
+- define GLM_ENABLE_EXPERIMENTAL in Primitive.h to fix issue #55
+
+

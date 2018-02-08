@@ -25,6 +25,7 @@
 #define GPU_VOXELS_VISUALIZATION_PRIMITIVE_H_INCLUDED
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>

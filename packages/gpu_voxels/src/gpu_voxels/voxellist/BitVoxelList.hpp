@@ -117,7 +117,7 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithTypes(const BitVectorVoxelL
   thrust::transform(matching_voxels_list1.m_dev_list.begin(), matching_voxels_list1.m_dev_list.end(),
                     matching_voxels_list2.m_dev_list.begin(),
                     dev_merged_voxel_list.begin(), BitVectorVoxel::reduce_op());
-
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
   types_in_collision = thrust::reduce(dev_merged_voxel_list.begin(), dev_merged_voxel_list.end(),
                                          BitVectorVoxel(), BitVectorVoxel::reduce_op());
@@ -293,6 +293,7 @@ size_t BitVoxelList<length, VoxelIDType>::collideWithBitcheck(const BitVectorVox
                       matching_voxels_list2.m_dev_list.begin(),
                       dev_colliding_bits_list.begin(), BitvectorCollisionWithBitshift(margin, 0));
   }
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   return thrust::count(dev_colliding_bits_list.begin(), dev_colliding_bits_list.end(), true);
 }
 
@@ -573,6 +574,7 @@ void BitVoxelList<length, VoxelIDType>::shiftLeftSweptVolumeIDs(uint8_t shift_si
     thrust::transform(this->m_dev_list.begin(), this->m_dev_list.end(),
                       this->m_dev_list.begin(),
                       ShiftBitvector(shift_size));
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   }
   catch(thrust::system_error &e)
   {

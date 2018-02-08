@@ -2775,8 +2775,6 @@ uint32_t NTree<branching_factor, level_count, InnerNode, LeafNode>::extractCubes
                     Trafo_NodeData_to_Cube(mapping));
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-
 //++num_extract_call;
 
   if (4*used_size < m_extract_buffer_size) // decrease buffer
