@@ -50,6 +50,7 @@
 #include <gpu_voxels/ManagedPrimitiveArray.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/helpers/PointCloud.h>
+#include <gpu_voxels/helpers/BitVector.h>
 #include <gpu_voxels/octree/Octree.h>
 #include <gpu_voxels/primitive_array/PrimitiveArray.h>
 #include <gpu_voxels/voxellist/VoxelList.h>
@@ -296,6 +297,7 @@ public:
                                    std::string map_name,
                                    const BitVoxelMeaning voxel_meaning);
 
+
   /*!
    * \brief insertRobotIntoMap Writes a robot with its current pose into a map
    * \param robot_name Name of the robot to use
@@ -303,6 +305,23 @@ public:
    * \return true, if robot was added, false otherwise
    */
   bool insertRobotIntoMap(std::string robot_name, std::string map_name, const BitVoxelMeaning voxel_meaning);
+
+
+  /*!
+   * \brief insertRobotIntoMapSelfCollAware This inserts a robot and checks for every link, if it collides with previously inserted data.
+   * For performance reasons it is advised to also give optional parameters to spare allocations at every call.
+   * \param robot_name Name of the robot to use
+   * \param map_name Name of the map to insert the robot
+   * \param voxel_meanings Can be used to define the meanings of the pointclouds. Useful, if more than one robot is inserted into the map.
+   * If not given, meanings from eBVM_SWEPT_VOLUME_START on are used and incremented per link. Requires one entry per robot subcloud.
+   * \param collision_masks Can be used to mask out collision pairs. Requires one entry per robot subcloud. If bits are set, collisions will be checked.
+   * \param colliding_meanings Can be used to get bitvector with collision results. Same meanings as given in \c voxel_meanings.
+   * \return True, if a collision with previously inserted data occurred.
+   */
+  bool insertRobotIntoMapSelfCollAware(std::string robot_name, std::string map_name,
+                                       const std::vector<BitVoxelMeaning> &voxel_meanings = std::vector<BitVoxelMeaning>(),
+                                       const std::vector<BitVector<BIT_VECTOR_LENGTH> > &collision_masks = std::vector<BitVector<BIT_VECTOR_LENGTH> >(),
+                                       BitVector<BIT_VECTOR_LENGTH> *colliding_meanings = NULL);
 
   /*!
   * \brief insertBoxIntoMap Helper function to generate obstacles. This inserts a box object.

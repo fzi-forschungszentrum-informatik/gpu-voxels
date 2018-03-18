@@ -436,6 +436,72 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
   }
 }
 
+
+//BitVectorVoxel specialization
+// This kernel may not be called with more threads than point per subcloud, as otherwise we will miss selfcollisions!
+template<>
+__global__
+void kernelInsertMetaPointCloudSelfCollCheck(BitVectorVoxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
+                                const BitVoxelMeaning* voxel_meanings, const Vector3ui dimensions, unsigned int sub_cloud,
+                                const float voxel_side_length, const BitVector<BIT_VECTOR_LENGTH>* coll_masks,
+                                bool *points_outside_map, BitVector<BIT_VECTOR_LENGTH>* colliding_subclouds)
+{
+  BitVector<BIT_VECTOR_LENGTH> masked;
+
+  u_int32_t sub_cloud_upper_bound;
+  Vector3ui uint_coords;
+
+  sub_cloud_upper_bound = meta_point_cloud->cloud_sizes[sub_cloud];
+
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sub_cloud_upper_bound;
+      i += blockDim.x * gridDim.x)
+  {
+    uint_coords = mapToVoxels(voxel_side_length, meta_point_cloud->clouds_base_addresses[sub_cloud][i]);
+
+//        printf("Point @(%f,%f,%f)\n",
+//               meta_point_cloud->clouds_base_addresses[0][i].x,
+//               meta_point_cloud->clouds_base_addresses[0][i].y,
+//               meta_point_cloud->clouds_base_addresses[0][i].z);
+
+    //check if point is in the range of the voxel map
+    if ((uint_coords.x < dimensions.x) && (uint_coords.y < dimensions.y) && (uint_coords.z < dimensions.z))
+    {
+      BitVectorVoxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions, uint_coords)];
+      masked.clear();
+      masked = voxel->bitVector() & coll_masks[sub_cloud];
+      if(! masked.noneButEmpty())
+      {
+        *colliding_subclouds |= masked; // copy the meanings of the colliding voxel, except the masked ones
+        colliding_subclouds->setBit(voxel_meanings[sub_cloud]); // also set collisions for own meaning
+        voxel->insert(eBVM_COLLISION); // Mark voxel as colliding
+      }
+
+      voxel->insert(voxel_meanings[sub_cloud]); // insert subclouds point
+
+
+//        printf("Inserted Point @(%u,%u,%u) with meaning %u into the voxel map \n",
+//               integer_coordinates.x,
+//               integer_coordinates.y,
+//               integer_coordinates.z,
+//               voxel_meanings[voxel_meaning_index]);
+
+    }
+    else
+    {
+      if(points_outside_map) *points_outside_map = true;
+//       printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
+//              meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
+//              meta_point_cloud->clouds_base_addresses[0][i].z);
+    }
+
+  } // grid stride loop
+//    unsigned int foo = atomicInc(global_sub_cloud_control, *global_sub_cloud_control);
+//    printf("This thread inserted point %d, which was last of subcloud. Incrementing global control value to %d ...\n", i, (foo+1));
+}
+
+
+
+
 //DistanceVoxel specialization
 template<>
 __global__

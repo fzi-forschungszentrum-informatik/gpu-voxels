@@ -516,6 +516,31 @@ bool GpuVoxels::insertRobotIntoMap(std::string robot_name, std::string map_name,
   return true;
 }
 
+
+
+bool GpuVoxels::insertRobotIntoMapSelfCollAware(std::string robot_name, std::string map_name,
+                                                const std::vector<BitVoxelMeaning>& voxel_meanings,
+                                                const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks,
+                                                BitVector<BIT_VECTOR_LENGTH>* colliding_meanings)
+{
+  ManagedRobotsIterator rob_it = m_managed_robots.find(robot_name);
+  if (rob_it == m_managed_robots.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find robot '" << robot_name << "'" << endl);
+    return false;
+  }
+  ManagedMapsIterator map_it = m_managed_maps.find(map_name);
+  if (map_it == m_managed_maps.end())
+  {
+    LOGGING_ERROR_C(Gpu_voxels, GpuVoxels, "Could not find map '" << map_name << "'" << endl);
+    return false;
+  }
+
+  return map_it->second.map_shared_ptr->insertMetaPointCloudWithSelfCollisionCheck(rob_it->second->getTransformedClouds(),
+                                                                                   voxel_meanings, collision_masks, colliding_meanings);
+
+}
+
 bool GpuVoxels::insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &corner_max, std::string map_name, const BitVoxelMeaning voxel_meaning, uint16_t points_per_voxel)
 {
   ManagedMapsIterator map_it = m_managed_maps.find(map_name);

@@ -55,13 +55,6 @@ BitVoxelList<length, VoxelIDType>::~BitVoxelList()
 }
 
 template<std::size_t length, class VoxelIDType>
-bool BitVoxelList<length, VoxelIDType>::insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test)
-{
-  LOGGING_ERROR_C(VoxellistLog, BitVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-  return false;
-}
-
-template<std::size_t length, class VoxelIDType>
 void BitVoxelList<length, VoxelIDType>::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
 {
   LOGGING_ERROR_C(VoxellistLog, BitVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);

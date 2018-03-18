@@ -129,8 +129,6 @@ public:
 //  template<class Collider>
 //  BitVector<length> collisionCheckBitvector(ProbVoxelMap* other, Collider collider);
 
-  virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
-
   virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
 
   virtual MapType getTemplateType() { return this->m_map_type; }

@@ -407,6 +407,16 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertMetaPointCloud(const MetaPoint
   make_unique();
 }
 
+template<class Voxel, class VoxelIDType>
+bool TemplateVoxelList<Voxel, VoxelIDType>::insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
+                                                                   const std::vector<BitVoxelMeaning>& voxel_meanings,
+                                                                   const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks,
+                                                                   BitVector<BIT_VECTOR_LENGTH>* colliding_meanings)
+{
+  LOGGING_ERROR_C(VoxellistLog, CountingVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+  return true;
+}
+
 
 template<class Voxel, class VoxelIDType>
 void TemplateVoxelList<Voxel, VoxelIDType>::resize(size_t new_size)

@@ -410,11 +410,14 @@ size_t GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::collideWith
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
-bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertRobotConfiguration(
-    const MetaPointCloud *robot_links, bool with_self_collision_test)
+bool GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertMetaPointCloudWithSelfCollisionCheck(
+                                                        const MetaPointCloud *robot_links,
+                                                        const std::vector<BitVoxelMeaning>& voxel_meanings,
+                                                        const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks,
+                                                        BitVector<BIT_VECTOR_LENGTH>* colliding_meanings)
 {
   LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
-  return false;
+  return true;
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
