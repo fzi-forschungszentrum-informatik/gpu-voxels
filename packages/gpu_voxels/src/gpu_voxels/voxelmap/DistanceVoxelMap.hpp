@@ -86,11 +86,13 @@ size_t DistanceVoxelMap::collideWithTypes(const GpuVoxelsMapSharedPtr other, Bit
   //TODO: debug output. nonsense operation or should we actually interpret distance > 0 as free and distance <= 0 as occupied?
 }
 
-bool DistanceVoxelMap::insertRobotConfiguration(const MetaPointCloud *robot_links,
-                                                   bool with_self_collision_test)
+bool DistanceVoxelMap::insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
+                                                                  const std::vector<BitVoxelMeaning>& voxel_meanings,
+                                                                  const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks,
+                                                                  BitVector<BIT_VECTOR_LENGTH>* colliding_meanings)
 {
   LOGGING_ERROR_C(VoxelmapLog, DistanceVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
-  return false;
+  return true;
 }
 
 void DistanceVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)

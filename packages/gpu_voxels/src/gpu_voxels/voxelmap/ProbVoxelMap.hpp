@@ -101,10 +101,13 @@ void ProbVoxelMap::insertSensorData(const Vector3f* points, const bool enable_ra
 //  printf("update counter: %u\n", m_update_counter);
 }
 
-bool ProbVoxelMap::insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test)
+bool ProbVoxelMap::insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
+                                                              const std::vector<BitVoxelMeaning>& voxel_meanings,
+                                                              const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks,
+                                                              BitVector<BIT_VECTOR_LENGTH>* colliding_meanings)
 {
   LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
-  return false;
+  return true;
 }
 
 void ProbVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)

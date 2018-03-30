@@ -434,6 +434,13 @@ void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *met
                                 const float voxel_side_length,
                                 bool *points_outside_map);
 
+template<class BitVectorVoxel>
+__global__
+void kernelInsertMetaPointCloudSelfCollCheck(BitVectorVoxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
+                                             const BitVoxelMeaning* voxel_meanings, const Vector3ui dimensions, unsigned int sub_cloud,
+                                             const float voxel_side_length, const BitVector<BIT_VECTOR_LENGTH>* coll_masks,
+                                             bool *points_outside_map, BitVector<BIT_VECTOR_LENGTH>* colliding_subclouds);
+
 /**
  * Shifts all swept-volume-IDs by shift_size towards lower IDs.
  * Currently this is limited to a shift size <64
