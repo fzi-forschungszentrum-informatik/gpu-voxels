@@ -111,25 +111,32 @@ bool XMLInterpreter::getDataContext(DataContext* context, std::string name)
   context->m_translation_offset = offset;
   context->m_default_prim = new Cuboid(glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec3(0), glm::vec3(1.f));
 
-  uint32_t threshold = icl_core::config::getDefault<uint32_t>((c_path / "occupancy_threshold").string(), 0);
+  int32_t threshold = icl_core::config::getDefault<int32_t>((c_path / "occupancy_threshold").string(), 0);
 
-  if (threshold > 255)
+  if (threshold > MAX_PROBABILITY)
   {
     LOGGING_WARNING_C(
         Visualization,
         XMLInterpreter,
-        "Occupancy_threshold of " << name << " is to big (" << threshold << "). 255 is used instead." << endl);
-    context->m_occupancy_threshold = 255;
+        "Occupancy_threshold of " << name << " is too big (" << threshold << "). MAX_PROBABILITY (127) is used instead." << endl);
+    context->m_occupancy_threshold = MAX_PROBABILITY;
+  }else if(threshold < MIN_PROBABILITY)
+  {
+    LOGGING_WARNING_C(
+        Visualization,
+        XMLInterpreter,
+        "Occupancy_threshold of " << name << " is too small (" << threshold << "). MIN_PROBABILITY (-127) is used instead." << endl);
+    context->m_occupancy_threshold = MIN_PROBABILITY;
   }
   else if (threshold == 0)
   {
     LOGGING_WARNING_C(Visualization, XMLInterpreter,
-                      "Occupancy_threshold of " << name << " is zero. 1 will be used instead." << endl);
+                      "Occupancy_threshold of " << name << " is zero." << endl);
     context->m_occupancy_threshold = 0;
   }
   else
   {
-    context->m_occupancy_threshold = (uint8_t) threshold;
+    context->m_occupancy_threshold = threshold;
   }
   bool found_something = false;
   // get the colors for all the specified types

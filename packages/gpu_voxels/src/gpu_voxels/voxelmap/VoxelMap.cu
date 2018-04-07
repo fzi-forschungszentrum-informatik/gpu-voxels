@@ -35,6 +35,7 @@ template uint32_t TemplateVoxelMap<ProbabilisticVoxel>::collisionCheckWithCounte
 template void ProbVoxelMap::insertSensorData<BIT_VECTOR_LENGTH>(const Vector3f*, const bool, const bool,
                                                                 const BitVoxelMeaning, BitVoxel<BIT_VECTOR_LENGTH>*);
 
+template void TemplateVoxelMap<ProbabilisticVoxel>::initSensorSettings(const Sensor&);
 
 // ##################################################################################
 
