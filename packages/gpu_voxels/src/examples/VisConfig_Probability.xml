@@ -20,80 +20,52 @@
 
 <visualizer_context>
 <background>
-  white
+  black
 </background>
 
-<!-- ------------- The parameter for myRobotMap------ -->
-<myRobotMap>
-  <occupancy_threshold> 1 </occupancy_threshold>
+<!-- ------------- The parameter for myProbVoxelMap------ -->
+<myProbVoxelMap>
+  <occupancy_threshold> -127 </occupancy_threshold>
 
-  <!--her you can specifie an offset to the voxel map (only effects the visualization)-->
-  <!--
-      <offset>
-      <x> 0 </x>
-      <y> 50 </y>
-      <z> 0 </z>
-      </offset>
-  -->
-  <!-- definde the colors for the different voxel types -->
   <type_0>
-    blue
+    <color_1> green     </color_1>
+    <color_2> dark blue </color_2>
+
   </type_0>
-  <type_1>
-      <rgba>
-        <r> 0 </r>
-        <g> 1 </g>
-        <b> 0 </b>
-      </rgba>
-  </type_1>
-  <type_2>
-    red
-  </type_2>
-  <type_3>
-    magenta
-  </type_3>
-</myRobotMap>
+</myProbVoxelMap>
 
+<myProbVoxelMap2>
+  <occupancy_threshold> 0 </occupancy_threshold>
 
-<!-- ------------- The parameter for myEnvironmentMap------ -->
-<myEnvironmentMap>
   <type_0>
-    <color_1>  green  </color_1>
-    <color_2>  dark green  </color_2>
+    <color_1> green     </color_1>
+    <color_2> dark blue </color_2>
+
   </type_0>
-  <type_1>
-    <color_1>  black </color_1>
-    <color_2>  red  </color_2>
-  </type_1>
-  <type_2>
-    red
-  </type_2>
-  <type_3>
-    cyan
-  </type_3>
-</myEnvironmentMap>
-
-
+</myProbVoxelMap2>
 
 
 <!-- --------------- The parameter for camera------------ -->
 <camera>
+  <!-- Free flight mode -->
   <position>
-    <x> 367.681 </x>
-    <y> 234.225 </y>
-    <z> 172.993 </z>
+    <x> 144.895 </x>
+    <y> 76.9175 </y>
+    <z> 113.541 </z>
   </position>
+  <horizontal_angle> 273.988 </horizontal_angle> <!-- given in Deg -->
+  <vertical_angle> -23.835 </vertical_angle> <!-- given in Deg -->
+  <field_of_view> 60 </field_of_view> <!-- given in Deg -->
+  <!-- Orbit mode -->
   <focus>
     <x> 50 </x>
     <y> 0 </y>
     <z> 50 </z>
   </focus>
-  <horizontal_angle> 286.993 </horizontal_angle> <!-- given in Deg -->
-  <vertical_angle> -9.50091 </vertical_angle> <!-- given in Deg -->
-  <field_of_view> 60 </field_of_view> <!-- given in Deg -->
   <window_width> 1024 </window_width>
   <window_height> 768 </window_height>
 </camera>
+
 
 <!-- --------------- some miscellaneous parameter------------ -->
 <miscellaneous>
@@ -118,7 +90,7 @@
   <grid_height> 0 </grid_height> <!-- the height where the grid will be drawn -->
   <grid_max_x> 500 </grid_max_x> <!-- the x dimension of the grid -->
   <grid_max_y> 500 </grid_max_y> <!-- the y dimension of the grid -->
-  <grid_color> black </grid_color>
+  <grid_color> blue </grid_color>
   <unit_scale> 1 cm </unit_scale>
 </miscellaneous>
 

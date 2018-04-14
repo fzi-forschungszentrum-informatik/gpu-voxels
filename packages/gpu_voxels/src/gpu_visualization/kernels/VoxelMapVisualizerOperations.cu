@@ -72,11 +72,9 @@ __global__ void fill_vbo_without_precounting(ProbabilisticVoxel* voxelMap, Vecto
 
               if (voxel.getOccupancy() >= occupancy_threshold)
               {
-                //printf("occ thresh %u \n", occupancy_threshold);
                 // map the occupancy on the SweptVolume types, which is a bit fuzzy, was only 250 Types are available
-                // so we have to cap it
-                uint8_t type = MIN((eBVM_SWEPT_VOLUME_START + voxel.getOccupancy()), eBVM_SWEPT_VOLUME_END);
-                //printf("type %u \n", type);
+                // so we have to cap it. Also we shift the prob by +127 to get rid of negative values:
+                uint8_t type = MAX( MIN((eBVM_SWEPT_VOLUME_START + voxel.getOccupancy() - MIN_PROBABILITY), eBVM_SWEPT_VOLUME_END), eBVM_SWEPT_VOLUME_START);
                 if (draw_voxel_type[type])
                 {
                   prefix = prefixes[type];

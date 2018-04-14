@@ -559,17 +559,17 @@ void kernelInsertMetaPointCloud(DistanceVoxel* voxelmap, const MetaPointCloudStr
 template<std::size_t length, class RayCasting>
 __global__
 void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-                            const Vector3ui dimensions, const float voxel_side_length, Sensor* sensor,
-                            const Vector3f* sensor_data, const bool cut_real_robot,
+                            const Vector3ui dimensions, const float voxel_side_length, const Vector3f sensor_pose,
+                            const Vector3f* sensor_data, const size_t num_points, const bool cut_real_robot,
                             BitVoxel<length>* robotmap, const uint32_t bit_index, RayCasting rayCaster)
 {
-  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; (i < voxelmap_size) && (i < sensor->data_size);
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; (i < voxelmap_size) && (i < num_points);
       i += gridDim.x * blockDim.x)
   {
     if (!(isnan(sensor_data[i].x) || isnan(sensor_data[i].y) || isnan(sensor_data[i].z)))
     {
       const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length, sensor_data[i]);
-      const Vector3ui sensor_coordinates = mapToVoxels(voxel_side_length, sensor->position);
+      const Vector3ui sensor_coordinates = mapToVoxels(voxel_side_length, sensor_pose);
 
       /* both data and sensor coordinates must
        be within boundaries for raycasting to work */
@@ -583,13 +583,7 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
           BitVoxel<length>* robot_voxel = getVoxelPtr(robotmap, dimensions, integer_coordinates.x,
                                                       integer_coordinates.y, integer_coordinates.z);
 
-          //          if (!((robot_voxel->occupancy > 0) && (robot_voxel->voxelmeaning == eBVM_OCCUPIED))) // not occupied by robot
-          //           {
           update = !robot_voxel->bitVector().getBit(bit_index); // not occupied by robot
-          //          else // else: sensor sees robot, no need to insert data.
-          //          {
-          //            printf("cutting robot from sensor data in kernel %u\n", i);
-          //          }
         }
         else
           update = true;
@@ -598,14 +592,12 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
         {
           // sensor does not see robot, so insert data into voxelmap
           // raycasting
-          rayCaster.rayCast(voxelmap, dimensions, sensor, sensor_coordinates, integer_coordinates);
+          rayCaster.rayCast(voxelmap, dimensions, sensor_coordinates, integer_coordinates);
 
-          // insert measured data itself:
+          // insert measured data itself afterwards, so it overrides free voxels from raycaster:
           ProbabilisticVoxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x,
                                                   integer_coordinates.y, integer_coordinates.z);
           voxel->updateOccupancy(cSENSOR_MODEL_OCCUPIED);
-          //            voxel->voxelmeaning = eBVM_OCCUPIED;
-          //            increaseOccupancy(voxel, cSENSOR_MODEL_OCCUPIED); // todo: replace with "occupied" of sensor model
         }
       }
     }

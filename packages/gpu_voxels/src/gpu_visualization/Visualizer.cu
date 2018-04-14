@@ -2752,21 +2752,20 @@ std::stringstream returnString;
 
       gpu_voxels::voxelmap::BitVectorVoxelMap::Voxel voxel;
       cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(vm->getDeviceDataPtr(), vm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::BitVectorVoxelMap::Voxel), cudaMemcpyDeviceToHost);
-      returnString << "Voxel info: " << voxel << std::endl;
+      returnString << "Voxel info: Bitvektor = " << voxel << std::endl;
 
     } else if (vm_context->m_voxelMap->getMapType() == MT_PROBAB_VOXELMAP) {
       gpu_voxels::voxelmap::ProbVoxelMap* vm = static_cast<gpu_voxels::voxelmap::ProbVoxelMap *>(vm_context->m_voxelMap);
 
       gpu_voxels::voxelmap::ProbVoxelMap::Voxel voxel;
       cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(vm->getDeviceDataPtr(), vm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::ProbVoxelMap::Voxel), cudaMemcpyDeviceToHost);
-      returnString << "Voxel info: " << voxel << std::endl;
-
+      returnString << "Voxel info: " << "Occupancy = " << voxel << " (Probability = " << ProbabilisticVoxel::probabilityToFloat(voxel.getOccupancy()) << ")" << std::endl;
     } else if (vm_context->m_voxelMap->getMapType() == MT_DISTANCE_VOXELMAP) {
       gpu_voxels::voxelmap::DistanceVoxelMap* dvm = static_cast<gpu_voxels::voxelmap::DistanceVoxelMap *>(vm_context->m_voxelMap);
 
       gpu_voxels::voxelmap::DistanceVoxelMap::Voxel voxel;
       cudaMemcpy(&voxel, gpu_voxels::voxelmap::getVoxelPtr(dvm->getDeviceDataPtr(), dvm->getDimensions(), n_pos), sizeof(gpu_voxels::voxelmap::DistanceVoxelMap::Voxel), cudaMemcpyDeviceToHost);
-      returnString << "Voxel info: " << voxel << std::endl;
+      returnString << "Voxel info: Closest obstacle: " << voxel << std::endl;
     }
   }
   if (found_in_octree)

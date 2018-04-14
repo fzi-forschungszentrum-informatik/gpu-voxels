@@ -45,18 +45,12 @@ public:
   virtual ~ProbVoxelMap();
 
   template<std::size_t length>
-  void insertSensorData(const Vector3f* points, const bool enable_raycasting, const bool cut_real_robot,
-                        const BitVoxelMeaning voxel_meaning, BitVoxel<length>* robot_map = NULL);
+  void insertSensorData(const PointCloud &global_points, const Vector3f &sensor_pose, const bool enable_raycasting, const bool cut_real_robot,
+                        const BitVoxelMeaning robot_voxel_meaning, BitVoxel<length>* robot_map = NULL);
 
   virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
 
   virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
-
-  virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
-
-  virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning);
-
-  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning);
 
   virtual MapType getTemplateType() const { return MT_PROBAB_VOXELMAP; }
 

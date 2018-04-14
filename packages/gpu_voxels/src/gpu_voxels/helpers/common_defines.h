@@ -55,6 +55,10 @@ enum BitVoxelMeaning
   eBVM_UNKNOWN            = 3,
   eBVM_SWEPT_VOLUME_START = 4,
   eBVM_SWEPT_VOLUME_END   = 254,
+  // Those can be used to update probabilisitc voxels via insertPointCloud():
+  eBVM_MAX_FREE_PROB      = 4,
+  eBVM_UNCERTAIN_OCC_PROB = 129,
+  eBVM_MAX_OCC_PROB       = 254,
   eBVM_UNDEFINED          = 255
 };
 
@@ -150,6 +154,10 @@ typedef int8_t Probability;
 static const Probability UNKNOWN_PROBABILITY = Probability(-128);
 static const Probability MIN_PROBABILITY = Probability(-127);
 static const Probability MAX_PROBABILITY = Probability(127);
+
+/* ------------------ Temporary Sensor Model ------------ */
+static const Probability cSENSOR_MODEL_FREE = -10;
+static const Probability cSENSOR_MODEL_OCCUPIED = 72;
 
 
 // ---------------- VoxelMap ----------------------
@@ -294,6 +302,14 @@ static inline boost::filesystem::path getGpuVoxelsPath(bool prepend_env_path)
 const float cMBYTE2BYTE = 1024.0 * 1024.0;
 const float cBYTE2MBYTE = 1.0 / cMBYTE2BYTE;
 
+// CUDA or STD min/max, depending on compiler:
+#ifdef __CUDACC__
+#define MIN(x,y) min(x,y)
+#define MAX(x,y) max(x,y)
+#else
+#define MIN(x,y) std::min(x,y)
+#define MAX(x,y) std::max(x,y)
+#endif
 
 }// end of namespace
 #endif

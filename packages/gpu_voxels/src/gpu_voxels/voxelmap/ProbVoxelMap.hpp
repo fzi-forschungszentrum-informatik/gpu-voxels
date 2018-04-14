@@ -50,55 +50,30 @@ ProbVoxelMap::~ProbVoxelMap()
 }
 
 template<std::size_t length>
-void ProbVoxelMap::insertSensorData(const Vector3f* points, const bool enable_raycasting,
-                                    const bool cut_real_robot, const BitVoxelMeaning voxel_meaning,
+void ProbVoxelMap::insertSensorData(const PointCloud &global_points, const Vector3f &sensor_pose, const bool enable_raycasting,
+                                    const bool cut_real_robot, const BitVoxelMeaning robot_voxel_meaning,
                                     BitVoxel<length>* robot_map)
 {
   lock_guard guard(this->m_mutex);
-  //  printf("got lock ----------------------------------------------------\n");
-  //  if (enable_raycasting)
-  //  {
-  //    printf("inserting new SENSOR data WITH RAYCASTING ... ");
-  //  }
-  //  else
-  //  {
-  //    printf("inserting new SENSOR data ... ");
-  //  }
-  //  m_elapsed_time = 0;
-  //  HANDLE_CUDA_ERROR(cudaEventRecord(m_start, 0));
 
-  copySensorDataToDevice(points);
-  transformSensorData();
+  computeLinearLoad(global_points.getPointCloudSize(), &m_blocks,
+                           &m_threads);
+
   if (enable_raycasting)
   {
-    // for debugging ray casting:
-//    uint32_t blocks, threads;
-//    computeLinearLoad(m_voxelmap_size, &blocks, &threads);
-//    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-//    kernelClearVoxelMap<<<blocks, threads>>>(m_dev_data, m_voxelmap_size, eBVM_OCCUPIED);
-//    CHECK_CUDA_ERROR();
-    // ---
-//    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-    kernelInsertSensorData<<<m_blocks_sensor_operations, m_threads_sensor_operations>>>(
-        m_dev_data, m_voxelmap_size, m_dim, m_voxel_side_length, m_dev_sensor,
-        m_dev_transformed_sensor_data, cut_real_robot, robot_map, voxel_meaning, RayCaster());
+    kernelInsertSensorData<<<m_blocks, m_threads>>>(
+        m_dev_data, m_voxelmap_size, m_dim, m_voxel_side_length, sensor_pose,
+        global_points.getConstDevicePointer(), global_points.getPointCloudSize(), cut_real_robot, robot_map, robot_voxel_meaning, RayCaster());
     CHECK_CUDA_ERROR();
   }
   else
   {
-    kernelInsertSensorData<<<m_blocks_sensor_operations, m_threads_sensor_operations>>>(
-        m_dev_data, m_voxelmap_size, m_dim, m_voxel_side_length, m_dev_sensor,
-        m_dev_transformed_sensor_data, cut_real_robot, robot_map, voxel_meaning, DummyRayCaster());
+    kernelInsertSensorData<<<m_blocks, m_threads>>>(
+        m_dev_data, m_voxelmap_size, m_dim, m_voxel_side_length, sensor_pose,
+        global_points.getConstDevicePointer(), global_points.getPointCloudSize(), cut_real_robot, robot_map, robot_voxel_meaning, DummyRayCaster());
     CHECK_CUDA_ERROR();
   }
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-
-//  HANDLE_CUDA_ERROR(cudaEventRecord(m_stop, 0));
-//  HANDLE_CUDA_ERROR(cudaEventSynchronize(m_stop));
-//  HANDLE_CUDA_ERROR(cudaEventElapsedTime(&m_elapsed_time, m_start, m_stop));
-
-//  printf(" ...done in %f ms!\n", m_elapsed_time);
-//  printf("update counter: %u\n", m_update_counter);
 }
 
 bool ProbVoxelMap::insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test)
@@ -113,30 +88,6 @@ void ProbVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
      LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
   else
     this->clearMap();
-}
-
-void ProbVoxelMap::insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning)
-{
-  if(voxel_meaning != eBVM_OCCUPIED)
-    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
-  else
-    this->Base::insertPointCloud(points, voxel_meaning);
-}
-
-void ProbVoxelMap::insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning)
-{
-  if(voxel_meaning != eBVM_OCCUPIED)
-    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
-  else
-    this->Base::insertPointCloud(pointcloud, voxel_meaning);
-}
-
-void ProbVoxelMap::insertPointCloud(const Vector3f *points_d, uint32_t size, const BitVoxelMeaning voxel_meaning)
-{
-  if(voxel_meaning != eBVM_OCCUPIED)
-    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
-  else
-    this->Base::insertPointCloud(points_d, size, voxel_meaning);
 }
 
 //Collsion Interface Implementations

@@ -61,7 +61,7 @@ public:
 
 public:
 
-  virtual bool mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset = Vector3ui());
+  virtual bool mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset = Vector3ui(), float occupancy_threshold = 0.5);
 
   void jumpFlood3D(int block_size = cMAX_THREADS_PER_BLOCK, int debug = 0, bool logging_reinit = false);
   void exactDistances3D(std::vector<Vector3f>& points);
@@ -113,11 +113,17 @@ struct mergeOccupiedOperator
 struct probVoxelOccupied
 {
   typedef thrust::tuple<ProbabilisticVoxel, uint> inputTuple;
+  Probability occ_threshold;
+
+  probVoxelOccupied(Probability occ_threshold_)
+  {
+    occ_threshold = occ_threshold_;
+  }
 
   __host__ __device__
   bool operator()(const inputTuple &input) const
   {
-    return thrust::get<0>(input).getOccupancy() == MAX_PROBABILITY;
+    return thrust::get<0>(input).getOccupancy() > occ_threshold;
   }
 };
 

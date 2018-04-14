@@ -72,10 +72,6 @@ public:
   bool collide(const OtherVoxel& v1, const DistanceVoxel& v2) const;
 
 protected:
-  __host__ __device__
-  static Probability floatToProbability(const float val);
-
-protected:
   Probability m_threshold1, m_threshold2;
 };
 
