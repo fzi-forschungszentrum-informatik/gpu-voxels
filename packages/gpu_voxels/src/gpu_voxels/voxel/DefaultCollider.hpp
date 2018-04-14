@@ -27,6 +27,7 @@
 
 #include "DefaultCollider.h"
 #include <gpu_voxels/voxel/BitVoxel.hpp>
+#include <gpu_voxels/voxel/ProbabilisticVoxel.hpp>
 #include <gpu_voxels/voxel/CountingVoxel.hpp>
 
 namespace gpu_voxels {
@@ -37,7 +38,7 @@ DefaultCollider::DefaultCollider() :
 }
 
 DefaultCollider::DefaultCollider(const float coll_threshold) :
-    m_threshold1(floatToProbability(coll_threshold)), m_threshold2(floatToProbability(coll_threshold))
+    m_threshold1(ProbabilisticVoxel::floatToProbability(coll_threshold)), m_threshold2(ProbabilisticVoxel::floatToProbability(coll_threshold))
 {
 
 }
@@ -89,12 +90,6 @@ template<class OtherVoxel>
 __host__ __device__
 bool DefaultCollider::collide(const OtherVoxel& v1, const DistanceVoxel& v2) const {
     return false; // has no meaning
-}
-
-Probability DefaultCollider::floatToProbability(const float val)
-{
-  float tmp = (val * (float(MAX_PROBABILITY) - float(MIN_PROBABILITY))) + MIN_PROBABILITY;
-  return Probability(tmp);
 }
 
 } // end of ns

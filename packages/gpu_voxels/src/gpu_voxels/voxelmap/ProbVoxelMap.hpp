@@ -115,30 +115,6 @@ void ProbVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
     this->clearMap();
 }
 
-void ProbVoxelMap::insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning)
-{
-  if(voxel_meaning != eBVM_OCCUPIED)
-    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
-  else
-    this->Base::insertPointCloud(points, voxel_meaning);
-}
-
-void ProbVoxelMap::insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning)
-{
-  if(voxel_meaning != eBVM_OCCUPIED)
-    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
-  else
-    this->Base::insertPointCloud(pointcloud, voxel_meaning);
-}
-
-void ProbVoxelMap::insertPointCloud(const Vector3f *points_d, uint32_t size, const BitVoxelMeaning voxel_meaning)
-{
-  if(voxel_meaning != eBVM_OCCUPIED)
-    LOGGING_ERROR_C(VoxelmapLog, ProbVoxelMap, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
-  else
-    this->Base::insertPointCloud(points_d, size, voxel_meaning);
-}
-
 //Collsion Interface Implementations
 
 size_t ProbVoxelMap::collideWith(const BitVectorVoxelMap *map, float coll_threshold, const Vector3i &offset)

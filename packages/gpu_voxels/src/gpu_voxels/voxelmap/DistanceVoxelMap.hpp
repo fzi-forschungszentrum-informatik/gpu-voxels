@@ -101,7 +101,7 @@ void DistanceVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
   //TODO: printf or make functional
 }
 
-bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset) {
+bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset, float occupancy_threshold) {
   boost::lock(this->m_mutex, other->m_mutex);
   lock_guard guard(this->m_mutex, boost::adopt_lock);
   lock_guard guard2(other->m_mutex, boost::adopt_lock);
@@ -124,7 +124,7 @@ bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other
 
         mergeOccupiedOperator(this->m_dim, voxel_offset),
 
-        probVoxelOccupied()
+        probVoxelOccupied(ProbabilisticVoxel::floatToProbability(occupancy_threshold))
       );
 
   return true;

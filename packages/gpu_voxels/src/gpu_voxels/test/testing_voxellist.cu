@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap)
     GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(Vector3ui(dimX, dimY, dimZ), side_length, MT_PROBAB_VOXELMAP));
     map_2->insertMetaPointCloud(boxes, eBVM_OCCUPIED);
 
-    size_t num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0);
+    size_t num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), ProbabilisticVoxel::probabilityToFloat(cSENSOR_MODEL_OCCUPIED));
     BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
     PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("collide_bitvoxellist_with_prob_voxelmap", "collide_bitvoxellist_with_prob_voxelmap", "voxellists");
   }
@@ -264,7 +264,7 @@ BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap_shifting)
 
     for(float shift = 0.0; shift < 4.0; shift += 0.5)
     {
-      num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0, Vector3i(shift, 0,0));
+      num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), ProbabilisticVoxel::probabilityToFloat(cSENSOR_MODEL_OCCUPIED), Vector3i(shift, 0,0));
       if(shift < 1.0)
         BOOST_CHECK_MESSAGE(num_colls == 27, "Number of Collisions == 27");
       else if(shift < 2.0)

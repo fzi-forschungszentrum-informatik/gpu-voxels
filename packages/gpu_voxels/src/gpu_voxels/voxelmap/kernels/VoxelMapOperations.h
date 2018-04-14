@@ -34,10 +34,6 @@
 namespace gpu_voxels {
 namespace voxelmap {
 
-/* ------------------ Temporary Sensor Model ------------ */
-static const Probability cSENSOR_MODEL_FREE = -10;
-static const Probability cSENSOR_MODEL_OCCUPIED = 72;
-
 
 /* ------------------ DEVICE FUNCTIONS ------------------ */
 

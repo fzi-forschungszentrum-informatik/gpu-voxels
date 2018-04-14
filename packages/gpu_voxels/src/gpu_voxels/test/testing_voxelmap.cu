@@ -337,8 +337,7 @@ BOOST_AUTO_TEST_CASE(collision_with_types_probab)
     size_t num_collisions = 0;
 
     BitVectorVoxel coll_types;
-    SVCollider collider(0.5);
-    num_collisions = map_1.collideWithTypes(&map_2, coll_types);
+    num_collisions = map_1.collideWithTypes(&map_2, coll_types, ProbabilisticVoxel::probabilityToFloat(cSENSOR_MODEL_OCCUPIED));
 
     std::cout << "Num colls = " << num_collisions << std::endl;
     std::cout << "Col types are " << coll_types << std::endl;

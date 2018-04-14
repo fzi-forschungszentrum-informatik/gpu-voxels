@@ -34,6 +34,23 @@ namespace gpu_voxels {
 class ProbabilisticVoxel: public AbstractVoxel
 {
 public:
+
+
+__host__ __device__
+inline static Probability floatToProbability(const float val)
+{
+  float tmp = MAX( MIN(1.0f, val), 0.0f);
+  tmp = (tmp * (float(MAX_PROBABILITY) - float(MIN_PROBABILITY))) + MIN_PROBABILITY;
+  return Probability(tmp);
+}
+
+__host__ __device__
+inline static float probabilityToFloat(const Probability val)
+{
+  return (float(val) - float(MIN_PROBABILITY)) / (float(MAX_PROBABILITY) - float(MIN_PROBABILITY));
+}
+
+
   /**
    * @brief ProbabilisticVoxel
    */
@@ -97,7 +114,7 @@ public:
   __host__
   friend T& operator<<(T& os, const ProbabilisticVoxel& dt)
   {
-    os << dt.getOccupancy();
+    os << int(dt.getOccupancy());
     return os;
   }
 

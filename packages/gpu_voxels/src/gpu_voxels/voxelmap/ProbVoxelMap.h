@@ -52,12 +52,6 @@ public:
 
   virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
 
-  virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
-
-  virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning);
-
-  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning);
-
   virtual MapType getTemplateType() const { return MT_PROBAB_VOXELMAP; }
 
   // Collision Interface Methods
