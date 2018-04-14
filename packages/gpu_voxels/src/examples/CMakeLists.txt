@@ -446,6 +446,39 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_PROGRAM()
 
+#------------- Example Program raycasting_sensor_example ------------
+ICMAKER_SET("raycasting_sensor_example" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
+
+ICMAKER_ADD_HEADERS(
+  )
+
+ICMAKER_ADD_SOURCES(
+  RaycastingSensorExample.cpp
+  )
+
+ICMAKER_ADD_CUDA_FILES(
+  )
+
+ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_EXAMPLES_VOXELMAP_SANDBOX_)
+ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
+
+ICMAKER_INTERNAL_DEPENDENCIES(
+  icl_core
+  icl_core_config
+  icl_core_logging
+  gpu_voxels
+  Boost_SYSTEM
+  )
+
+
+ICMAKER_EXTERNAL_DEPENDENCIES(
+  CUDA
+  )
+
+ICMAKER_BUILD_PROGRAM()
+
+
 #------------- Example Program distance_voxel_test ------------
 ICMAKER_SET("distance_voxel_test" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 add_definitions(-DIC_PERFORMANCE_MONITOR)

@@ -20,57 +20,6 @@
 namespace gpu_voxels {
 namespace voxelmap {
 
-/* Transform sensor data from sensor coordinate system
- * to world system. Needs extrinsic calibration of sensor.
- */
-
-__global__
-void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector3f* transformed_sensor_data)
-{
-  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sensor->data_size; i += gridDim.x * blockDim.x)
-  {
-    Matrix4f sensor_pose;
-
-    const Matrix3f mat_in = sensor->orientation;
-    const Vector3f vec_in = sensor->position;
-
-    sensor_pose.a11 = mat_in.a11;
-    sensor_pose.a12 = mat_in.a12;
-    sensor_pose.a13 = mat_in.a13;
-    sensor_pose.a14 = vec_in.x;
-    sensor_pose.a21 = mat_in.a21;
-    sensor_pose.a22 = mat_in.a22;
-    sensor_pose.a23 = mat_in.a23;
-    sensor_pose.a24 = vec_in.y;
-    sensor_pose.a31 = mat_in.a31;
-    sensor_pose.a32 = mat_in.a32;
-    sensor_pose.a33 = mat_in.a33;
-    sensor_pose.a34 = vec_in.z;
-    sensor_pose.a41 = 0;
-    sensor_pose.a42 = 0;
-    sensor_pose.a43 = 0;
-    sensor_pose.a44 = 1;
-
-    transformed_sensor_data[i] = sensor_pose * raw_sensor_data[i];
-    // Todo remove later:
-    if (transformed_sensor_data[i].z < 0) //This code sets the points that lie outside of the map to z=0
-    {
-      // Vector3f start = transformed_sensor_data[i];
-      double factor = vec_in.z / (vec_in.z - transformed_sensor_data[i].z); //the vector from the sensor to the world point is scaled with this factor, then its z-coordinate will be zero
-      Vector3f raw_data = raw_sensor_data[i];
-      raw_data.x *= factor;
-      raw_data.y *= factor;
-      raw_data.z *= factor;
-      transformed_sensor_data[i] = sensor_pose * raw_data;
-      // if(i % 100 == 0)
-      // {
-      //     printf("factor: %f, start sensor data: x: %f, y: %f, z: %f \n new sensor data: x: %f, y: %f, z: %f\n\n",factor, start.x, start.y, start.z, transformed_sensor_data[i].x, transformed_sensor_data[i].y, transformed_sensor_data[i].z);
-      // }
-    }
-  }
-}
-
-
 //
 //void kernelCalculateBoundingBox(Voxel* voxelmap, const uint32_t voxelmap_size, )
 

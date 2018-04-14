@@ -198,7 +198,7 @@ public:
 
 //! raycasting from one point to another marks decreases voxel occupancy along the ray
   __device__ __forceinline__
-  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions, const Sensor* sensor,
+  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions,
                const Vector3ui& from, const Vector3ui& to)
   {
     int32_t difference_x = 0;
@@ -322,7 +322,7 @@ struct DummyRayCaster: public RayCaster
 {
 public:
   __device__ __forceinline__
-  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions, const Sensor* sensor,
+  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions,
                const Vector3ui& from, const Vector3ui& to)
   {
     // override and do nothing
@@ -351,11 +351,6 @@ void kernelClearVoxelMap(BitVoxel<bit_length>* voxelmap, uint32_t voxelmap_size,
 //__global__
 //void kernelDumpVoxelMap(const Voxel* voxelmap, const Vector3ui dimensions, const uint32_t voxelmap_size);
 
-/*! Transform sensor data from sensor coordinate system
- * to world system. Needs extrinsic calibration of sensor.
- */
-__global__
-void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector3f* transformed_sensor_data);
 
 /*! Insert sensor data into voxel map.
  * Assumes sensor data is already transformed
@@ -369,8 +364,8 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 template<std::size_t length, class RayCasting>
 __global__
 void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-                            const Vector3ui dimensions, const float voxel_side_length, Sensor* sensor,
-                            const Vector3f* sensor_data, const bool cut_real_robot,
+                            const Vector3ui dimensions, const float voxel_side_length, const Vector3f sensor_pose,
+                            const Vector3f* sensor_data, const size_t num_points, const bool cut_real_robot,
                             BitVoxel<length>* robotmap, const uint32_t bit_index, RayCasting rayCaster);
 
 /*!
