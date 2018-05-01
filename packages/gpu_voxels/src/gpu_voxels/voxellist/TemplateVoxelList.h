@@ -115,6 +115,8 @@ public:
     return m_voxel_side_length;
   }
 
+  virtual void copyCoordsToHost(std::vector<Vector3ui>& host_vec);
+
   // ------ BEGIN Global API functions ------
   virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
 
@@ -138,6 +140,11 @@ public:
    * @param voxel_meanings Vector with voxel meanings
    */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings);
+
+  virtual bool insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
+                                                          const std::vector<BitVoxelMeaning>& voxel_meanings = std::vector<BitVoxelMeaning>(),
+                                                          const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks = std::vector<BitVector<BIT_VECTOR_LENGTH> >(),
+                                                          BitVector<BIT_VECTOR_LENGTH>* colliding_meanings = NULL);
 
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset = Vector3i(), const BitVoxelMeaning* new_meaning = NULL);
@@ -252,6 +259,7 @@ public:
   thrust::device_vector<Voxel> m_dev_list;           // contains the actual data: bitvector or probability
 protected:
 
+  virtual void remove_out_of_bounds();
   virtual void make_unique();
 
   /* ======== Variables with content on host ======== */

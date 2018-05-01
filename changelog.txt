@@ -421,4 +421,51 @@ Minor changes:
 - removed obsolete explicit Kinect.cpp references in src/examples
 - define GLM_ENABLE_EXPERIMENTAL in Primitive.h to fix issue #55
 
+V1.2.0 (2018-05-01):
+====================
+Self-Collision checks, ProbVoxelMap raycasting, distance extraction, VoxelList bounds checking
+
+Thanks to Andreas Hermann for these additions:
+- Implemented self collision checks. Also added an example and a testcase. Fixes #67 and resolves #68
+- Improvements and fixes for prob voxels. Resolves #69
+- Added example and vis config file
+- Moved conversion from float to Probability to ProbabilisticVoxel
+- Fixed the updates of probabilistic voxels.
+- Added example about constructing a distance map from a probabilistic map
+- Added a raycasting example. Resolves #70
+- Rewrote the insertSensorData() function to resemble the current interfaces.
+- Deleted old sensor / environment map code.
+- Moved cSENSOR_MODEL_FREE and cSENSOR_MODEL_OCCUPIED to the common defines.
+- Removed unnecessary meaning checks in ProbabilisticVoxelMap
+- Added a missing template instance for the sensor model.
+- Corrected all VisConfig files from the examples.
+- Fixes in the visualizer for probability voxels and SWEPT_VOLUME_END
+
+Possibly breaking changes:
+- Added TemplateVoxelList::remove_out_of_bounds functionality.
+- Always check for VoxelList map dimensions when inserting PointClouds into VoxelLists. Old behavior was not to check at all.
+- Added mapToVoxels(linear_id, coords) to VoxelMapOperations. Available for host code too.
+- Removed "linearIndexToCoordinates"
+- Changed Logging in computeLinearLoad: 
+  - Inputting 0 items generates a warning now and lead to one block with one thread. 
+  - More than 64M items create an error message and only cMAX_NR_OF_BLOCKS blocks.
+
+Additional changes:
+- Added DVM::get(Squared)Distances(ToHost) functions: extract distance value for voxels at selected indexes
+- Implemented TemplateVoxelList.merge(CountingVoxelList)
+- Added TemplateVoxelMap::gatherVoxelsByIndex as basis for getDistances
+- Added TemplateVoxelList::copyCoordsToHost
+- Added test countingvoxellist_merge_into_bitvectorvoxellist_minimal
+- Added test distance_extraction
+- Fixed memory management for URDF RobotLink
+
+Known issues:
+- Octrees are broken on Pascal GPUs
+  - confirmed on Titan Xp and GTX 1080 Ti
+- The constant cMAX_NR_OF_BLOCKS is currently limited to 65535, while current CUDA devices support over 2 billion blocks
+  - relevant during computeLinearLoad calls and collision checking
+- the GLM headers provided by Ubuntu 16.04 have to be patched to allow usage of the visualizer.
+  - see https://github.com/g-truc/glm/issues/530
+  - patch for /usr/include/glm/detail/func_common.inl in packages/gpu_voxels/doc/glm_fix_issu530.patch
+
 

@@ -1,0 +1,5 @@
+341c341,342
+<               return mod(tvec1<genType>(x), y).x;
+---
+>               tvec1<genType> ret_vec(mod(tvec1<genType>(x), y));
+>               return ret_vec.x;

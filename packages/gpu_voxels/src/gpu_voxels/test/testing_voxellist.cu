@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap)
     GpuVoxelsMapSharedPtr map_2(new ProbVoxelMap(Vector3ui(dimX, dimY, dimZ), side_length, MT_PROBAB_VOXELMAP));
     map_2->insertMetaPointCloud(boxes, eBVM_OCCUPIED);
 
-    size_t num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0);
+    size_t num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), ProbabilisticVoxel::probabilityToFloat(cSENSOR_MODEL_OCCUPIED));
     BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
     PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("collide_bitvoxellist_with_prob_voxelmap", "collide_bitvoxellist_with_prob_voxelmap", "voxellists");
   }
@@ -264,7 +264,7 @@ BOOST_AUTO_TEST_CASE(collide_bitvoxellist_with_prob_voxelmap_shifting)
 
     for(float shift = 0.0; shift < 4.0; shift += 0.5)
     {
-      num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), 1.0, Vector3i(shift, 0,0));
+      num_colls = list->collideWith(map_2->as<ProbVoxelMap>(), ProbabilisticVoxel::probabilityToFloat(cSENSOR_MODEL_OCCUPIED), Vector3i(shift, 0,0));
       if(shift < 1.0)
         BOOST_CHECK_MESSAGE(num_colls == 27, "Number of Collisions == 27");
       else if(shift < 2.0)
@@ -340,6 +340,11 @@ BOOST_AUTO_TEST_CASE(bitvoxellist_insert_metapointcloud)
 
 BOOST_AUTO_TEST_CASE(bitvoxellist_findMatchingVoxels)
 {
+  // this test depends on the limits of the voxellist, in part because of voxellist out_of_bounds checking
+  int dimX = 500;
+  int dimY = dimX;
+  int dimZ = 200;
+  
   PERF_MON_START("bitvoxellist_findMatchingVoxels");
   for(int i = 0; i < iterationCount; i++)
   {
@@ -657,7 +662,7 @@ BOOST_AUTO_TEST_CASE(countingvoxellist_collide_bitvectorvoxellist)
 //    //DEBUG
 //    list1.screendump(true);
 //    map_2->as<BitVectorVoxelList>()->screendump(true);
-    
+
     BOOST_CHECK_MESSAGE(num_colls == 46, "Number of Collisions == 46");
 
     PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("countingvoxellist_collide_bitvectorvoxellist", "countingvoxellist_collide_bitvectorvoxellist", "voxellists");
@@ -669,8 +674,8 @@ BOOST_AUTO_TEST_CASE(countingvoxellist_subtract_bitvectorvoxellist_minimal)
   PERF_MON_START("countingvoxellist_subtract_bitvectorvoxellist_minimal");
   for (int i = 0; i < iterationCount; i++)
   {
-    CountingVoxelList list1(Vector3ui(dimX, dimY, dimZ), 1, MT_COUNTING_VOXELLIST);
-    BitVectorVoxelList list2(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST);
+    GpuVoxelsMapSharedPtr list1(new CountingVoxelList(Vector3ui(dimX, dimY, dimZ), 1, MT_COUNTING_VOXELLIST));
+    GpuVoxelsMapSharedPtr list2(new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), 1, MT_BITVECTOR_VOXELLIST));
 
     Vector3f testPoint1(1.1, 1.1, 1.1);
     Vector3f testPoint2(1.2, 1.1, 1.1);
@@ -687,18 +692,58 @@ BOOST_AUTO_TEST_CASE(countingvoxellist_subtract_bitvectorvoxellist_minimal)
     cloud2.push_back(testPoint1);
     cloud2.push_back(testPoint3);
 
-    list1.insertPointCloud(cloud1, BitVoxelMeaning(11));
-    list2.insertPointCloud(cloud2, BitVoxelMeaning(12));
+    list1->insertPointCloud(cloud1, BitVoxelMeaning(11));
+    list2->insertPointCloud(cloud2, BitVoxelMeaning(12));
 
-    list1.subtractFromCountingVoxelList(&list2, Vector3f());
+    list1->as<CountingVoxelList>()->subtractFromCountingVoxelList(list2->as<BitVectorVoxelList>(), Vector3f());
 
     thrust::device_vector<Cube> *d_cubes = NULL;
-    list1.extractCubes(&d_cubes);
+    list1->as<CountingVoxelList>()->extractCubes(&d_cubes);
     thrust::host_vector<Cube> h_cubes = *d_cubes;
 
     BOOST_CHECK_MESSAGE(h_cubes.size() == 1, "Number of cubes after subtract == 1 ");
 
     PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("countingvoxellist_subtract_bitvectorvoxellist_minimal", "countingvoxellist_subtract_bitvectorvoxellist_minimal", "voxellists");
+  }
+}
+
+BOOST_AUTO_TEST_CASE(countingvoxellist_merge_into_bitvectorvoxellist_minimal)
+{
+  PERF_MON_START("countingvoxellist_merge_into_bitvectorvoxellist_minimal");
+  for (int i = 0; i < iterationCount; i++)
+  {
+    GpuVoxelsMapSharedPtr list1(new CountingVoxelList(Vector3ui(dimX, dimY, dimZ), 0.1f, MT_COUNTING_VOXELLIST));
+    GpuVoxelsMapSharedPtr list2(new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), 0.1f, MT_BITVECTOR_VOXELLIST));
+
+    Vector3f testPoint1(1.1, 1.1, 1.1);
+    Vector3f testPoint2(1.2, 1.1, 1.1);
+    Vector3f testPoint3(3.1, 3.1, 3.1);
+    Vector3f testPoint4(5.0, 5.0, 5.0);
+
+    std::vector<Vector3f> cloud1;
+    cloud1.push_back(testPoint1);
+    cloud1.push_back(testPoint2);
+    cloud1.push_back(testPoint4);
+
+    std::vector<Vector3f> cloud2;
+    cloud2.push_back(testPoint1);
+    cloud2.push_back(testPoint3);
+
+    list1->insertPointCloud(cloud1, BitVoxelMeaning(11));
+    list2->insertPointCloud(cloud2, BitVoxelMeaning(12));
+
+    BitVoxelMeaning bvm = eBVM_OCCUPIED;
+    list2->merge(list1, Vector3f(), &bvm);
+
+    // list2->as<BitVectorVoxelList>()->screendump(true); //DEBUG
+
+    thrust::device_vector<Cube> *d_cubes = NULL;
+    list2->as<BitVectorVoxelList>()->extractCubes(&d_cubes);
+    thrust::host_vector<Cube> h_cubes = *d_cubes;
+
+    BOOST_CHECK_MESSAGE(h_cubes.size() == 4, "Number of cubes after merge == 4 ");
+
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("countingvoxellist_merge_into_bitvectorvoxellist_minimal", "countingvoxellist_merge_into_bitvectorvoxellist_minimal", "voxellists");
   }
 }
 

@@ -217,19 +217,6 @@
       <inertia ixx="0.000526462289415" ixy="0.0" ixz="0.0" iyy="0.000526462289415" iyz="0.0" izz="0.000568125"/>
     </inertial>
   </link>
-  <joint name="ee_fixed_joint" type="fixed">
-    <parent link="wrist_3_link"/>
-    <child link="ee_link"/>
-    <origin rpy="0.0 0.0 1.570796325" xyz="0.0 0.0922 0.0"/>
-  </joint>
-  <link name="ee_link">
-    <collision>
-      <geometry>
-        <box size="0.01 0.01 0.01"/>
-      </geometry>
-      <origin rpy="0 0 0" xyz="-0.01 0 0"/>
-    </collision>
-  </link>
   <transmission name="shoulder_pan_trans">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="shoulder_pan_joint">
@@ -295,13 +282,6 @@
     <origin rpy="0 0 -3.14159265" xyz="0 0 0"/>
     <parent link="base_link"/>
     <child link="base"/>
-  </joint>
-  <!-- Frame coincident with all-zeros TCP on UR controller -->
-  <link name="tool0"/>
-  <joint name="wrist_3_link-tool0_fixed_joint" type="fixed">
-    <origin rpy="-1.570796325 0 0" xyz="0 0.0922 0"/>
-    <parent link="wrist_3_link"/>
-    <child link="tool0"/>
   </joint>
   <link name="world"/>
   <joint name="world_joint" type="fixed">

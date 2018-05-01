@@ -40,35 +40,6 @@
 namespace gpu_voxels {
 
 
-/*************** Sensor ********************/
-
-struct Sensor
-{
-  __host__ __device__ Sensor()
-  {
-  }
-
-  __host__ __device__ Sensor(Vector3f _position, Matrix3f _orientation, uint32_t _data_width,
-                             uint32_t _data_height) :
-      position(_position), orientation(_orientation), data_width(_data_width), data_height(_data_height), data_size(
-          _data_width * _data_height)
-  {
-  }
-
-  __host__ __device__ Sensor(const Sensor& other) :
-      position(other.position), orientation(other.orientation), data_width(other.data_width), data_height(
-          other.data_height), data_size(other.data_size)
-  {
-  }
-
-  Vector3f position;
-  Matrix3f orientation;
-  uint32_t data_width;
-  uint32_t data_height;
-  uint32_t data_size;
-};
-
-
 struct MetaPointCloudStruct
 {
   uint16_t num_clouds;

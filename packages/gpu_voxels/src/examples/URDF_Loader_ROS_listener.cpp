@@ -80,7 +80,7 @@ void obstaclePoseCallback(const geometry_msgs::Pose::ConstPtr& msg)
   object_position.y = msg->position.y;
   object_position.z = msg->position.z;
 
-  gvl->insertPointCloudFromFile("myObjectVoxelmap", "hals_vereinfacht.binvox", true,
+  gvl->insertPointCloudFromFile("myObjectVoxelmap", "hollie/hals_vereinfacht.binvox", true,
                                 eBVM_OCCUPIED, false, object_position, 0.3);
 }
 
@@ -108,14 +108,14 @@ int main(int argc, char* argv[])
   gvl->addMap(MT_BITVECTOR_VOXELLIST, "myHandVoxellist");
 
   // And a robot, generated from a ROS URDF file:
-  gvl->addRobot("myUrdfRobot", "svh-standalone.urdf", true);
+  gvl->addRobot("myUrdfRobot", "schunk_svh/svh-standalone.urdf", true);
 
   ros::NodeHandle n;
   ros::Subscriber sub1 = n.subscribe("joint_states", 1, jointStateCallback);
   ros::Subscriber sub2 = n.subscribe("obstacle_pose", 1, obstaclePoseCallback);
 
   // A an obstacle that can be moved with the ROS callback
-  gvl->insertPointCloudFromFile("myObjectVoxelmap", "hals_vereinfacht.binvox", true,
+  gvl->insertPointCloudFromFile("myObjectVoxelmap", "hollie/hals_vereinfacht.binvox", true,
                                 eBVM_OCCUPIED, false, object_position, 0.3);
   // update the robot joints:
   gvl->setRobotConfiguration("myUrdfRobot", myRobotJointValues);
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
 
     num_colls = gvl->getMap("myHandVoxellist")->as<voxellist::BitVectorVoxelList>()->collideWithTypes(gvl->getMap("myObjectVoxelmap")->as<voxelmap::ProbVoxelMap>(), bits_in_collision);
 
-    std::cout << "Detected " << num_colls << " collisiosn " << std::endl;
+    std::cout << "Detected " << num_colls << " collisions " << std::endl;
     //std::cout << "with bits \n" << bits_in_collision << std::endl;
 
     // tell the visualier that the map has changed:

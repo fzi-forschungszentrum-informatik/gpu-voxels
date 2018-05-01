@@ -40,6 +40,7 @@
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/tuple.h>
+#include <thrust/transform.h>
 
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 
@@ -86,11 +87,13 @@ size_t DistanceVoxelMap::collideWithTypes(const GpuVoxelsMapSharedPtr other, Bit
   //TODO: debug output. nonsense operation or should we actually interpret distance > 0 as free and distance <= 0 as occupied?
 }
 
-bool DistanceVoxelMap::insertRobotConfiguration(const MetaPointCloud *robot_links,
-                                                   bool with_self_collision_test)
+bool DistanceVoxelMap::insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
+                                                                  const std::vector<BitVoxelMeaning>& voxel_meanings,
+                                                                  const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks,
+                                                                  BitVector<BIT_VECTOR_LENGTH>* colliding_meanings)
 {
   LOGGING_ERROR_C(VoxelmapLog, DistanceVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_SUPPORTED << endl);
-  return false;
+  return true;
 }
 
 void DistanceVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
@@ -98,10 +101,11 @@ void DistanceVoxelMap::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
   //NOP
 
   // TODO: maybe clearMap instead? ProbVoxelMap does this
-  //TODO: printf or make functional
+    
+  // TODO: printf or make functional
 }
 
-bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset) {
+bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset, float occupancy_threshold) {
   boost::lock(this->m_mutex, other->m_mutex);
   lock_guard guard(this->m_mutex, boost::adopt_lock);
   lock_guard guard2(other->m_mutex, boost::adopt_lock);
@@ -124,7 +128,7 @@ bool DistanceVoxelMap::mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other
 
         mergeOccupiedOperator(this->m_dim, voxel_offset),
 
-        probVoxelOccupied()
+        probVoxelOccupied(ProbabilisticVoxel::floatToProbability(occupancy_threshold))
       );
 
   return true;
@@ -715,6 +719,96 @@ DistanceVoxel::pba_dist_t DistanceVoxelMap::getObstacleDistance(uint x, uint y, 
   return sqrt(this->getSquaredObstacleDistance(x, y, z));
 }
 
+struct SquaredDistanceFunctor
+{
+  Vector3ui dims;
+
+  __host__ __device__
+  SquaredDistanceFunctor(Vector3ui dims) : dims(dims) {}
+  
+  __host__ __device__
+  DistanceVoxel::pba_dist_t operator()(thrust::tuple<DistanceVoxel, uint> t)
+  {
+    DistanceVoxel voxel = thrust::get<0>(t);
+    uint linear_id = thrust::get<1>(t);
+    Vector3ui position = mapToVoxels(linear_id, dims);
+    return voxel.squaredObstacleDistance(Vector3i(position.x, position.y, position.z));
+  }
+};
+
+void DistanceVoxelMap::getSquaredDistancesToHost(std::vector<uint>& indices, std::vector<DistanceVoxel::pba_dist_t>& output)
+{
+  // copy indices to device
+  thrust::device_vector<uint> dev_indices(indices);
+  
+  // allocate device output memory
+  thrust::device_vector<DistanceVoxel::pba_dist_t> dev_output(indices.size());
+  
+  //call dev function
+  getSquaredDistances(&(*dev_indices.begin()), &(*dev_indices.end()), &(*dev_output.begin()));
+  
+  //copy output to std_vector
+  thrust::copy(dev_output.begin(), dev_output.end(), output.begin());
+}
+
+void DistanceVoxelMap::getSquaredDistances(thrust::device_ptr<uint> dev_indices_begin, thrust::device_ptr<uint> dev_indices_end, thrust::device_ptr<DistanceVoxel::pba_dist_t> dev_output)
+{  
+  //get the Voxels corresponding to the selected indices
+  thrust::device_vector<DistanceVoxel> dev_voxels(dev_indices_end - dev_indices_begin);
+  gatherVoxelsByIndex(dev_indices_begin, dev_indices_end, dev_voxels.data());
+
+  // extract the distances for the indexed voxels
+  thrust::transform(thrust::make_zip_iterator(thrust::make_tuple(dev_voxels.begin(), dev_indices_begin)),
+                    thrust::make_zip_iterator(thrust::make_tuple(dev_voxels.end(), dev_indices_end)),
+                    dev_output,
+                    SquaredDistanceFunctor(m_dim));
+}
+
+struct DistanceFunctor
+{
+  Vector3ui dims;
+
+  __host__ __device__
+  DistanceFunctor(Vector3ui dims) : dims(dims) {}
+  
+  __host__ __device__
+  DistanceVoxel::pba_dist_t operator()(thrust::tuple<DistanceVoxel, uint> t)
+  {
+    DistanceVoxel voxel = thrust::get<0>(t);
+    uint linear_id = thrust::get<1>(t);
+    Vector3ui position = mapToVoxels(linear_id, dims);
+    return sqrtf(voxel.squaredObstacleDistance(Vector3i(position.x, position.y, position.z)));
+  }
+};
+
+void DistanceVoxelMap::getDistancesToHost(std::vector<uint>& indices, std::vector<DistanceVoxel::pba_dist_t>& output)
+{
+  // copy indices to device
+  thrust::device_vector<uint> dev_indices(indices);
+  
+  // allocate device output memory
+  thrust::device_vector<DistanceVoxel::pba_dist_t> dev_output(indices.size());
+  
+  //call dev function
+  getDistances(&(*dev_indices.begin()), &(*dev_indices.end()), &(*dev_output.begin()));
+  
+  //copy output to std_vector
+  thrust::copy(dev_output.begin(), dev_output.end(), output.begin());
+}
+
+void DistanceVoxelMap::getDistances(thrust::device_ptr<uint> dev_indices_begin, thrust::device_ptr<uint> dev_indices_end, thrust::device_ptr<DistanceVoxel::pba_dist_t> dev_output)
+{  
+  //get the Voxels corresponding to the selected indices
+  thrust::device_vector<DistanceVoxel> dev_voxels(dev_indices_end - dev_indices_begin);
+  gatherVoxelsByIndex(dev_indices_begin, dev_indices_end, dev_voxels.data());
+
+  // extract the distances for the indexed voxels
+  thrust::transform(thrust::make_zip_iterator(thrust::make_tuple(dev_voxels.begin(), dev_indices_begin)),
+                    thrust::make_zip_iterator(thrust::make_tuple(dev_voxels.end(), dev_indices_end)),
+                    dev_output,
+                    DistanceFunctor(m_dim));
+}
+
 /**
  * @brief DistanceVoxelMap::differences3D
  * @param other
@@ -940,9 +1034,9 @@ DistanceVoxel::accumulated_diff DistanceVoxelMap::differences3D(const boost::sha
     if ((result.count > 0) && (result.count < 250)) { //don't print differing obstacles at identical distance?
       for (size_t i = 0; i < host_map.size(); i++) {
         const DistanceVoxel& d = host_map[i];
-        int32_t dd = d.squaredObstacleDistance(linearIndexToCoordinates(i, m_dim));
+        int32_t dd = d.squaredObstacleDistance(mapToVoxelsSigned(i, m_dim));
         const DistanceVoxel& od = host_other_map[i];
-        int32_t odd = od.squaredObstacleDistance(linearIndexToCoordinates(i, m_dim));
+        int32_t odd = od.squaredObstacleDistance(mapToVoxelsSigned(i, m_dim));
         if ((dd != odd) && !((dd + odd == -1) && (dd * odd == 0))) { //don't show anything if the distances are 0 and -1
           int idx = i;
           LOGGING_INFO(VoxelmapLog, "map["

@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
+  The map name can be either the exact name, or an enumarator like:
+  voxelmap_#, voxellist_#, primitive_array_# or octree_#
+  where # is a counter, starting at 0.
+
+  For bitvector voxelmaps you can specify the color for "all_types" and then overwrite specific SweptVolume IDs by tpye_#.
+
+  For probabilistic maps, an occupancy_threshold can be set, so that only voxels with an
+  occupancy >= occupancy_threshold will be drawn. It has to be in the range of -127 to 127.
+
   If the color is not specified by a word, the RGBA-values will be used instead.
   The RGBA-values should be between 0 and 1.
   Currently supported colors are: black, white, red, green, blue, gray, yellow, cyan, magenta
   To get a darker version of the color add "dark" infront of the name
   (e.g. dark blue), that doesn't work with black or white.
+  Also a color blending along the Z-Axis can be realized by defining "color_1" and "color_2" instead of a single color.
 -->
 
 <visualizer_context>
@@ -19,9 +29,8 @@
 </background>
 
 
-<!--The parameter for the voxel map 0-->
+<!--The parameter for pbaDistanceVoxmapVisual-->
 <pbaDistanceVoxmapVisual>
-  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
   <occupancy_threshold> 1 </occupancy_threshold>
 
 
@@ -116,9 +125,8 @@
 </pbaDistanceVoxmapVisual>
 
 
-<!--The parameter for the voxel map 0-->
+<!--The parameter for jfaDistanceVoxmap-->
 <jfaDistanceVoxmap>
-  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
   <occupancy_threshold> 1 </occupancy_threshold>
 
 
@@ -213,9 +221,8 @@
 </jfaDistanceVoxmap>
 
 
-<!--The parameter for the voxel map 0-->
+<!--The parameter for exactDistanceVoxmap-->
 <exactDistanceVoxmap>
-  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
   <occupancy_threshold> 1 </occupancy_threshold>
 
 
@@ -310,9 +317,8 @@
 </exactDistanceVoxmap>
 
 
-<!--The parameter for the voxel map 0-->
+<!--The parameter for intermediatePBAmap1-->
 <intermediatePBAmap1>
-  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
   <occupancy_threshold> 1 </occupancy_threshold>
 
 
@@ -406,9 +412,8 @@
 </intermediatePBAmap1>
 
 
-<!--The parameter for the voxel map 0-->
+<!--The parameter for intermediatePBAmap2-->
 <intermediatePBAmap2>
-  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
   <occupancy_threshold> 1 </occupancy_threshold>
 
 
@@ -503,9 +508,8 @@
 </intermediatePBAmap2>
 
 
-<!--The parameter for the voxel map 0-->
+<!--The parameter for intermediatePBAmap3-->
 <intermediatePBAmap3>
-  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
   <occupancy_threshold> 1 </occupancy_threshold>
 
 

@@ -27,6 +27,7 @@
 #include <gpu_voxels/voxel/SVCollider.hpp>
 #include <gpu_voxels/voxel/BitVoxel.hpp>
 #include <gpu_voxels/helpers/GeometryGeneration.h>
+#include <gpu_voxels/helpers/MetaPointCloud.h>
 #include <gpu_voxels/test/testing_fixtures.hpp>
 #include <boost/mpl/vector.hpp>
 #include <boost/test/unit_test.hpp>
@@ -337,8 +338,7 @@ BOOST_AUTO_TEST_CASE(collision_with_types_probab)
     size_t num_collisions = 0;
 
     BitVectorVoxel coll_types;
-    SVCollider collider(0.5);
-    num_collisions = map_1.collideWithTypes(&map_2, coll_types);
+    num_collisions = map_1.collideWithTypes(&map_2, coll_types, ProbabilisticVoxel::probabilityToFloat(cSENSOR_MODEL_OCCUPIED));
 
     std::cout << "Num colls = " << num_collisions << std::endl;
     std::cout << "Col types are " << coll_types << std::endl;
@@ -359,7 +359,125 @@ BOOST_AUTO_TEST_CASE(collision_with_types_probab)
   }
 }
 
+/**
+ * @brief Test for selfcollisions in metapointclouds
+ *
+ */
+BOOST_AUTO_TEST_CASE(selfcollision_metapointcloud)
+{
+  PERF_MON_START("selfccollision_metapointcloud");
+  for(int i = 0; i < iterationCount; i++)
+  {
+    // force kernel calls that run in a single block as well as multiple blocks
+    for(int j = 2; j < 11; j+=8 )
+    {
+      float side_length = 1.f;
+      BitVectorVoxelMap map(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELMAP);
 
+
+      // PART 1: No optional parameters are given. Default meanings are used:
+
+
+      std::vector< std::vector<Vector3f> > meta_vectors_colliding;
+
+      // First three boxex overlap, last one is seperated
+      meta_vectors_colliding.push_back(createBoxOfPoints( Vector3f(2.1, 2.1, 2.1), Vector3f(5.1, 5.1, 5.1), 1.0/j));
+      meta_vectors_colliding.push_back(createBoxOfPoints( Vector3f(4.1, 4.1, 4.1), Vector3f(7.1, 7.1, 7.1), 1.0/j));
+      meta_vectors_colliding.push_back(createBoxOfPoints( Vector3f(6.1, 6.1, 6.1), Vector3f(9.1, 9.1, 9.1), 1.0/j));
+      meta_vectors_colliding.push_back(createBoxOfPoints( Vector3f(10.1, 10.1, 10.1), Vector3f(12.1, 12.1, 12.1), 1.0/j));
+
+      MetaPointCloud meta_pc_colliding_host(meta_vectors_colliding);
+
+      bool self_coll = map.insertMetaPointCloudWithSelfCollisionCheck(&meta_pc_colliding_host);
+      BOOST_CHECK(self_coll == true);
+
+
+
+      std::vector< std::vector<Vector3f> > meta_vectors_noncolliding;
+
+      // All boxes are seperated and do not collide with previous ones:
+      meta_vectors_noncolliding.push_back(createBoxOfPoints( Vector3f(30.1, 30.1, 30.1), Vector3f(32.1, 32.1, 32.1), 1.0/j));
+      meta_vectors_noncolliding.push_back(createBoxOfPoints( Vector3f(40.1, 40.1, 40.1), Vector3f(43.1, 43.1, 43.1), 1.0/j));
+      meta_vectors_noncolliding.push_back(createBoxOfPoints( Vector3f(60.1, 60.1, 60.1), Vector3f(64.1, 64.1, 64.1), 1.0/j));
+      meta_vectors_noncolliding.push_back(createBoxOfPoints( Vector3f(65.1, 65.1, 65.1), Vector3f(68.1, 68.1, 68.1), 1.0/j));
+
+
+      MetaPointCloud meta_pc_noncolliding_host(meta_vectors_noncolliding);
+
+      self_coll = map.insertMetaPointCloudWithSelfCollisionCheck(&meta_pc_noncolliding_host);
+      BOOST_CHECK(self_coll == false);
+
+      map.clearMap();
+
+      // PART 2: All params are given:
+
+      std::vector<BitVoxelMeaning> voxel_meanings(4);
+
+      // arbitrary offset for demonstration purposes. Usefull if you need more than one robot.
+      voxel_meanings[0] = BitVoxelMeaning(50 + 1);
+      voxel_meanings[1] = BitVoxelMeaning(50 + 2);
+      voxel_meanings[2] = BitVoxelMeaning(50 + 3);
+      voxel_meanings[3] = BitVoxelMeaning(50 + 4);
+
+      std::vector<BitVector<BIT_VECTOR_LENGTH> > collision_masks(4);
+      BitVector<BIT_VECTOR_LENGTH> tmp_coll_mask; // All collisions disabled
+      tmp_coll_mask = ~tmp_coll_mask;
+      tmp_coll_mask.clearBit(eBVM_COLLISION); // mask out the colliding bit
+
+      // check the assertions on size equality of all input paras!! Seems not to be checked!
+
+      collision_masks[0] = tmp_coll_mask; // set all to True
+      collision_masks[1] = tmp_coll_mask; // set all to True
+      collision_masks[2] = tmp_coll_mask; // set all to True
+      collision_masks[3] = tmp_coll_mask; // set all to True
+
+      collision_masks[0].clearBit(50 + 2); // Disbale collision of first cloud with second cloud ==> No collisions should be detected
+      collision_masks[1].clearBit(50 + 1); // Disbale collision of second cloud with first cloud ==> Only collisions with third cloud should be detected
+
+      collision_masks[0].clearBit(50 + 1); // reset own meaning, otherwise we would see a selfcollision if more than one point falls into the same voxel
+      collision_masks[1].clearBit(50 + 2);
+      collision_masks[2].clearBit(50 + 3);
+      collision_masks[3].clearBit(50 + 4);
+
+
+      BitVector<BIT_VECTOR_LENGTH> colliding_meanings; // return value
+
+      self_coll = map.insertMetaPointCloudWithSelfCollisionCheck(&meta_pc_colliding_host, voxel_meanings, collision_masks, &colliding_meanings);
+
+      //std::cout << "colliding_meanings 1:" << colliding_meanings << std::endl;
+
+      BOOST_CHECK(self_coll == true);
+      BOOST_CHECK(colliding_meanings.getBit(50 + 1) == false);
+      BOOST_CHECK(colliding_meanings.getBit(50 + 2) == true);
+      BOOST_CHECK(colliding_meanings.getBit(50 + 3) == true);
+      BOOST_CHECK(colliding_meanings.getBit(50 + 4) == false);
+
+      colliding_meanings.clearBit(50 + 2); // reset the expected collisions
+      colliding_meanings.clearBit(50 + 3);
+      BOOST_CHECK(colliding_meanings.isZero() == true); // everything else should be zero
+
+      // now insert the noncolliding parts:
+
+      collision_masks[0] = tmp_coll_mask; // activate all collisions
+      collision_masks[1] = tmp_coll_mask;
+      collision_masks[2] = tmp_coll_mask;
+      collision_masks[3] = tmp_coll_mask;
+
+      collision_masks[0].clearBit(50 + 1); // reset own mask
+      collision_masks[1].clearBit(50 + 2);
+      collision_masks[2].clearBit(50 + 3);
+      collision_masks[3].clearBit(50 + 4);
+
+      colliding_meanings.clear();
+      self_coll = map.insertMetaPointCloudWithSelfCollisionCheck(&meta_pc_noncolliding_host, voxel_meanings, collision_masks, &colliding_meanings);
+      //std::cout << "colliding_meanings 2:" << colliding_meanings << std::endl;
+      BOOST_CHECK(self_coll == false);
+      BOOST_CHECK(colliding_meanings.isZero() == true);
+
+      PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("selfccollision_metapointcloud", "selfccollision_metapointcloud", "voxelmap");
+    }
+  }
+}
 
 BOOST_AUTO_TEST_CASE(iostream_bitvoxel)
 {

@@ -38,7 +38,7 @@ void computeLinearLoad(const uint32_t nr_of_items, uint32_t* blocks, uint32_t* t
 
   if(nr_of_items == 0)
   {
-      LOGGING_ERROR(
+      LOGGING_WARNING(
           Gpu_voxels_helpers,
           "Number of Items is 0. Blocks and Threads per Block is set to 1. Size 0 would lead to a Cuda ERROR" << endl);
 
@@ -57,7 +57,7 @@ void computeLinearLoad(const uint32_t nr_of_items, uint32_t* blocks, uint32_t* t
   {
     /* In this case the kernel must perform multiple runs because
      * nr_of_items is larger than the gpu can handle at once.
-     * To overcome this limits use standard parallelism offsets
+     * To overcome this limit, use standard parallelism offsets
      * as when programming host code (increment by the number of all threads
      * running). Use something like
      *
@@ -70,7 +70,13 @@ void computeLinearLoad(const uint32_t nr_of_items, uint32_t* blocks, uint32_t* t
      *     // increment by number of all threads that are running
      *     i += blockDim.x * gridDim.x;
      *   }
+     *
+     * CAUTION: currently cMAX_NR_OF_BLOCKS is 64K, although
+     *          GPUs with SM >= 3.0 support up to 2^31 -1 blocks in a grid!
      */
+    LOGGING_ERROR(
+      Gpu_voxels_helpers,
+      "computeLinearLoad: Number of Items " << nr_of_items << " exceeds the limit cMAX_NR_OF_BLOCKS * cMAX_THREADS_PER_BLOCK = " << (cMAX_NR_OF_BLOCKS*cMAX_THREADS_PER_BLOCK) << "! This number of items cannot be processed in a single invocation." << endl);
     *blocks = cMAX_NR_OF_BLOCKS;
     *threads_per_block = cMAX_THREADS_PER_BLOCK;
   }

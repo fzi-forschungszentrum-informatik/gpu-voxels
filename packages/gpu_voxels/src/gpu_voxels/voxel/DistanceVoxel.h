@@ -25,6 +25,7 @@
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/common_defines.h>
+
 #include <cstddef>
 #include <ostream>
 #include <sstream>
@@ -34,29 +35,15 @@
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/tuple.h>
 
+//forward declaration
+namespace gpu_voxels{
+  namespace voxelmap {
+    __device__ __host__
+    Vector3i mapToVoxelsSigned(int linear_id, const Vector3ui &dimensions);
+  };
+};
+
 namespace gpu_voxels {
-
-//TODO: put somewhere else?
-//! Maps a voxel address to discrete voxel coordinates
-__host__ __device__ __forceinline__
-Vector3i linearIndexToCoordinates(int linear_id, const Vector3ui &dimensions)
-{
-  Vector3i integer_coordinates;
-  integer_coordinates.z = linear_id / (dimensions.x * dimensions.y);
-  integer_coordinates.y = (linear_id -= integer_coordinates.z * (dimensions.x * dimensions.y)) / dimensions.x;
-  integer_coordinates.x = (linear_id -= integer_coordinates.y * dimensions.x);
-  return integer_coordinates;
-}
-
-__host__ __device__ __forceinline__
-Vector3ui linearIndexToCoordinatesUnsigned(uint linear_id, const Vector3ui &dimensions)
-{
-  Vector3ui integer_coordinates;
-  integer_coordinates.z = linear_id / (dimensions.x * dimensions.y);
-  integer_coordinates.y = (linear_id -= integer_coordinates.z * (dimensions.x * dimensions.y)) / dimensions.x;
-  integer_coordinates.x = (linear_id -= integer_coordinates.y * dimensions.x);
-  return integer_coordinates;
-}
 
 /**
  * @brief Voxel holding information about next obstacle and distance
@@ -343,10 +330,10 @@ public:
       if (b.getObstacle().y == PBA_UNINITIALISED_COORD) return MAX_OBSTACLE_DISTANCE;
       if (b.getObstacle().z == PBA_UNINITIALISED_COORD) return MAX_OBSTACLE_DISTANCE;
 
-      Vector3i pos_a = linearIndexToCoordinates(linear_id_a, dims);
+      Vector3i pos_a = voxelmap::mapToVoxelsSigned(linear_id_a, dims);
       int32_t da = a.squaredObstacleDistance(pos_a);
 
-      Vector3i pos_b = linearIndexToCoordinates(linear_id_b, dims);
+      Vector3i pos_b = voxelmap::mapToVoxelsSigned(linear_id_b, dims);
       int32_t db = b.squaredObstacleDistance(pos_b);
 
       //getDistance is squared distance; get root before subtracting

@@ -251,12 +251,13 @@ void VoxelMapProvider::newSensorData(gpu_voxels::Vector3f* h_point_cloud, const 
       h_point_cloud[i] = sensor.sensorCoordinatesToWorldCoordinates(point);
   }
 
+  PointCloud tmp_point_cloud(h_point_cloud, num_points);
+
   PERF_MON_START(temp_timer);
 
   if (voxelmap::ProbVoxelMap* _voxelmap = dynamic_cast<voxelmap::ProbVoxelMap*>(m_voxelMap))
   {
-    // HACK by AH: the bitvector length was 0 ?! But that template wasn't instantiated...
-    _voxelmap->insertSensorData<BIT_VECTOR_LENGTH>((const gpu_voxels::Vector3f*) h_point_cloud, true, false, eBVM_OCCUPIED, NULL);
+    _voxelmap->insertSensorData<BIT_VECTOR_LENGTH>(tmp_point_cloud, m_sensor_position, true, false, eBVM_OCCUPIED, NULL);
   }
   else
   {

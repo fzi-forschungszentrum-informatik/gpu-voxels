@@ -436,6 +436,72 @@ void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* met
   }
 }
 
+
+//BitVectorVoxel specialization
+// This kernel may not be called with more threads than point per subcloud, as otherwise we will miss selfcollisions!
+template<>
+__global__
+void kernelInsertMetaPointCloudSelfCollCheck(BitVectorVoxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
+                                const BitVoxelMeaning* voxel_meanings, const Vector3ui dimensions, unsigned int sub_cloud,
+                                const float voxel_side_length, const BitVector<BIT_VECTOR_LENGTH>* coll_masks,
+                                bool *points_outside_map, BitVector<BIT_VECTOR_LENGTH>* colliding_subclouds)
+{
+  BitVector<BIT_VECTOR_LENGTH> masked;
+
+  u_int32_t sub_cloud_upper_bound;
+  Vector3ui uint_coords;
+
+  sub_cloud_upper_bound = meta_point_cloud->cloud_sizes[sub_cloud];
+
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sub_cloud_upper_bound;
+      i += blockDim.x * gridDim.x)
+  {
+    uint_coords = mapToVoxels(voxel_side_length, meta_point_cloud->clouds_base_addresses[sub_cloud][i]);
+
+//        printf("Point @(%f,%f,%f)\n",
+//               meta_point_cloud->clouds_base_addresses[0][i].x,
+//               meta_point_cloud->clouds_base_addresses[0][i].y,
+//               meta_point_cloud->clouds_base_addresses[0][i].z);
+
+    //check if point is in the range of the voxel map
+    if ((uint_coords.x < dimensions.x) && (uint_coords.y < dimensions.y) && (uint_coords.z < dimensions.z))
+    {
+      BitVectorVoxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions, uint_coords)];
+      masked.clear();
+      masked = voxel->bitVector() & coll_masks[sub_cloud];
+      if(! masked.noneButEmpty())
+      {
+        *colliding_subclouds |= masked; // copy the meanings of the colliding voxel, except the masked ones
+        colliding_subclouds->setBit(voxel_meanings[sub_cloud]); // also set collisions for own meaning
+        voxel->insert(eBVM_COLLISION); // Mark voxel as colliding
+      }
+
+      voxel->insert(voxel_meanings[sub_cloud]); // insert subclouds point
+
+
+//        printf("Inserted Point @(%u,%u,%u) with meaning %u into the voxel map \n",
+//               integer_coordinates.x,
+//               integer_coordinates.y,
+//               integer_coordinates.z,
+//               voxel_meanings[voxel_meaning_index]);
+
+    }
+    else
+    {
+      if(points_outside_map) *points_outside_map = true;
+//       printf("Point (%f,%f,%f) is not in the range of the voxel map \n",
+//              meta_point_cloud->clouds_base_addresses[0][i].x, meta_point_cloud->clouds_base_addresses[0][i].y,
+//              meta_point_cloud->clouds_base_addresses[0][i].z);
+    }
+
+  } // grid stride loop
+//    unsigned int foo = atomicInc(global_sub_cloud_control, *global_sub_cloud_control);
+//    printf("This thread inserted point %d, which was last of subcloud. Incrementing global control value to %d ...\n", i, (foo+1));
+}
+
+
+
+
 //DistanceVoxel specialization
 template<>
 __global__
@@ -559,17 +625,17 @@ void kernelInsertMetaPointCloud(DistanceVoxel* voxelmap, const MetaPointCloudStr
 template<std::size_t length, class RayCasting>
 __global__
 void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-                            const Vector3ui dimensions, const float voxel_side_length, Sensor* sensor,
-                            const Vector3f* sensor_data, const bool cut_real_robot,
+                            const Vector3ui dimensions, const float voxel_side_length, const Vector3f sensor_pose,
+                            const Vector3f* sensor_data, const size_t num_points, const bool cut_real_robot,
                             BitVoxel<length>* robotmap, const uint32_t bit_index, RayCasting rayCaster)
 {
-  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; (i < voxelmap_size) && (i < sensor->data_size);
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; (i < voxelmap_size) && (i < num_points);
       i += gridDim.x * blockDim.x)
   {
     if (!(isnan(sensor_data[i].x) || isnan(sensor_data[i].y) || isnan(sensor_data[i].z)))
     {
       const Vector3ui integer_coordinates = mapToVoxels(voxel_side_length, sensor_data[i]);
-      const Vector3ui sensor_coordinates = mapToVoxels(voxel_side_length, sensor->position);
+      const Vector3ui sensor_coordinates = mapToVoxels(voxel_side_length, sensor_pose);
 
       /* both data and sensor coordinates must
        be within boundaries for raycasting to work */
@@ -583,13 +649,7 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
           BitVoxel<length>* robot_voxel = getVoxelPtr(robotmap, dimensions, integer_coordinates.x,
                                                       integer_coordinates.y, integer_coordinates.z);
 
-          //          if (!((robot_voxel->occupancy > 0) && (robot_voxel->voxelmeaning == eBVM_OCCUPIED))) // not occupied by robot
-          //           {
           update = !robot_voxel->bitVector().getBit(bit_index); // not occupied by robot
-          //          else // else: sensor sees robot, no need to insert data.
-          //          {
-          //            printf("cutting robot from sensor data in kernel %u\n", i);
-          //          }
         }
         else
           update = true;
@@ -598,14 +658,12 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
         {
           // sensor does not see robot, so insert data into voxelmap
           // raycasting
-          rayCaster.rayCast(voxelmap, dimensions, sensor, sensor_coordinates, integer_coordinates);
+          rayCaster.rayCast(voxelmap, dimensions, sensor_coordinates, integer_coordinates);
 
-          // insert measured data itself:
+          // insert measured data itself afterwards, so it overrides free voxels from raycaster:
           ProbabilisticVoxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x,
                                                   integer_coordinates.y, integer_coordinates.z);
           voxel->updateOccupancy(cSENSOR_MODEL_OCCUPIED);
-          //            voxel->voxelmeaning = eBVM_OCCUPIED;
-          //            increaseOccupancy(voxel, cSENSOR_MODEL_OCCUPIED); // todo: replace with "occupied" of sensor model
         }
       }
     }

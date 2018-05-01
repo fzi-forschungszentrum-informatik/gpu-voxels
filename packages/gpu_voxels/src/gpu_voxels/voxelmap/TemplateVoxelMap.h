@@ -35,6 +35,8 @@
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 #include <gpu_voxels/voxel/DefaultCollider.h>
 
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
 
 /**
  * @namespace gpu_voxels::voxelmap
@@ -105,6 +107,8 @@ public:
 
   //! print data array to screen for debugging (low performance)
   virtual void printVoxelMapData();
+
+  virtual void gatherVoxelsByIndex(thrust::device_ptr<uint> dev_indices_begin, thrust::device_ptr<uint> dev_indices_end, thrust::device_ptr<Voxel> dev_output_begin);
 
   /* --- collision check operations --- */
   /*! Test for collision with other VoxelMap
@@ -178,51 +182,6 @@ public:
 
   // ------ END Global API functions ------
 
-   //------------------- Env Map specific functions: -------------------
-   void initSensorSettings(const Sensor& sensor);
-
-   void updateSensorPose(const Sensor& sensor);
-
-   /*! Copies a sensor pointcloud to the device.
-    * No further processing is done by this function!
-    * Call transformSensorData() afterwards.
-    */
-   void copySensorDataToDevice(const Vector3f* points);
-
-   /*! Transforms pointcloud according to the previously set
-    * sensor position
-    */
-   void transformSensorData();
-
-   // ------------------- END of Env Map specific functions -------------------
-
-
-//   /*! Model kinematic links that may not be entered into VoxelMap without
-//       performing a self collision check.
-//
-//       Example assuming:
-//          - the kinematic chain has a length of 6 links
-//          - the links 0, 1 and 2 can not collide with each other
-//          - link 3 can collide with one of the previous (does not matter with which)
-//          - link 4 can collide with one of the previous
-//          - link 5 can collide with one of the previous
-//
-//         In this case there is no need to insert every link after each other
-//         and check for collision every time.
-//
-//         A valid order to insert the links would be:
-//         0 (no check),
-//         1 (no check),
-//         2 (no check),
-//         3 (self-collision check!),
-//         4 (self-collision check!),
-//         5 (self-collision check!)
-//
-//         This would be represented in the following matter:
-//         links_to_enable_check = (3, 4, 5)
-//
-//         IMPORTANT: start to count with 0 and pay attention to correct order!       */
-
 
 protected:
 
@@ -271,31 +230,6 @@ protected:
 
   //! result array for collision check with counter on device
   uint16_t* m_dev_collision_check_results_counter;
-
-  // ------------------- BEGIN Env Map specific: -------------------
-  /* ======== Variables with content on host ======== */
-
-  uint32_t m_blocks_sensor_operations;
-  uint32_t m_threads_sensor_operations;
-
-  bool m_init_sensor;
-  Sensor m_sensor;
-
-
-  /* ======== Variables with content on device ======== */
-
-  //! device pointer to sensor parameters
-  Sensor* m_dev_sensor;
-
-  /*! device array for raw (untransformed) sensor
-   *  data */
-  Vector3f* m_dev_raw_sensor_data;
-
-  //! device array for transformed sensor data
-  Vector3f* m_dev_transformed_sensor_data;
-
-  // array for point cloud data
-  Vector3f* m_dev_point_data;
 
 };
 

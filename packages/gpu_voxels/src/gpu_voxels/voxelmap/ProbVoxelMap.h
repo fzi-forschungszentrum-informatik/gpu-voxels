@@ -45,18 +45,15 @@ public:
   virtual ~ProbVoxelMap();
 
   template<std::size_t length>
-  void insertSensorData(const Vector3f* points, const bool enable_raycasting, const bool cut_real_robot,
-                        const BitVoxelMeaning voxel_meaning, BitVoxel<length>* robot_map = NULL);
+  void insertSensorData(const PointCloud &global_points, const Vector3f &sensor_pose, const bool enable_raycasting, const bool cut_real_robot,
+                        const BitVoxelMeaning robot_voxel_meaning, BitVoxel<length>* robot_map = NULL);
 
-  virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
+  virtual bool insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
+                                                          const std::vector<BitVoxelMeaning>& voxel_meanings = std::vector<BitVoxelMeaning>(),
+                                                          const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks = std::vector<BitVector<BIT_VECTOR_LENGTH> >(),
+                                                          BitVector<BIT_VECTOR_LENGTH>* colliding_meanings = NULL);
 
   virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
-
-  virtual void insertPointCloud(const std::vector<Vector3f> &points, const BitVoxelMeaning voxel_meaning);
-
-  virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning);
-
-  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning);
 
   virtual MapType getTemplateType() const { return MT_PROBAB_VOXELMAP; }
 

@@ -125,7 +125,98 @@ BOOST_AUTO_TEST_CASE(distance_correctness)
   }
 }
 
+BOOST_AUTO_TEST_CASE(distance_extraction)
+{
+  float side_length = 1.f;
+  
+  // caution: shadows global variables defined in testing_fixtures
+  //TODO  check for exact requirements of algorithms; assumptions appear to be:
+  //        PBA: dimX==dimY and dimX % 64 == 0
+  //        JFA: dimX and dimY must be even numbers
+  //      suspected causes in PBA: 
+  //        pba x/y in-place transpose operation assumes dimX == dimY
+  //        pba x/y in-place transpose uses constant sized shared memory cache, PBA_TILE_DIM=16
+  int dimX = 64;
+  int dimY = dimX;
+  int dimZ = 64;
 
+  DistMapSharedPtr pba_dist_map = DistMapSharedPtr(new voxelmap::DistanceVoxelMap(Vector3ui(dimX, dimY, dimZ), side_length, MT_DISTANCE_VOXELMAP));
+
+  std::cout << "DEBUG distance_extraction test dimX=" << dimX << ", dimY="<<dimY<<", dimZ="<<dimZ<<std::endl;
+
+  // test gatherVoxelsByIndex, getSquaredDistances, getDistances
+  PERF_MON_START("distance_extraction");
+  for(int iter = 0; iter < iterationCount; iter++)
+  {
+    //get squared distance of each Position
+    std::vector<uint> h_indices;
+    h_indices.push_back(0);
+    h_indices.push_back(10);
+    h_indices.push_back(100);
+    h_indices.push_back(1000);
+    h_indices.push_back(10000);
+
+    pba_dist_map->clearMap();
+    std::vector<Vector3f> obstacles;
+    for (size_t i = 0; i < h_indices.size(); i++) 
+    {
+        Vector3i coords = voxelmap::mapToVoxelsSigned(h_indices[i], pba_dist_map->getDimensions());
+        Vector3f f_coords = coords / side_length;
+        obstacles.push_back(f_coords);
+    }    
+    pba_dist_map->insertPointCloud(obstacles, eBVM_OCCUPIED);
+
+    // use gatherVoxelsByIndex
+    thrust::device_vector<uint> d_indices(h_indices);
+    thrust::device_vector<DistanceVoxel> d_voxels(h_indices.size());
+      
+    pba_dist_map->gatherVoxelsByIndex(&(*d_indices.begin()), &(*d_indices.end()), d_voxels.data());
+    
+    // validate voxels
+    for (size_t i = 0; i < d_voxels.size(); i++) 
+    {
+        DistanceVoxel dv = d_voxels[i];
+        std::cout << "d_voxels["<<i<<"] = " << dv.getObstacle() << std::endl;
+        
+        Vector3ui coords = voxelmap::mapToVoxels(h_indices[i], pba_dist_map->getDimensions());
+        BOOST_CHECK_MESSAGE((coords == dv.getObstacle()), "Sanity check failed! gatherVoxelsByIndex did not return the expected voxel contents");
+    }
+        
+    // get squared distances
+    std::vector<int> squared_distances(h_indices.size());
+    pba_dist_map->getSquaredDistancesToHost(h_indices, squared_distances);
+    
+    // get distances
+    std::vector<int> distances(h_indices.size());
+    pba_dist_map->getDistancesToHost(h_indices, distances);
+            
+    std::vector<uint> h_indices_neighbors(h_indices);
+    for (size_t i = 0; i < h_indices_neighbors.size(); i++) 
+    {
+        h_indices_neighbors[i]++;
+    }
+    
+    //std::cout << "Calculating PBA..." << std::endl;
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+    pba_dist_map->parallelBanding3D(1, 1, 1);
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+    
+    // get neighbor distances
+    std::vector<int> distances_neighbors(h_indices_neighbors.size());
+    pba_dist_map->getDistancesToHost(h_indices_neighbors, distances_neighbors);
+
+    // perform sanity checks
+    for (size_t i = 0; i < h_indices_neighbors.size(); i++) 
+    {
+        BOOST_CHECK_MESSAGE((distances[i] == 0), "Sanity check failed! distance at obstacle not zero");
+        BOOST_CHECK_MESSAGE((squared_distances[i] == 0), "Sanity check failed! squared_distance at obstacle not zero");
+        BOOST_CHECK_MESSAGE((distances[i] != distances_neighbors[i]), "Sanity check failed! distance equals neighbors distance");
+//         std::cout << "distances["<<i<<"]=" << distances[i] << std::endl;
+//         std::cout << "squared_distances["<<i<<"]=" << squared_distances[i] << std::endl;
+//         std::cout << "distances_neighbors["<<i<<"]=" << distances_neighbors[i] << std::endl;
+    }
+  }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

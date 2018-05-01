@@ -31,7 +31,7 @@
 #include <gpu_voxels/voxel/SVCollider.hpp>
 
 #include <thrust/fill.h>
-#include <thrust/device_ptr.h>
+#include <thrust/gather.h>
 
 // temp:
 #include <time.h>
@@ -57,9 +57,7 @@ TemplateVoxelMap<Voxel>::TemplateVoxelMap(const Vector3ui dim,
                                           m_limits(dim.x * voxel_side_length, dim.y * voxel_side_length, dim.z * voxel_side_length),
                                           m_voxel_side_length(voxel_side_length), m_voxelmap_size(getVoxelMapSize()), m_dev_data(NULL),
                                           m_dev_points_outside_map(NULL),
-                                          m_collision_check_results(NULL),
-                                          // Env Map specific stuff
-                                          m_init_sensor(false), m_dev_raw_sensor_data(NULL), m_dev_sensor(NULL), m_dev_transformed_sensor_data(NULL)
+                                          m_collision_check_results(NULL)
 {
   this->m_map_type = map_type;
   if (dim.x * dim.y * dim.z * sizeof(Voxel) > (pow(2, 32) - 1))
@@ -178,20 +176,6 @@ TemplateVoxelMap<Voxel>::~TemplateVoxelMap()
   HANDLE_CUDA_ERROR(cudaEventDestroy(m_start));
   HANDLE_CUDA_ERROR(cudaEventDestroy(m_stop));
 
-  // Env Map specific stuff
-  if (m_dev_transformed_sensor_data)
-  {
-    HANDLE_CUDA_ERROR(cudaFree(m_dev_transformed_sensor_data));
-  }
-  if (m_dev_sensor)
-  {
-    HANDLE_CUDA_ERROR(cudaFree(m_dev_sensor));
-  }
-  if (m_dev_raw_sensor_data)
-  {
-    HANDLE_CUDA_ERROR(cudaFree(m_dev_raw_sensor_data));
-  }
-  // End of Env Map specific
 }
 
 /* ======== VoxelMap operations  ======== */
@@ -283,6 +267,15 @@ void TemplateVoxelMap<Voxel>::printVoxelMapData()
 {
   lock_guard guard(this->m_mutex);
   HANDLE_CUDA_ERROR(cuPrintDeviceArray(m_dev_data, m_voxelmap_size, "VoxelMap dump: "));
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::gatherVoxelsByIndex(thrust::device_ptr<uint> dev_indices_begin, thrust::device_ptr<uint> dev_indices_end, thrust::device_ptr<Voxel> dev_output_begin)
+{
+  // writes the Voxels at indicated indices to dev_output_begin
+  thrust::gather(dev_indices_begin, dev_indices_end,
+                 thrust::device_pointer_cast(m_dev_data),
+                 dev_output_begin);
 }
 
 //template<class Voxel>
@@ -616,9 +609,9 @@ void TemplateVoxelMap<Voxel>::insertMetaPointCloud(const MetaPointCloud &meta_po
   HANDLE_CUDA_ERROR(cudaMemset((void*)m_dev_points_outside_map, 0, sizeof(bool)));
   bool points_outside_map;
 
-  computeLinearLoad(meta_point_cloud.getAccumulatedPointcloudSize(), &m_blocks_sensor_operations,
-                           &m_threads_sensor_operations);
-  kernelInsertMetaPointCloud<<<m_blocks_sensor_operations, m_threads_sensor_operations>>>(
+  computeLinearLoad(meta_point_cloud.getAccumulatedPointcloudSize(), &m_blocks,
+                           &m_threads);
+  kernelInsertMetaPointCloud<<<m_blocks, m_threads>>>(
       m_dev_data, meta_point_cloud.getDeviceConstPointer(), voxel_meaning, m_dim, m_voxel_side_length,
       m_dev_points_outside_map);
   CHECK_CUDA_ERROR();
@@ -641,15 +634,15 @@ void TemplateVoxelMap<Voxel>::insertMetaPointCloud(const MetaPointCloud& meta_po
   HANDLE_CUDA_ERROR(cudaMemset((void*)m_dev_points_outside_map, 0, sizeof(bool)));
   bool points_outside_map;
 
-  computeLinearLoad(meta_point_cloud.getAccumulatedPointcloudSize(), &m_blocks_sensor_operations,
-                           &m_threads_sensor_operations);
+  computeLinearLoad(meta_point_cloud.getAccumulatedPointcloudSize(), &m_blocks,
+                           &m_threads);
 
   BitVoxelMeaning* voxel_meanings_d;
   size_t size = voxel_meanings.size() * sizeof(BitVoxelMeaning);
   HANDLE_CUDA_ERROR(cudaMalloc((void**) &voxel_meanings_d, size));
   HANDLE_CUDA_ERROR(cudaMemcpy(voxel_meanings_d, &voxel_meanings[0], size, cudaMemcpyHostToDevice));
 
-  kernelInsertMetaPointCloud<<<m_blocks_sensor_operations, m_threads_sensor_operations>>>(
+  kernelInsertMetaPointCloud<<<m_blocks, m_threads>>>(
       m_dev_data, meta_point_cloud.getDeviceConstPointer(), voxel_meanings_d, m_dim, m_voxel_side_length,
       m_dev_points_outside_map);
   CHECK_CUDA_ERROR();
@@ -830,83 +823,6 @@ Vector3f TemplateVoxelMap<Voxel>::getMetricDimensions() const
 #ifdef ALTERNATIVE_CHECK
 #undef ALTERNATIVE_CHECK
 #endif
-
-// Env map specific functions
-template<class Voxel>
-void TemplateVoxelMap<Voxel>::initSensorSettings(const Sensor& sensor)
-{
-  lock_guard guard(this->m_mutex);
-  m_sensor = sensor;
-
-  if (m_dev_raw_sensor_data)
-  {
-    HANDLE_CUDA_ERROR(cudaFree(m_dev_raw_sensor_data));
-    HANDLE_CUDA_ERROR(cudaFree(m_dev_sensor));
-    LOGGING_INFO_C(VoxelmapLog, VoxelMap, "Reinitialized sensor settings!" << endl);
-  }
-
-  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_dev_raw_sensor_data, m_sensor.data_size * sizeof(Vector3f)));
-  HANDLE_CUDA_ERROR(
-      cudaMalloc((void** )&m_dev_transformed_sensor_data, m_sensor.data_size * sizeof(Vector3f)));
-  HANDLE_CUDA_ERROR(cudaMalloc((void** )&m_dev_sensor, sizeof(Sensor)));
-  HANDLE_CUDA_ERROR(cudaMemcpy(m_dev_sensor, &m_sensor, sizeof(Sensor), cudaMemcpyHostToDevice));
-  m_init_sensor = true;
-  computeLinearLoad(m_sensor.data_size, &m_blocks_sensor_operations, &m_threads_sensor_operations);
-}
-
-template<class Voxel>
-void TemplateVoxelMap<Voxel>::updateSensorPose(const Sensor& sensor)
-{
-  lock_guard guard(this->m_mutex);
-  if (m_init_sensor)
-  {
-    m_sensor.position = sensor.position;
-    m_sensor.orientation = sensor.orientation;
-    HANDLE_CUDA_ERROR(cudaMemcpy(m_dev_sensor, &m_sensor, sizeof(Sensor), cudaMemcpyHostToDevice));
-  }
-  else
-  {
-    LOGGING_ERROR_C(VoxelmapLog, VoxelMap, "Initialize Sensor first!" << endl);
-  }
-}
-
-template<class Voxel>
-void TemplateVoxelMap<Voxel>::copySensorDataToDevice(const Vector3f* points)
-{
-  lock_guard guard(this->m_mutex);
-  if (!m_init_sensor)
-  {
-    LOGGING_ERROR_C(VoxelmapLog, EnvironmentMap, "Call initSensorSettings() first!" << endl);
-    exit(-1);
-  }
-//  m_elapsed_time = 0;
-//  printf("copying SENSOR data... ");
-//  HANDLE_CUDA_ERROR(cudaEventRecord(m_start, 0));
-  HANDLE_CUDA_ERROR(
-      cudaMemcpy(m_dev_raw_sensor_data, points, m_sensor.data_size * sizeof(Vector3f),
-                 cudaMemcpyHostToDevice));
-//  HANDLE_CUDA_ERROR(cudaEventRecord(m_stop, 0));
-//  HANDLE_CUDA_ERROR(cudaEventSynchronize(m_stop));
-//  HANDLE_CUDA_ERROR(cudaEventElapsedTime(&m_elapsed_time, m_start, m_stop));
-//  printf(" ...done in %f ms!\n", m_elapsed_time);
-}
-
-template<class Voxel>
-void TemplateVoxelMap<Voxel>::transformSensorData()
-{
-  lock_guard guard(this->m_mutex);
-//  printf("transforming SENSOR data... ");
-//  m_elapsed_time = 0;
-//  HANDLE_CUDA_ERROR(cudaEventRecord(m_start, 0));
-//  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  kernelTransformSensorData<<<m_blocks_sensor_operations, m_threads_sensor_operations>>>(
-      m_dev_sensor, m_dev_raw_sensor_data, m_dev_transformed_sensor_data);
-  CHECK_CUDA_ERROR();
-//  HANDLE_CUDA_ERROR(cudaEventRecord(m_stop, 0));
-//  HANDLE_CUDA_ERROR(cudaEventSynchronize(m_stop));
-//  HANDLE_CUDA_ERROR(cudaEventElapsedTime(&m_elapsed_time, m_start, m_stop));
-//  printf(" ...done in %f ms!\n", m_elapsed_time);
-}
 
 
 

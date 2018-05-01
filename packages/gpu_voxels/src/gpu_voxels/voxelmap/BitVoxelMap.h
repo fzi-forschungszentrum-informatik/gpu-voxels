@@ -81,7 +81,11 @@ public:
    */
   void shiftLeftSweptVolumeIDs(uint8_t shift_size);
 
-  virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
+
+  bool insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *meta_point_cloud,
+                                                          const std::vector<BitVoxelMeaning>& voxel_meanings = std::vector<BitVoxelMeaning>(),
+                                                          const std::vector<BitVector<length> >& collision_masks = std::vector<BitVector<length> >(),
+                                                          BitVector<length>* colliding_meanings = NULL);
 
   virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
 
@@ -95,6 +99,14 @@ public:
 
 protected:
   virtual void clearVoxelMapRemoteLock(const uint32_t bit_index);
+
+private:
+
+  //these are used for self collision checks:
+  size_t m_num_self_collisions_checked_entities;
+  BitVector<BIT_VECTOR_LENGTH>* m_selfcolliding_subclouds_dev;
+  BitVector<length>* m_collisions_masks_dev;
+  BitVoxelMeaning* m_subcloud_meanings_dev;
 };
 
 } // end of namespace

@@ -81,8 +81,8 @@ RobotLink::RobotLink(Robot* robot,
 : robot_( robot )
 , name_( link->name )
 , parent_joint_name_( parent_joint_name )
-, visual_node_( NULL )
-, collision_node_( NULL )
+, visual_meshes_()
+, collision_meshes_()
 , discretization_distance_(discretization_distance)
 , link_pointclouds_(link_pointclouds)
 , pose_calculated_(false)
@@ -92,6 +92,7 @@ RobotLink::RobotLink(Robot* robot,
 
   visual_node_ = new node;
   collision_node_ = new node;
+  offset_node = new node;
 
   // we prefer collisions over visuals
   if (collision) createCollision(link);
@@ -165,11 +166,19 @@ RobotLink::~RobotLink()
 {
   for( size_t i = 0; i < visual_meshes_.size(); i++ )
   {
+    delete visual_meshes_[i];
   }
+  visual_meshes_.clear();
 
   for( size_t i = 0; i < collision_meshes_.size(); i++ )
   {
+    delete collision_meshes_[i];
   }
+  collision_meshes_.clear();
+
+  delete visual_node_;
+  delete collision_node_;
+  delete offset_node;
 }
 
 bool RobotLink::hasGeometry() const
@@ -179,8 +188,6 @@ bool RobotLink::hasGeometry() const
 
 void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, const urdf::Geometry& geom, const urdf::Pose& origin, node*& entity)
 {
-  offset_node = new node();
-
   gpu_voxels::Vector3f scale;
 
   KDL::Vector offset_pos = KDL::Vector(origin.position.x, origin.position.y, origin.position.z);
@@ -258,6 +265,7 @@ void RobotLink::createEntityForGeometryElement(const urdf::LinkConstPtr& link, c
 
     link_pointclouds_.addCloud(link_cloud, false, name_);
 
+    // TODO: does this work as expected? offset_node is a member of RobotLink. createEntityForGeometryElement could be called for multiple collision groups!
     offset_node->setScale(scale);
     offset_node->setPose(offset_pose);
   }
@@ -279,7 +287,7 @@ void RobotLink::createCollision(const urdf::LinkConstPtr& link)
         if( collision && collision->geometry )
         {
           node* collision_mesh = new node();
-          createEntityForGeometryElement( link, *collision->geometry, collision->origin, collision_node_, collision_mesh );
+          createEntityForGeometryElement( link, *collision->geometry, collision->origin, collision_mesh );
           if( collision_mesh )
           {
             collision_meshes_.push_back( collision_mesh );
@@ -375,15 +383,8 @@ void RobotLink::createVisual(const urdf::LinkConstPtr& link )
 
 void RobotLink::setPoses( const KDL::Frame& visual_pose, const KDL::Frame& collision_pose)
 {
-  if ( visual_node_ )
-  {
-    visual_node_->setPose( visual_pose );
-  }
-
-  if ( collision_node_ )
-  {
-    collision_node_->setPose( collision_pose );
-  }
+  visual_node_->setPose( visual_pose );
+  collision_node_->setPose( collision_pose );
 
   pose_property_ = visual_pose;
 }

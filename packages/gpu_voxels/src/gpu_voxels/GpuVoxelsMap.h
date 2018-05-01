@@ -38,6 +38,7 @@
 #include <stdint.h> // for fixed size datatypes
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/MetaPointCloud.h>
+#include <gpu_voxels/helpers/BitVector.h>
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 #include <gpu_voxels/helpers/common_defines.h>
 
@@ -114,8 +115,6 @@ public:
 
   virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning) = 0;
 
-  virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test) = 0;
-
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map.
    * @param meta_point_cloud The MetaPointCloud to insert
@@ -132,6 +131,22 @@ public:
    * @param voxel_meanings Vector with voxel meanings
    */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings) = 0;
+
+  /**
+   * @brief insertMetaPointCloudWithSelfCollisionCheck Inserts a MetaPointCloud into the map and checks for selfcollisions.
+   * Each pointcloud inside the MetaPointCloud will get it's own voxel meaning as given in the voxel_meanings
+   * parameter. The number of pointclouds in the MetaPointCloud and the size of voxel_meanings
+   * have to be identical. For performance reasons it is advised to also give optional parameters to spare allocations at every call.
+   * @param meta_point_cloud The MetaPointCloud to insert
+   * @param voxel_meanings Vector with voxel meanings
+   * @param selfcolliding_subclouds Bitvector with voxel meanings in collision
+   * @return true, if one of the inserted subclouds collided with previously inserted data
+   */
+  virtual bool insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
+                                                          const std::vector<BitVoxelMeaning>& voxel_meanings = std::vector<BitVoxelMeaning>(),
+                                                          const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks = std::vector<BitVector<BIT_VECTOR_LENGTH> >(),
+                                                          BitVector<BIT_VECTOR_LENGTH>* colliding_meanings = NULL) = 0;
+
 
   /*!
    * \brief collideWith This does a collision check with 'other'.

@@ -29,14 +29,12 @@
 #include <gpu_voxels/voxel/ProbabilisticVoxel.h>
 #include <gpu_voxels/voxel/DistanceVoxel.h>
 
+#include <thrust/transform.h>
+
 #include "VoxelMapOperationsPBA.h"
 
 namespace gpu_voxels {
 namespace voxelmap {
-
-/* ------------------ Temporary Sensor Model ------------ */
-static const Probability cSENSOR_MODEL_FREE = -10;
-static const Probability cSENSOR_MODEL_OCCUPIED = 72;
 
 
 /* ------------------ DEVICE FUNCTIONS ------------------ */
@@ -145,6 +143,27 @@ Vector3i mapToVoxelsSigned(const float voxel_side_length, const Vector3f &coordi
   return integer_coordinates;
 }
 
+//! Maps a voxel address to discrete voxel coordinates
+__device__ __host__ __forceinline__
+Vector3i mapToVoxelsSigned(int linear_id, const Vector3ui &dimensions)
+{
+  Vector3i integer_coordinates;
+  integer_coordinates.z = linear_id / (dimensions.x * dimensions.y);
+  integer_coordinates.y = (linear_id -= integer_coordinates.z * (dimensions.x * dimensions.y)) / dimensions.x;
+  integer_coordinates.x = (linear_id -= integer_coordinates.y * dimensions.x);
+  return integer_coordinates;
+}
+
+__device__ __host__ __forceinline__
+Vector3ui mapToVoxels(uint linear_id, const Vector3ui &dimensions)
+{
+  Vector3ui integer_coordinates;
+  integer_coordinates.z = linear_id / (dimensions.x * dimensions.y);
+  integer_coordinates.y = (linear_id -= integer_coordinates.z * (dimensions.x * dimensions.y)) / dimensions.x;
+  integer_coordinates.x = (linear_id -= integer_coordinates.y * dimensions.x);
+  return integer_coordinates;
+}
+
 template<class Voxel>
 __device__ __host__     __forceinline__
 Voxel* getHighestVoxelPtr(const Voxel* base_addr, const Vector3ui &dimensions)
@@ -202,7 +221,7 @@ public:
 
 //! raycasting from one point to another marks decreases voxel occupancy along the ray
   __device__ __forceinline__
-  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions, const Sensor* sensor,
+  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions,
                const Vector3ui& from, const Vector3ui& to)
   {
     int32_t difference_x = 0;
@@ -326,7 +345,7 @@ struct DummyRayCaster: public RayCaster
 {
 public:
   __device__ __forceinline__
-  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions, const Sensor* sensor,
+  void rayCast(ProbabilisticVoxel* voxelmap, const Vector3ui &dimensions,
                const Vector3ui& from, const Vector3ui& to)
   {
     // override and do nothing
@@ -355,11 +374,6 @@ void kernelClearVoxelMap(BitVoxel<bit_length>* voxelmap, uint32_t voxelmap_size,
 //__global__
 //void kernelDumpVoxelMap(const Voxel* voxelmap, const Vector3ui dimensions, const uint32_t voxelmap_size);
 
-/*! Transform sensor data from sensor coordinate system
- * to world system. Needs extrinsic calibration of sensor.
- */
-__global__
-void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector3f* transformed_sensor_data);
 
 /*! Insert sensor data into voxel map.
  * Assumes sensor data is already transformed
@@ -373,8 +387,8 @@ void kernelTransformSensorData(Sensor* sensor, Vector3f* raw_sensor_data, Vector
 template<std::size_t length, class RayCasting>
 __global__
 void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
-                            const Vector3ui dimensions, const float voxel_side_length, Sensor* sensor,
-                            const Vector3f* sensor_data, const bool cut_real_robot,
+                            const Vector3ui dimensions, const float voxel_side_length, const Vector3f sensor_pose,
+                            const Vector3f* sensor_data, const size_t num_points, const bool cut_real_robot,
                             BitVoxel<length>* robotmap, const uint32_t bit_index, RayCasting rayCaster);
 
 /*!
@@ -433,6 +447,13 @@ void kernelInsertMetaPointCloud(Voxel *voxelmap, const MetaPointCloudStruct *met
                                 BitVoxelMeaning* voxel_meanings, const Vector3ui map_dim,
                                 const float voxel_side_length,
                                 bool *points_outside_map);
+
+template<class BitVectorVoxel>
+__global__
+void kernelInsertMetaPointCloudSelfCollCheck(BitVectorVoxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
+                                             const BitVoxelMeaning* voxel_meanings, const Vector3ui dimensions, unsigned int sub_cloud,
+                                             const float voxel_side_length, const BitVector<BIT_VECTOR_LENGTH>* coll_masks,
+                                             bool *points_outside_map, BitVector<BIT_VECTOR_LENGTH>* colliding_subclouds);
 
 /**
  * Shifts all swept-volume-IDs by shift_size towards lower IDs.

@@ -1,7 +1,7 @@
 /**
  * \page Prerequisites Prerequisites
  * Some words on what you will need to build the library. I don’t give explicit version requirements as they get outdated too fast. 
- * For specific problems or questions please write to our GITHub bugtracker <a title="Bugtracker" href="https://github.com/fzi-forschungszentrum-informatik/gpu-voxels/issues">https://github.com/fzi-forschungszentrum-informatik/gpu-voxels/issues</a>.
+ * For specific problems or questions please write to our GitHub bugtracker <a title="Bugtracker" href="https://github.com/fzi-forschungszentrum-informatik/gpu-voxels/issues">https://github.com/fzi-forschungszentrum-informatik/gpu-voxels/issues</a>.
  * 
  * \section hardware Hardware
  * As this is called GPU-Voxels, you will of course need a decent graphics card! 
@@ -14,7 +14,7 @@
  * \section req_libs Required libraries to build GPU-Voxels
  * The software is tested on 64 Bit Ubuntu Linux Trusty (14.04) and Xenial (16.04). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:
  * <ul>
- * <li>CUDA &gt; 7.5 or 8.0 (9.1 not fully supported yet)</li>
+ * <li>CUDA &gt; 7.5, 8.0 and 9.1</li>
  * <li>PCL</li>
  * <li>OpenNI</li>
  * <li>Boost</li>

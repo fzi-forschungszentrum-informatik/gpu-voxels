@@ -49,8 +49,6 @@ public:
 
   virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
 
-  virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
-
   virtual MapType getTemplateType() { return this->m_map_type; }
 
   size_t collideWith(const voxellist::BitVectorVoxelList* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());

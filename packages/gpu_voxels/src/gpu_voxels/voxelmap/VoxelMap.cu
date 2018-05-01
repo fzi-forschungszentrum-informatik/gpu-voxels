@@ -32,8 +32,9 @@ template uint32_t TemplateVoxelMap<ProbabilisticVoxel>::collisionCheckWithCounte
 
 // ############################### ProbVoxelMap (inherits from TemplateVoxelMap) ######################################
 // Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects
-template void ProbVoxelMap::insertSensorData<BIT_VECTOR_LENGTH>(const Vector3f*, const bool, const bool,
+template void ProbVoxelMap::insertSensorData<BIT_VECTOR_LENGTH>(const PointCloud&, const Vector3f&, const bool, const bool,
                                                                 const BitVoxelMeaning, BitVoxel<BIT_VECTOR_LENGTH>*);
+
 
 
 // ##################################################################################

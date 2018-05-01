@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
+  The map name can be either the exact name, or an enumarator like:
+  voxelmap_#, voxellist_#, primitive_array_# or octree_#
+  where # is a counter, starting at 0.
+
+  For bitvector voxelmaps you can specify the color for "all_types" and then overwrite specific SweptVolume IDs by tpye_#.
+
+  For probabilistic maps, an occupancy_threshold can be set, so that only voxels with an
+  occupancy >= occupancy_threshold will be drawn. It has to be in the range of -127 to 127.
+
   If the color is not specified by a word, the RGBA-values will be used instead.
   The RGBA-values should be between 0 and 1.
   Currently supported colors are: black, white, red, green, blue, gray, yellow, cyan, magenta
   To get a darker version of the color add "dark" infront of the name
   (e.g. dark blue), that doesn't work with black or white.
+  Also a color blending along the Z-Axis can be realized by defining "color_1" and "color_2" instead of a single color.
 -->
-
 <visualizer_context>
 <background>
   white
@@ -15,7 +24,7 @@
 
 <!-- ------------- The parameter for the voxel map 0------ -->
 <voxelmap_0>
-  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of -127 to 127 -->
   <occupancy_threshold> 1 </occupancy_threshold>
 
   <!--her you can specifie an offset to the voxel map (only effects the visualization)-->
@@ -27,7 +36,7 @@
       </offset>
   -->
   <!-- definde the colors for the different voxel types -->
-  <!-- -------- type DYNAMIC ------------- -->
+  <!-- -------- type FREE ------------- -->
   <type_0>
     <rgba>
       <r> 0 </r>
@@ -35,7 +44,7 @@
       <b> 0 </b>
     </rgba>
   </type_0>
-  <!-- -------- type STATIC -------------- -->
+  <!-- -------- type OCCUPIED -------------- -->
   <type_1>
     <color_1> green     </color_1>
     <color_2> dark blue </color_2>
@@ -44,21 +53,25 @@
   <type_2>
     dark red
   </type_2>
-  <!-- -------- type SWEPT_VOLUME_END ---- -->
+  <!-- -------- type UNKNOWN ---- -->
   <type_3>
     magenta
   </type_3>
+  <!-- ------- type SWEPT_VOLUME_START --- -->
+  <type_4>
+    dark gray
+  </type_4>
 </voxelmap_0>
 
 
 <!-- ------------- The parameter for the voxel map 1------ -->
 <MyVoxelMap>
-  <!-- -------- type DYNAMIC ------------- -->
+  <!-- -------- type FREE ------------- -->
   <type_0>
     <color_1>  green  </color_1>
     <color_2>  green  </color_2>
   </type_0>
-  <!-- -------- type STATIC -------------- -->
+  <!-- -------- type OCCUPIED -------------- -->
   <type_1>
     <color_1>  black </color_1>
     <color_2>  red  </color_2>
@@ -67,7 +80,7 @@
   <type_2>
     red
   </type_2>
-  <!-- ------- type SWEPT_VOLUME_END ---- -->
+  <!-- ------- type UNKNOWN ---- -->
   <type_3>
     cyan
   </type_3>
@@ -75,23 +88,23 @@
 
 <!-- ------------ The parameter for the octree 0------ -->
 <octree_0>
-  <!-- ------- type DYNAMIC ------------- -->
+  <!-- ------- type FREE ------------- -->
   <type_0>
     red
   </type_0>
-  <!-- ------- type STATIC -------------- -->
+  <!-- ------- type OCCUPIED -------------- -->
   <type_1>
     green
   </type_1>
   <!-- ------- type COLLISION ---------- -->
-  <type_2> <!-- type dynamic -->
+  <type_2>
     yellow
   </type_2>
-  <!-- ------- type SWEPT_VOLUME_END ---- -->
+  <!-- ------- type UNKNOWN ---- -->
   <type_3>
     red
   </type_3>
-  <!-- ------- type SWEPT_VOLUME(250) --- -->
+  <!-- ------- type SWEPT_VOLUME_START --- -->
   <type_4>
     dark gray
   </type_4>
@@ -104,11 +117,11 @@
     <y> 0 </y>
     <z> 0 </z>
   </offset>
-  <!-- ------- type DYNAMIC ------------- -->
+  <!-- ------- type FREE ------------- -->
   <type_0>
     red
   </type_0>
-  <!-- ------- type STATIC -------------- -->
+  <!-- ------- type OCCUPIED -------------- -->
   <type_1>
     <color_1>  green </color_1>
     <color_2>  red   </color_2>
@@ -117,11 +130,11 @@
   <type_2>
     blue
   </type_2>
-  <!-- ------- type SWEPT_VOLUME_END --- -->
+  <!-- ------- type UNKNOWN --- -->
   <type_3>
     red
   </type_3>
-  <!-- ------- type SWEPT_VOLUME(250) -- -->
+  <!-- ------- type SWEPT_VOLUME_START -- -->
   <type_4>
     dark gray
   </type_4>

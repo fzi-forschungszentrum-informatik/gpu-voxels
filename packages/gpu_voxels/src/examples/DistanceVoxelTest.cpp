@@ -76,16 +76,6 @@ void killhandler(int)
   exit(EXIT_SUCCESS);
 }
 
-//! Maps a voxel address to discrete voxel coordinates
-Vector3ui mapToVoxels(const float voxel_side_length, const Vector3f &coordinates)
-{
-  Vector3ui integer_coordinates;
-  integer_coordinates.x = static_cast<uint32_t>(floor(coordinates.x / voxel_side_length));
-  integer_coordinates.y = static_cast<uint32_t>(floor(coordinates.y / voxel_side_length));
-  integer_coordinates.z = static_cast<uint32_t>(floor(coordinates.z / voxel_side_length));
-  return integer_coordinates;
-}
-
 bool hollie_cutout(Vector3f p) {
   if (p.x < voxel_side_length*120) return true;
   if (p.x > voxel_side_length*148) return true;
@@ -124,7 +114,7 @@ struct out_of_bounds {
   bool operator()(Vector3f point) const {
     Vector3ui dimensions(nxy, nxy, nz);
 
-    const Vector3ui int_coords = mapToVoxels(voxel_side_length, point);
+    const Vector3ui int_coords = voxelmap::mapToVoxels(voxel_side_length, point);
 //    const Vector3f int_coords = point; //TODO change
 
     //check if point is in the range of the voxel map
@@ -454,7 +444,7 @@ int main(int argc, char* argv[])
     std::vector<Vector3f> unique_obstacles;
     for (uint obstacle_i=0; obstacle_i<obstacles.size(); obstacle_i++) {
       Vector3f obstacle = obstacles[obstacle_i];
-      Vector3ui int_coords = mapToVoxels(voxel_side_length, obstacle);
+      Vector3ui int_coords = voxelmap::mapToVoxels(voxel_side_length, obstacle);
       int linear_id = (int_coords.z * NXY  * NXY) + (int_coords.y * NXY) + int_coords.x;
       if (voxels_found[linear_id] == false) {
         voxels_found[linear_id] = true;

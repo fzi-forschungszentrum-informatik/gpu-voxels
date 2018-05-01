@@ -64,12 +64,6 @@ void CountingVoxelList::clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning)
     VoxellistLog, CountingVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
 }
 
-bool CountingVoxelList::insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test)
-{
-  LOGGING_ERROR_C(VoxellistLog, CountingVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-  return false;
-}
-
 struct is_collision_candidate
 {
   int8_t threshold;

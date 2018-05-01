@@ -9,7 +9,7 @@ See our videos on http://www.gpu-voxels.org/demos/ to get an impression.
 Find more information on our website http://www.gpu-voxels.org
 Doxygen is available at http://www.gpu-voxels.org/doxygen/html/
 
-If you have questions or experience any problems with the software, please post to our GITHub Bugtracker:
+If you have questions or experience any problems with the software, please post to our GitHub Bugtracker:
 at https://github.com/fzi-forschungszentrum-informatik/gpu-voxels/issues
 
 ## Install dependencies:
@@ -18,7 +18,7 @@ Find detailed installation and linking instructions in our Doxygen.
 
 **Core:**
 
-- CUDA 7.5 or 8.0 (9.1 not fully supported yet)
+- CUDA 7.5, 8.0 and 9.1
 - PCL
 - OpenNI
 - Boost
@@ -99,11 +99,8 @@ All rights reserved.
 ## Thanks:
 The **GPU-Voxels** library was developed at the *FZI Forschungszentrum Informatik*, Karlsruhe, Germany.
 
-The research leading to the results has received funding from the
- **German Federal Ministry of Education and Research (BMBF)**
- under grant agreement no. 01IM12006C (ISABEL).
- **European Union** program **Horizon 2020**
- under grant agreement no. 680734 (HORSE).
- **Baden-Württemberg Stiftung**
- through the KolRob reasearch project.
+The research leading to the results has received funding from... 
+- the **German Federal Ministry of Education and Research (BMBF)** under grant agreement no. 01IM12006C (ISABEL).
+- the **European Union** program **Horizon 2020** under grant agreement no. 680734 (HORSE).
+- the **Baden-Württemberg Stiftung** through the KolRob reasearch project.
 

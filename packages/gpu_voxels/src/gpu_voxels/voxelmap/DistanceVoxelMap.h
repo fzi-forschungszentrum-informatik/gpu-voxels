@@ -25,7 +25,7 @@
 
 #include <gpu_voxels/voxelmap/TemplateVoxelMap.h>
 #include <gpu_voxels/voxel/DistanceVoxel.h>
-
+#include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 #include <boost/shared_ptr.hpp>
 
 using namespace gpu_voxels;
@@ -51,17 +51,19 @@ public:
 
 //  virtual ~BitVoxelMap();
 
-  virtual bool insertRobotConfiguration(const MetaPointCloud *robot_links, bool with_self_collision_test);
+  virtual bool insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
+                                                          const std::vector<BitVoxelMeaning>& voxel_meanings = std::vector<BitVoxelMeaning>(),
+                                                          const std::vector<BitVector<BIT_VECTOR_LENGTH> >& collision_masks = std::vector<BitVector<BIT_VECTOR_LENGTH> >(),
+                                                          BitVector<BIT_VECTOR_LENGTH>* colliding_meanings = NULL);
 
   virtual void clearBitVoxelMeaning(BitVoxelMeaning voxel_meaning);
-
 
 //protected:
 //  virtual void clearVoxelMapRemoteLock(const uint32_t bit_index);
 
 public:
 
-  virtual bool mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset = Vector3ui());
+  virtual bool mergeOccupied(const boost::shared_ptr<ProbVoxelMap> other, const Vector3ui &voxel_offset = Vector3ui(), float occupancy_threshold = 0.5);
 
   void jumpFlood3D(int block_size = cMAX_THREADS_PER_BLOCK, int debug = 0, bool logging_reinit = false);
   void exactDistances3D(std::vector<Vector3f>& points);
@@ -76,9 +78,15 @@ public:
   DistanceVoxel::pba_dist_t getSquaredObstacleDistance(uint x, uint y, uint z);
   DistanceVoxel::pba_dist_t getObstacleDistance(const Vector3ui& pos);
   DistanceVoxel::pba_dist_t getObstacleDistance(uint x, uint y, uint z);
+  
+  void getSquaredDistancesToHost(std::vector<uint>& indices, std::vector<DistanceVoxel::pba_dist_t>& output);
+  void getSquaredDistances(thrust::device_ptr<uint> dev_indices_begin, thrust::device_ptr<uint> dev_indices_end, thrust::device_ptr<DistanceVoxel::pba_dist_t> dev_output);
+  
+  void getDistancesToHost(std::vector<uint>& indices, std::vector<DistanceVoxel::pba_dist_t>& output);
+  void getDistances(thrust::device_ptr<uint> dev_indices_begin, thrust::device_ptr<uint> dev_indices_end, thrust::device_ptr<DistanceVoxel::pba_dist_t> dev_output);
 
   void extract_distances(free_space_t* dev_distances, int robot_radius) const;
-  void init_floodfill(free_space_t* distances, manhattan_dist_t* manhattan_distances, uint robot_radius);
+  void init_floodfill(free_space_t* dev_distances, manhattan_dist_t* dev_manhattan_distances, uint robot_radius);
 
   DistanceVoxel::accumulated_diff differences3D(const boost::shared_ptr<DistanceVoxelMap> other_map, int debug = 0, bool logging_reinit = true);
 };
@@ -103,7 +111,7 @@ struct mergeOccupiedOperator
     uint index = thrust::get<1>(input);
 
     // get int coords of voxel; use map_dim
-    Vector3ui coords = linearIndexToCoordinatesUnsigned(index, map_dim);
+    Vector3ui coords = mapToVoxels(index, map_dim);
 
     // add offset
     return DistanceVoxel(coords + offset);
@@ -113,11 +121,17 @@ struct mergeOccupiedOperator
 struct probVoxelOccupied
 {
   typedef thrust::tuple<ProbabilisticVoxel, uint> inputTuple;
+  Probability occ_threshold;
+
+  probVoxelOccupied(Probability occ_threshold_)
+  {
+    occ_threshold = occ_threshold_;
+  }
 
   __host__ __device__
   bool operator()(const inputTuple &input) const
   {
-    return thrust::get<0>(input).getOccupancy() == MAX_PROBABILITY;
+    return thrust::get<0>(input).getOccupancy() > occ_threshold;
   }
 };
 

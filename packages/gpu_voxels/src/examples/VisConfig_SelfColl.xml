@@ -1,99 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  The map name can be either the exact name, or an enumarator like:
-  voxelmap_#, voxellist_#, primitive_array_# or octree_#
-  where # is a counter, starting at 0.
-
-  For bitvector voxelmaps you can specify the color for "all_types" and then overwrite specific SweptVolume IDs by tpye_#.
-
-  For probabilistic maps, an occupancy_threshold can be set, so that only voxels with an
-  occupancy >= occupancy_threshold will be drawn. It has to be in the range of -127 to 127.
-
   If the color is not specified by a word, the RGBA-values will be used instead.
   The RGBA-values should be between 0 and 1.
   Currently supported colors are: black, white, red, green, blue, gray, yellow, cyan, magenta
   To get a darker version of the color add "dark" infront of the name
   (e.g. dark blue), that doesn't work with black or white.
-  Also a color blending along the Z-Axis can be realized by defining "color_1" and "color_2" instead of a single color.
 -->
 
 <visualizer_context>
 <background>
-  white
+  black
 </background>
 
-<!-- ------------- The parameter for myRobotMap------ -->
-<myRobotMap>
+
+<!-- ------------- The parameter for the voxel map 0------ -->
+<voxelmap_0>
+  <!-- only voxels with an occupancy >= occupancy_threshold will be drawn. Has to be in the range of 1 to 255 -->
   <occupancy_threshold> 1 </occupancy_threshold>
 
-  <!--her you can specifie an offset to the voxel map (only effects the visualization)-->
-  <!--
-      <offset>
-      <x> 0 </x>
-      <y> 50 </y>
-      <z> 0 </z>
-      </offset>
-  -->
   <!-- definde the colors for the different voxel types -->
-  <type_0>
-    blue
-  </type_0>
-  <type_1>
-      <rgba>
-        <r> 0 </r>
-        <g> 1 </g>
-        <b> 0 </b>
-      </rgba>
-  </type_1>
+  <all_types>
+    green
+  </all_types>
+  <!-- -------- type COLLISION ----------- -->
   <type_2>
-    red
+    dark red
   </type_2>
-  <type_3>
-    magenta
-  </type_3>
-</myRobotMap>
+</voxelmap_0>
 
-
-<!-- ------------- The parameter for myEnvironmentMap------ -->
-<myEnvironmentMap>
-  <type_0>
-    <color_1>  green  </color_1>
-    <color_2>  dark green  </color_2>
-  </type_0>
-  <type_1>
-    <color_1>  black </color_1>
-    <color_2>  red  </color_2>
-  </type_1>
-  <type_2>
-    red
-  </type_2>
-  <type_3>
-    cyan
-  </type_3>
-</myEnvironmentMap>
 
 
 
 
 <!-- --------------- The parameter for camera------------ -->
 <camera>
+  <!-- Free flight mode -->
   <position>
-    <x> 367.681 </x>
-    <y> 234.225 </y>
-    <z> 172.993 </z>
+    <x> 71.3917 </x>
+    <y> 145.875 </y>
+    <z> 49.123 </z>
   </position>
+  <horizontal_angle> 3.81635 </horizontal_angle> <!-- given in Deg -->
+  <vertical_angle> -11.9003 </vertical_angle> <!-- given in Deg -->
+  <field_of_view> 60 </field_of_view> <!-- given in Deg -->
+  <!-- Orbit mode -->
   <focus>
-    <x> 50 </x>
-    <y> 0 </y>
+    <x> 202.43 </x>
+    <y> 199.583 </y>
     <z> 50 </z>
   </focus>
-  <horizontal_angle> 286.993 </horizontal_angle> <!-- given in Deg -->
-  <vertical_angle> -9.50091 </vertical_angle> <!-- given in Deg -->
-  <field_of_view> 60 </field_of_view> <!-- given in Deg -->
   <window_width> 1024 </window_width>
   <window_height> 768 </window_height>
 </camera>
+
 
 <!-- --------------- some miscellaneous parameter------------ -->
 <miscellaneous>
@@ -114,11 +74,11 @@
   <draw_edges_of_triangles> true </draw_edges_of_triangles>
   <draw_filled_triangles> true </draw_filled_triangles>
   <draw_whole_map> true </draw_whole_map> <!-- disables the view cutting -->
-  <grid_distance> 25 </grid_distance> <!-- the distance between two grid lines -->
+  <grid_distance> 10 </grid_distance> <!-- the distance between two grid lines -->
   <grid_height> 0 </grid_height> <!-- the height where the grid will be drawn -->
   <grid_max_x> 500 </grid_max_x> <!-- the x dimension of the grid -->
   <grid_max_y> 500 </grid_max_y> <!-- the y dimension of the grid -->
-  <grid_color> black </grid_color>
+  <grid_color> blue </grid_color>
   <unit_scale> 1 cm </unit_scale>
 </miscellaneous>
 
