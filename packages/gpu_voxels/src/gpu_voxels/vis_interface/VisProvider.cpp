@@ -35,6 +35,9 @@ VisProvider::VisProvider(std::string segment_name, std::string map_name)
     m_shm_mapName(),
     m_shm_draw_types(NULL)
 {
+  permissions per;
+  per.set_unrestricted();
+  m_visualizer_segment = managed_shared_memory(open_or_create, shm_segment_name_visualizer.c_str(), 65536, 0, per);
 }
 
 VisProvider::~VisProvider()
@@ -66,12 +69,6 @@ void VisProvider::openOrCreateSegment()
 
 void VisProvider::setDrawTypes(DrawTypes set_draw_types)
 {
-  if (m_visualizer_segment.get_segment_manager() == NULL) // check whether it's already initialized
-  {
-    permissions per;
-    per.set_unrestricted();
-    m_visualizer_segment = managed_shared_memory(open_or_create, shm_segment_name_visualizer.c_str(), 65536, 0, per);
-  }
   if (m_shm_draw_types == NULL)
     m_shm_draw_types = m_visualizer_segment.find_or_construct<DrawTypes>(shm_variable_name_set_draw_types.c_str())(
         DrawTypes());

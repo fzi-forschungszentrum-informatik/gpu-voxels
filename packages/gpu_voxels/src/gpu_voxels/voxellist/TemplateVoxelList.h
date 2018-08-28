@@ -76,7 +76,7 @@ public:
   //! get thrust triple to the end of all data vectors
   virtual keyCoordVoxelZipIterator getEndTripleZipIterator();
 
-  //! get acces to data vectors on device
+  //! get access to data vectors on device
   typename thrust::device_vector<Voxel>::iterator getDeviceDataVectorBeginning()
   {
     return m_dev_list.begin();
@@ -122,7 +122,12 @@ public:
 
   virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning);
 
-  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning);
+  virtual void insertPointCloud(const Vector3f* d_points, uint32_t size, const BitVoxelMeaning voxel_meaning);
+
+
+  virtual void insertCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning);
+
+  virtual void insertCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning);
 
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map.

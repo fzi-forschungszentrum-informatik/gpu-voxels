@@ -31,7 +31,7 @@ include(LibFindMacros)
 
 libfind_lib_with_pkg_config(Eigen3 eigen3
   HEADERS Eigen/Core
-  HEADER_PATHS "/usr/include/eigen3" "${CMAKE_INSTALL_PREFIX}/include/eigen3"
+  HEADER_PATHS "${CMAKE_PREFIX_PATH}" "/usr/include/eigen3" "${CMAKE_INSTALL_PREFIX}/include/eigen3"
   DEFINE _IC_BUILDER_EIGEN_
   )
 

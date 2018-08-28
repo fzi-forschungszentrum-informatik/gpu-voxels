@@ -357,7 +357,7 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const PointCloud &p
 }
 
 template<class Voxel, class VoxelIDType>
-void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const Vector3f *points_d, uint32_t size, const BitVoxelMeaning voxel_meaning)
+void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const Vector3f *d_points, uint32_t size, const BitVoxelMeaning voxel_meaning)
 {
   if (size > 0)
   {
@@ -379,7 +379,52 @@ void TemplateVoxelList<Voxel, VoxelIDType>::insertPointCloud(const Vector3f *poi
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
     kernelInsertGlobalPointCloud<<<num_blocks, threads_per_block>>>(dev_id_list_ptr, dev_coord_list_ptr, dev_voxel_list_ptr,
                                                                     m_ref_map_dim, m_voxel_side_length,
-                                                                    points_d, size, offset_new_entries, voxel_meaning);
+                                                                    d_points, size, offset_new_entries, voxel_meaning);
+    CHECK_CUDA_ERROR();
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+    remove_out_of_bounds();
+
+    make_unique();
+  }
+}
+
+template<class Voxel, class VoxelIDType>
+void TemplateVoxelList<Voxel, VoxelIDType>::insertCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning)
+{
+  Vector3ui* d_coordinates;
+  HANDLE_CUDA_ERROR(cudaMalloc(&d_coordinates, coordinates.size() * sizeof(Vector3ui)));
+  HANDLE_CUDA_ERROR(
+        cudaMemcpy(d_coordinates, &coordinates[0], coordinates.size() * sizeof(Vector3ui), cudaMemcpyHostToDevice));
+
+  insertCoordinateList(d_coordinates, coordinates.size(), voxel_meaning);
+
+  HANDLE_CUDA_ERROR(cudaFree(d_coordinates));
+}
+
+template<class Voxel, class VoxelIDType>
+void TemplateVoxelList<Voxel,VoxelIDType>::insertCoordinateList(const Vector3ui *d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning)
+{
+  if (size > 0)
+  {
+    lock_guard guard(this->m_mutex);
+
+    uint32_t offset_new_entries = m_dev_list.size();
+
+    // resize capacity
+    this->resize(offset_new_entries + size);
+
+    // get raw pointers to the thrust vectors data:
+    Voxel* dev_voxel_list_ptr = thrust::raw_pointer_cast(m_dev_list.data());
+    Vector3ui* dev_coord_list_ptr = thrust::raw_pointer_cast(m_dev_coord_list.data());
+    VoxelIDType* dev_id_list_ptr = thrust::raw_pointer_cast(m_dev_id_list.data());
+
+    // copy points to the gpu
+    uint32_t num_blocks, threads_per_block;
+    computeLinearLoad(size, &num_blocks, &threads_per_block);
+    HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+    kernelInsertCoordinateTuples<<<num_blocks, threads_per_block>>>(dev_id_list_ptr, dev_coord_list_ptr, dev_voxel_list_ptr,
+                                                                    m_ref_map_dim, d_coordinates, size, offset_new_entries, voxel_meaning);
     CHECK_CUDA_ERROR();
     HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -801,8 +846,8 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::subtractFromCountingVoxelList(const 
 template<class Voxel, class VoxelIDType>
 Vector3ui TemplateVoxelList<Voxel, VoxelIDType>::getDimensions() const
 {
-  //LOGGING_WARNING_C(VoxellistLog, TemplateVoxelList, "This is not the xyz dimension! The x value contains the number of voxels in the list." << endl);
-  return Vector3ui(m_dev_list.size(), 0, 0);
+//LOGGING_DEBUG_C(VoxellistLog, TemplateVoxelList, "This returns the number of voxels in the voxellist, not the xyz limits of the reference GpuVoxelsMap! The x value contains the number of voxels in the list." << endl);
+return Vector3ui(m_dev_list.size(), 1, 1);
 }
 
 template<class Voxel, class VoxelIDType>

@@ -45,7 +45,7 @@ RobotToGPU::RobotToGPU(const float voxel_side_length, const std::string &_path, 
   boost::filesystem::path path_to_urdf = getGpuVoxelsPath(use_model_path) / boost::filesystem::path(_path);
 
   LOGGING_INFO_C(RobotLog, Robot, "Parsing URDF " << path_to_urdf.string() << endl);
-  boost::shared_ptr<urdf::ModelInterface> model_interface_shrd_ptr = urdf::parseURDFFile(path_to_urdf.string());
+  urdf::ModelInterfaceSharedPtr model_interface_shrd_ptr = urdf::parseURDFFile(path_to_urdf.string());
 
   // for the robot itself we pass the path where we expect the binvox files:
   boost::filesystem::path path_to_pointclouds = path_to_urdf.parent_path();

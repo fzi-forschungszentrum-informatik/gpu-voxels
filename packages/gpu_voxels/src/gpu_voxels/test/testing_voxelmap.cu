@@ -365,7 +365,7 @@ BOOST_AUTO_TEST_CASE(collision_with_types_probab)
  */
 BOOST_AUTO_TEST_CASE(selfcollision_metapointcloud)
 {
-  PERF_MON_START("selfccollision_metapointcloud");
+  PERF_MON_START("selfcollision_metapointcloud");
   for(int i = 0; i < iterationCount; i++)
   {
     // force kernel calls that run in a single block as well as multiple blocks
@@ -474,7 +474,7 @@ BOOST_AUTO_TEST_CASE(selfcollision_metapointcloud)
       BOOST_CHECK(self_coll == false);
       BOOST_CHECK(colliding_meanings.isZero() == true);
 
-      PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("selfccollision_metapointcloud", "selfccollision_metapointcloud", "voxelmap");
+      PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("selfcollision_metapointcloud", "selfcollision_metapointcloud", "voxelmap");
     }
   }
 }

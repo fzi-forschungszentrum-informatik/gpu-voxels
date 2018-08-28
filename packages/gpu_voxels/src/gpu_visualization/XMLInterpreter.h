@@ -84,19 +84,6 @@ public:
 
   XMLInterpreter()
   {
-    m_is_initialized = false;
-  }
-
-  /*!
-   * \brief initialize the XML interpreter from <code>icl_core::config</code>
-   * \param argc CLI arguments to find the config file
-   * \param argv CLI arguments to find the config file
-   * \return true if success
-   */
-  bool initialize(int& argc, char *argv[])
-  {
-    m_is_initialized = icl_core::config::initialize(argc, argv);
-    return m_is_initialized;
   }
 
   /*!
@@ -437,8 +424,8 @@ private:
    */
   Camera_gpu* getCameraFromXML();
 
-  /////////////////////////////private variables/////////////////////////////////////initialized
-  bool m_is_initialized;
+  /////////////////////////////private variables/////////////////////////////////////
+
 };
 
 } // end of ns

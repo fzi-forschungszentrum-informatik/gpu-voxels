@@ -67,7 +67,7 @@
 namespace gpu_voxels {
 namespace robot {
 
-RobotJoint::RobotJoint( Robot* robot, const boost::shared_ptr<const urdf::Joint>& joint )
+RobotJoint::RobotJoint( Robot* robot, const urdf::JointConstPtr& joint )
   : robot_( robot )
   , name_( joint->name )
   , parent_link_name_( joint->parent_link_name )

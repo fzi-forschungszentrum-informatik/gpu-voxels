@@ -66,6 +66,8 @@
 #include "gpu_voxels/robot/urdf_robot/robot_link.h"
 #include "gpu_voxels/robot/urdf_robot/robot_joint.h"
 
+#include <boost/typeof/typeof.hpp>
+
 namespace fs=boost::filesystem;
 
 namespace gpu_voxels {
@@ -130,8 +132,8 @@ RobotLink::RobotLink(Robot* robot,
       desc << " child joint: ";
     }
 
-    std::vector<boost::shared_ptr<urdf::Joint> >::const_iterator child_it = link->child_joints.begin();
-    std::vector<boost::shared_ptr<urdf::Joint> >::const_iterator child_end = link->child_joints.end();
+    BOOST_TYPEOF(link->child_joints.begin()) child_it = link->child_joints.begin();
+    BOOST_TYPEOF(link->child_joints.end()) child_end = link->child_joints.end();
     for ( ; child_it != child_end ; ++child_it )
     {
       urdf::Joint *child_joint = child_it->get();
@@ -275,15 +277,15 @@ void RobotLink::createCollision(const urdf::LinkConstPtr& link)
 {
   bool valid_collision_found = false;
 #if URDF_MAJOR_VERSION == 0 && URDF_MINOR_VERSION == 2
-  std::map<std::string, boost::shared_ptr<std::vector<boost::shared_ptr<urdf::Collision> > > >::const_iterator mi;
+  BOOST_TYPEOF(link->collision_groups)::const_iterator mi;
   for( mi = link->collision_groups.begin(); mi != link->collision_groups.end(); mi++ )
   {
     if( mi->second )
     {
-      std::vector<boost::shared_ptr<urdf::Collision> >::const_iterator vi;
+      BOOST_TYPEOF(mi->second)::const_iterator vi;
       for( vi = mi->second->begin(); vi != mi->second->end(); vi++ )
       {
-        boost::shared_ptr<urdf::Collision> collision = *vi;
+        BOOST_TYPEOF(*vi) collision = *vi;
         if( collision && collision->geometry )
         {
           node* collision_mesh = new node();
@@ -298,10 +300,10 @@ void RobotLink::createCollision(const urdf::LinkConstPtr& link)
     }
   }
 #else
-  std::vector<boost::shared_ptr<urdf::Collision> >::const_iterator vi;
+  BOOST_TYPEOF(link->collision_array.begin()) vi;
   for( vi = link->collision_array.begin(); vi != link->collision_array.end(); vi++ )
   {
-    boost::shared_ptr<urdf::Collision> collision = *vi;
+    BOOST_TYPEOF(*vi) collision = *vi;
     if( collision && collision->geometry )
     {
       node* collision_mesh = new node();
@@ -330,15 +332,15 @@ void RobotLink::createVisual(const urdf::LinkConstPtr& link )
 {
   bool valid_visual_found = false;
 #if URDF_MAJOR_VERSION == 0 && URDF_MINOR_VERSION == 2
-  std::map<std::string, boost::shared_ptr<std::vector<boost::shared_ptr<urdf::Visual> > > >::const_iterator mi;
+  BOOST_TYPEOF(link->visual_groups)::const_iterator mi;
   for( mi = link->visual_groups.begin(); mi != link->visual_groups.end(); mi++ )
   {
     if( mi->second )
     {
-      std::vector<boost::shared_ptr<urdf::Visual> >::const_iterator vi;
+      BOOST_TYPEOF(mi->second)::const_iterator vi;
       for( vi = mi->second->begin(); vi != mi->second->end(); vi++ )
       {
-        boost::shared_ptr<urdf::Visual> visual = *vi;
+        BOOST_TYPEOF(*vi) visual = *vi;
         if( visual && visual->geometry )
         {
           node* visual_mesh = new node();
@@ -353,10 +355,10 @@ void RobotLink::createVisual(const urdf::LinkConstPtr& link )
     }
   }
 #else
-  std::vector<boost::shared_ptr<urdf::Visual> >::const_iterator vi;
+  BOOST_TYPEOF(link->visual_array.begin()) vi;
   for( vi = link->visual_array.begin(); vi != link->visual_array.end(); vi++ )
   {
-    boost::shared_ptr<urdf::Visual> visual = *vi;
+    BOOST_TYPEOF(*vi) visual = *vi;
     if( visual && visual->geometry )
     {
       node* visual_mesh = new node();

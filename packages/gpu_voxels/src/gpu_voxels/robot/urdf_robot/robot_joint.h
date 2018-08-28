@@ -62,7 +62,6 @@
 
 #include "gpu_voxels/helpers/cuda_datatypes.h"
 #include "gpu_voxels/robot/urdf_robot/node.h"
-#include <boost/shared_ptr.hpp>
 #if __CUDACC_VER_MAJOR__ >= 9
 #undef __CUDACC_VER__
 #define __CUDACC_VER__ 90000
@@ -70,12 +69,19 @@
 #include <Eigen/Geometry>
 #include <kdl/frames.hpp>
 
+#include <boost/typeof/typeof.hpp>
+#include <boost/utility/declval.hpp>
+#include <urdf/model.h>
+
+
 namespace urdf {
   class ModelInterface;
   class Link;
   class Joint;
   class Geometry;
   class Pose;
+  typedef BOOST_TYPEOF(boost::declval<urdf::ModelInterface>().joints_) VectorOfJointConstPtr;
+  typedef typename VectorOfJointConstPtr::mapped_type JointConstPtr;
 }
 
 namespace gpu_voxels {
@@ -90,7 +96,7 @@ class Robot;
 class RobotJoint
 {
 public:
-  RobotJoint( Robot* robot, const boost::shared_ptr<const urdf::Joint>& joint );
+  RobotJoint( Robot* robot, const urdf::JointConstPtr& joint );
   virtual ~RobotJoint();
 
   KDL::Frame getPose();

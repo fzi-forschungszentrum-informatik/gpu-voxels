@@ -338,7 +338,7 @@ void registerOctreeFromSharedMemory(uint32_t index)
   {
     SharedMemoryManagerOctrees shm_manager_octrees;
     std::string map_name = shm_manager_octrees.getNameOfOctree(index);
-    LOGGING_INFO(Visualization, "Providing a Octree called \""<< map_name << "\"." << endl);
+    LOGGING_INFO(Visualization, "Providing an Octree called \""<< map_name << "\"." << endl);
     vis->registerOctree(index, map_name);
   } catch (interprocess_exception& e)
   {
@@ -364,11 +364,11 @@ void registerPrimitiveArrayFromSharedMemory(uint32_t index)
 
 int32_t main(int32_t argc, char* argv[])
 {
-// Initialize the logging
+// Initialize the logging framework. Also calls icl_core::config::initialize
   icl_core::logging::initialize(argc, argv);
 
   LOGGING_INFO(Visualization, "Starting the gpu_voxels Visualizer." << endl);
-  vis->initalizeVisualizer(argc, argv);
+  vis->initializeVisualizer(argc, argv);
 
   uint32_t num_voxelmaps = getNumberOfVoxelmapsFromSharedMem();
   LOGGING_INFO(Visualization, "Number of voxel maps that will be drawn: " << num_voxelmaps << endl);

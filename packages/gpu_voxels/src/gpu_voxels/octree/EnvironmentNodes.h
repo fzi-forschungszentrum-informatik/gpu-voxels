@@ -284,7 +284,7 @@ public:
   void setChildPtr(void* const child)
   {
 //    assert(uint64_t(child) < (uint64_t(1) << uint64_t(8 * (sizeof(m_child_high) + sizeof(m_child_low)))));
-//    m_child_high = (uint8_t) (uint64_t(child) >> (8 * sizeof(m_child_low)));
+//    m_child_high = (uint16_t) (uint64_t(child) >> (8 * sizeof(m_child_low)));
 //    m_child_low = (uint32_t) (uint64_t(child) & 0xFFFFFFFF);
     assert(uint64_t(child) < (uint64_t(1) << uint64_t(8 * (sizeof(m_child_high) + sizeof(m_child_middle) + sizeof(m_child_low)))));
     uint64_t ptr = uint64_t(child);
@@ -292,7 +292,7 @@ public:
     ptr =  ptr >> (sizeof(m_child_low) << 3);
     m_child_middle = uint16_t(ptr);
     ptr =  ptr >> (sizeof(m_child_middle) << 3);
-    m_child_high = uint8_t(ptr);
+    m_child_high = uint16_t(ptr);
   }
 
 #ifndef DISABLE_SEPARATE_COMPILTION
@@ -347,10 +347,10 @@ protected:
   NodeFlags m_flags;
   uint16_t m_child_low;
   uint16_t m_child_middle;
-  uint8_t m_child_high;
+  uint16_t m_child_high;
 
 //  uint32_t m_child_low;
-//  uint8_t m_child_high;
+//  uint16_t m_child_high;
 //  NodeFlags m_flags;
 };
 

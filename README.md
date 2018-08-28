@@ -18,7 +18,7 @@ Find detailed installation and linking instructions in our Doxygen.
 
 **Core:**
 
-- CUDA 7.5, 8.0 and 9.1
+- CUDA 7.5, 8.0 and 9.2
 - PCL
 - OpenNI
 - Boost
@@ -56,12 +56,15 @@ C++11 is not enabled by default. To compile in C++11 mode add this to the top of
  SET(CMAKE_CXX_STANDARD 11)
 
 ## Known issues
-There is a known bug in GLM on Ubuntu 16.04 that has to be patched to allow usage of the visualizer. Apply the patch described at https://github.com/g-truc/glm/issues/530 to /usr/include/glm/detail/func_common.inl
+- Cuda 8.0: Code compiled with Cuda 8.0 works fine with older GPU drivers such as 375.66, but there are runtime errors with driver 384.111 and newer ("PTX JIT compilation failed").
+- GLM: There is a known bug in GLM on Ubuntu 16.04 that has to be patched to allow usage of the visualizer. Apply the patch described at https://github.com/g-truc/glm/issues/530 to /usr/include/glm/detail/func_common.inl
+- Eigen 3.3.4 and 3.3.5 with CUDA 9.0, 9.1, 9.2: Error: class "Eigen::half" has no member "x". Can be fixed by using latest unstable version of Eigen
 
 ## Maintainers:
 The library is developed and maintained by:
 
 - Andreas Hermann
+- Christian Jülg
 
 Contributors are (in temporal order):
 
@@ -69,9 +72,9 @@ Contributors are (in temporal order):
 - Florian Drews
 - Matthias Wagner
 - Felix Mauch
-- Christian Jülg
 - Herbert Pietrzyk
 - Gabriele Bolano
+- Florian Fervers
 
 ## License:
 The software in this repository underlies different licenses.

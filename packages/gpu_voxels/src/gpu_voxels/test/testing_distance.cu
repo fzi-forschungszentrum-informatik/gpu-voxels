@@ -26,6 +26,7 @@
 
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/GeometryGeneration.h>
+#include <gpu_voxels/voxel/DistanceVoxel.hpp>
 #include <gpu_voxels/voxelmap/VoxelMap.h>
 #include <gpu_voxels/test/testing_fixtures.hpp>
 

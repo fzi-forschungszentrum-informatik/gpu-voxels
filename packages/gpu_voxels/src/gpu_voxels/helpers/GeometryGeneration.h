@@ -55,6 +55,8 @@ void createOrientedBox(const OrientedBoxParams& params, float spacing, gpu_voxel
  */
 std::vector<Vector3f> createBoxOfPoints(Vector3f min, Vector3f max, float delta);
 
+std::vector<Vector3ui> createBoxOfPoints(Vector3f min, Vector3f max, float delta, float voxel_side_length);
+
 /*!
  * \brief createSphereOfPoints creates points within a sphere, with a given spacing
  * \param center Center of the sphere
@@ -64,6 +66,7 @@ std::vector<Vector3f> createBoxOfPoints(Vector3f min, Vector3f max, float delta)
  */
 std::vector<Vector3f> createSphereOfPoints(Vector3f center, float radius, float delta);
 
+std::vector<Vector3ui> createSphereOfPoints(Vector3f center, float radius, float delta, float voxel_side_length);
 
 /*!
  * \brief createCylinderOfPoints creates points within a cylinder, with a given spacing
@@ -74,6 +77,8 @@ std::vector<Vector3f> createSphereOfPoints(Vector3f center, float radius, float 
  * \return Generated pointcloud
  */
 std::vector<Vector3f> createCylinderOfPoints(Vector3f center, float radius, float length_along_z, float delta);
+
+std::vector<Vector3ui> createCylinderOfPoints(Vector3f center, float radius, float length_along_z, float delta, float voxel_side_length);
 
 /*!
  * \brief createEquidistantPointsInBox creates a pointcloud that will cover

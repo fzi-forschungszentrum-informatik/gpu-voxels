@@ -57,6 +57,8 @@
 #include "gpu_voxels/robot/urdf_robot/robot.h"
 #include "gpu_voxels/logging/logging_robot.h"
 
+#include <boost/typeof/typeof.hpp>
+
 namespace gpu_voxels {
 namespace robot {
 
@@ -106,12 +108,11 @@ void Robot::load( const urdf::ModelInterface &urdf, const boost::filesystem::pat
 
   // Create properties for each link.
   {
-    typedef std::map<std::string, boost::shared_ptr<urdf::Link> > M_NameToUrdfLink;
-    M_NameToUrdfLink::const_iterator link_it = urdf.links_.begin();
-    M_NameToUrdfLink::const_iterator link_end = urdf.links_.end();
+    BOOST_TYPEOF(urdf.links_.begin()) link_it = urdf.links_.begin();
+    BOOST_TYPEOF(urdf.links_.end()) link_end = urdf.links_.end();
     for( ; link_it != link_end; ++link_it )
     {
-      const boost::shared_ptr<const urdf::Link>& urdf_link = link_it->second;
+      const BOOST_TYPEOF(link_it->second)& urdf_link = link_it->second;
       std::string parent_joint_name;
 
       if (urdf_link != urdf.getRoot() && urdf_link->parent_joint)
@@ -134,12 +135,11 @@ void Robot::load( const urdf::ModelInterface &urdf, const boost::filesystem::pat
 
   // Create properties for each joint.
   {
-    typedef std::map<std::string, boost::shared_ptr<urdf::Joint> > M_NameToUrdfJoint;
-    M_NameToUrdfJoint::const_iterator joint_it = urdf.joints_.begin();
-    M_NameToUrdfJoint::const_iterator joint_end = urdf.joints_.end();
+    BOOST_TYPEOF(urdf.joints_.begin()) joint_it = urdf.joints_.begin();
+    BOOST_TYPEOF(urdf.joints_.end()) joint_end = urdf.joints_.end();
     for( ; joint_it != joint_end; ++joint_it )
     {
-      const boost::shared_ptr<const urdf::Joint>& urdf_joint = joint_it->second;
+      const BOOST_TYPEOF(joint_it->second)& urdf_joint = joint_it->second;
       RobotJoint* joint = new RobotJoint(this, urdf_joint);
 
       joints_[urdf_joint->name] = joint;

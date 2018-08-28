@@ -105,6 +105,38 @@ void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCl
 }
 
 template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
+void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning)
+{
+  lock_guard guard(this->m_mutex);
+  if (voxel_meaning != eBVM_OCCUPIED)
+    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
+  else
+  {
+    // Copy points to gpu and tranform to voxel coordinates
+    thrust::host_vector<Vector3ui> h_coordinates(coordinates.begin(), coordinates.end());
+    thrust::device_vector<Vector3ui> d_voxels;
+    d_voxels = h_coordinates;    
+
+    insertVoxelData(d_voxels);
+  }
+}
+
+template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
+void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertCoordinateList(const Vector3ui *d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning)
+{
+  lock_guard guard(this->m_mutex);
+  if (voxel_meaning != eBVM_OCCUPIED)
+    LOGGING_ERROR_C(OctreeLog, NTree, GPU_VOXELS_MAP_ONLY_SUPPORTS_BVM_OCCUPIED << endl);
+  else
+  {
+    // Copy points to gpu and tranform to voxel coordinates
+    thrust::device_vector<Vector3ui> d_voxels(d_coordinates, d_coordinates + size);
+
+    insertVoxelData(d_voxels);
+  }
+}
+
+template<std::size_t branching_factor, std::size_t level_count, typename InnerNode, typename LeafNode>
 void GvlNTree<branching_factor, level_count, InnerNode, LeafNode>::insertPointCloudWithFreespaceCalculation(
     const std::vector<Vector3f> &point_cloud_in_sensor_coords, const Matrix4f &sensor_pose,
     uint32_t free_space_resolution, uint32_t occupied_space_resolution)

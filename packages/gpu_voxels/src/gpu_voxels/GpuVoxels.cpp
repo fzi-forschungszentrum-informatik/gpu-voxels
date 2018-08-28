@@ -552,9 +552,8 @@ bool GpuVoxels::insertBoxIntoMap(const Vector3f &corner_min, const Vector3f &cor
 
   float delta = m_voxel_side_length / points_per_voxel;
 
-  PointCloud box_cloud(geometry_generation::createBoxOfPoints(corner_min, corner_max, delta));
-
-  map_it->second.map_shared_ptr->insertPointCloud(box_cloud, voxel_meaning);
+  std::vector<Vector3ui> coordinates = geometry_generation::createBoxOfPoints(corner_min, corner_max, delta, m_voxel_side_length);
+  map_it->second.map_shared_ptr->insertCoordinateList(coordinates, voxel_meaning);
 
   return true;
 }

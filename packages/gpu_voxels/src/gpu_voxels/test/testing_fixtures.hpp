@@ -27,12 +27,18 @@
 #define IC_PERFORMANCE_MONITOR
 #include <iostream>
 #include <fstream>
-#include <boost/test/unit_test.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <gpu_voxels/helpers/cuda_handling.h>
 #include "icl_core_performance_monitor/PerformanceMonitor.h"
+
+#include <boost/version.hpp>
+// boost::unit_test::traverse_test_tree is only part of public boost api since 1.59
+#if BOOST_VERSION >= 105900
+#include <boost/test/tree/traverse.hpp>
+#endif
+#include <boost/test/unit_test.hpp>
 
 struct Visitor : boost::unit_test::test_tree_visitor
 {

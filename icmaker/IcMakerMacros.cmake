@@ -221,7 +221,7 @@ MACRO(ICMAKER_ADD_ROS_SUBDIRECTORY)
   IF(ROS_FOUND)
     ADD_SUBDIRECTORY(${ARGN})
   ELSE()
-    MESSAGE(STATUS "Warning: Omitting ROS subdirectory \"${ARGN}\" because ROS has not been found on the system!")
+    MESSAGE(STATUS "Warning: Omitting ROS subdirectory \"${ARGN}\" because ROS has not been found on the system! See http://wiki.ros.org/ROS/Installation if you want to use these features.")
   ENDIF()
 ENDMACRO()
 
@@ -479,7 +479,11 @@ MACRO(ICMAKER_BUILD_LIBRARY_IN_SUBDIR _subdir_lib _subdir_bin _sources)
     # See if there are CUDA object files to be added
     IF(CUDA_FOUND AND ${icmaker_target}_CUDA_FILES)
       SET(__cuda_generated_files)
-      CUDA_WRAP_SRCS(${icmaker_target}_CUDA_TARGET OBJ __cuda_generated_files ${${icmaker_target}_CUDA_FILES} OPTIONS ${ICMAKER_CUDA_CPPDEFINES})
+      IF(${CMAKE_VERSION} VERSION_LESS "3.6.2") 
+        CUDA_WRAP_SRCS(${icmaker_target}_CUDA_TARGET OBJ __cuda_generated_files ${${icmaker_target}_CUDA_FILES} OPTIONS ${ICMAKER_CUDA_CPPDEFINES})
+      ELSE()
+        CUDA_WRAP_SRCS(${icmaker_target}_CUDA_TARGET OBJ __cuda_generated_files ${${icmaker_target}_CUDA_FILES} OPTIONS ${ICMAKER_CUDA_CPPDEFINES} PHONY)
+      ENDIF()
       LIST(APPEND ${icmaker_target}_AGGREGATE_SOURCES ${__cuda_generated_files})
     ENDIF()
 
@@ -654,7 +658,11 @@ MACRO(ICMAKER_BUILD_SWIG_MODULES)
 
           include_directories(${${icmaker_target}_AGGREGATE_INCLUDE_DIRS})
 
-          SWIG_ADD_MODULE(${icmaker_target} ${_module} ${${icmaker_target_parent}_SWIG_FILE})
+          IF(${CMAKE_VERSION} VERSION_LESS "3.8")
+            SWIG_ADD_MODULE(${icmaker_target} ${_module} ${${icmaker_target_parent}_SWIG_FILE})
+          ELSE()
+            SWIG_ADD_LIBRARY(${icmaker_target} LANGUAGE ${_module} SOURCES ${${icmaker_target_parent}_SWIG_FILE})
+          ENDIF()
 
           SWIG_LINK_LIBRARIES(${icmaker_target} ${${icmaker_target}_AGGREGATE_TARGET_LINK_LIBRARIES})
 
@@ -806,7 +814,11 @@ MACRO(ICMAKER_BUILD_PROGRAM_INTERNAL)
     # See if there are CUDA object files to be added
     IF(CUDA_FOUND AND ${icmaker_target}_CUDA_FILES)
       SET(__cuda_generated_files)
-      CUDA_WRAP_SRCS(${icmaker_target}_CUDA_TARGET OBJ __cuda_generated_files ${${icmaker_target}_CUDA_FILES} OPTIONS ${ICMAKER_CUDA_CPPDEFINES})
+      IF(${CMAKE_VERSION} VERSION_LESS "3.6.2") 
+        CUDA_WRAP_SRCS(${icmaker_target}_CUDA_TARGET OBJ __cuda_generated_files ${${icmaker_target}_CUDA_FILES} OPTIONS ${ICMAKER_CUDA_CPPDEFINES})
+      ELSE()
+        CUDA_WRAP_SRCS(${icmaker_target}_CUDA_TARGET OBJ __cuda_generated_files ${${icmaker_target}_CUDA_FILES} OPTIONS ${ICMAKER_CUDA_CPPDEFINES} PHONY)
+      ENDIF()
       LIST(APPEND ${icmaker_target}_GENERATED_CUDA_OBJS ${__cuda_generated_files})
     ENDIF()
 
@@ -1023,7 +1035,16 @@ MACRO(ICMAKER_CONFIGURE_PACKAGE)
   else()
     configure_file("${ICMAKER_DIRECTORY}/icmaker_template-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/${icmaker_package}-config.cmake" IMMEDIATE @ONLY)
   endif()
-  EXPORT(PACKAGE ${icmaker_package})
+
+  # We do not want to make the packages registered in the User Package Registry to prevent unwanted
+  # finding/linking, especially when using multiple workspaces. That's why we deactivate it here. If
+  # this implies other flaws please consider a new solution!
+  #
+  # More:
+  # https://cmake.org/cmake/help/v3.0/command/export.html
+  # https://ids-git.fzi.de/core/robot_folders/issues/30
+  #
+  #EXPORT(PACKAGE ${icmaker_package})
 
   #  Part 2/3: ${BIN_DIR}/unix-install/${icmaker_package}-config.cmake -> For use *with* "make install"
   set(ICLIB_INCLUDE_DIRS_CONFIGCMAKE "\"\${${icmaker_package}_INSTALL_PATH}/include\"")

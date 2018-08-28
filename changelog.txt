@@ -469,3 +469,39 @@ Known issues:
   - patch for /usr/include/glm/detail/func_common.inl in packages/gpu_voxels/doc/glm_fix_issu530.patch
 
 
+V1.2.1 (2018-08-28):
+====================
+Octree and 18.04 bugfixes, insertCoordinateList and geometry generation with integer coordinates.
+
+Important Bufixes:
+- Octrees issues on Pascal GPUs have been fixed. Thanks to Florian!
+- Icmaker updated to avoid issues on CMake 3.6.2 and newer
+- Fix Boost 1.65.1 compatibility issues for Ubuntu 18.04
+- Fix CUBIN compilation in code=sm_** settings. Thanks to @r2b0 and Florian!
+
+Known Issues:
+- the GLM headers provided by Ubuntu 16.04 have to be patched to allow usage of the visualizer.
+  - see https://github.com/g-truc/glm/issues/530
+  - patch for /usr/include/glm/detail/func_common.inl in packages/gpu_voxels/doc/glm_fix_issu530.patch
+- Cuda 8.0: Code compiled with Cuda 8.0 works fine with older GPU drivers such as 375.66, but there are runtime errors with driver 384.111 and newer
+  - produces runtime error "PTX JIT compilation failed"
+- Eigen 3.3.4 and 3.3.5 issue with CUDA 9.0, 9.1, 9.2: Error: class "Eigen::half" has no member "x".
+  - Can be fixed by using latest unstable version of Eigen
+- The constant cMAX_NR_OF_BLOCKS is currently limited to 65535, while current CUDA devices support over 2 billion blocks
+  - relevant during computeLinearLoad calls and collision checking
+
+Possibly breaking changes:
+- TemplateVoxelList::getDimensions returns (size,1,1) instead of (size,0,0)
+  - Important: TemplateVoxelList::getDimensions does not depend on m_ref_map_dim, unlike TemplateVoxelList::getMetricDimensions!
+
+Additional changes:
+- New example: GeometryGeneration showcases 
+- New function GpuVoxelsMap::insertCoordinateList and geometry generation with integer coordinates 
+  - Example: geometry_generation::createBoxOfPoints(corner_min, corner_max, delta, side_length);
+  - Available for maps, lists and octrees. Can create boxes, spheres and cylinders. Thanks to Herbert for his contribution!
+- GpuVoxels::insertBoxIntoMap now uses the integer coordinate based creation and insertion functionality, avoiding discretization issues
+- Remove warnings regarding logging and visualizer initialization
+- Fix visualizer warning by always creating the shared memory segment on initialization
+- Removed unused shader loading code
+- Updated URDF code for compatibility with new ROS releases
+

@@ -192,10 +192,6 @@ bool XMLInterpreter::getDataContext(DataContext* context, std::string name)
  */
 bool XMLInterpreter::getVoxelmapContext(VoxelmapContext* context, uint32_t index)
 {
-  if (!m_is_initialized)
-  {
-    return false;
-  }
   std::string p = "/" + context->m_map_name;
   if (!getDataContext(context, p))
   { // if no context has been found for the name try the old naming
@@ -207,10 +203,6 @@ bool XMLInterpreter::getVoxelmapContext(VoxelmapContext* context, uint32_t index
 
 bool XMLInterpreter::getVoxellistContext(CubelistContext* context, uint32_t index)
 {
-  if (!m_is_initialized)
-  {
-    return false;
-  }
   std::string p = "/" + context->m_map_name;
   if (!getDataContext(context, p))
   { // if no context has been found for the name try the old naming
@@ -222,10 +214,6 @@ bool XMLInterpreter::getVoxellistContext(CubelistContext* context, uint32_t inde
 
 bool XMLInterpreter::getOctreeContext(CubelistContext* context, uint32_t index)
 {
-  if (!m_is_initialized)
-  {
-    return false;
-  }
   std::string p = "/" + context->m_map_name;
   if (!getDataContext(context, p))
   { // if no context has been found for the name try the old naming
@@ -237,10 +225,6 @@ bool XMLInterpreter::getOctreeContext(CubelistContext* context, uint32_t index)
 
 bool XMLInterpreter::getPrimitiveArrayContext(PrimitiveArrayContext* context, uint32_t index)
 {
-  if (!m_is_initialized)
-  {
-    return false;
-  }
   std::string p = "/" + context->m_map_name;
   if (!getDataContext(context, p))
   { // if no context has been found for the name try the old naming
@@ -252,10 +236,6 @@ bool XMLInterpreter::getPrimitiveArrayContext(PrimitiveArrayContext* context, ui
 
 bool XMLInterpreter::getVisualizerContext(VisualizerContext* con)
 {
-  if (!m_is_initialized)
-  {
-    return false;
-  }
   glm::vec4 color;
   if (getColorFromXML(color, "/background"))
     con->m_background_color = color;
@@ -438,6 +418,7 @@ void XMLInterpreter::getDefaultCuboid(Cuboid*& cuboid)
 /**
  * Loads the camera parameter from the XML file
  * icl_core::config::initalize(..) must be called before use.
+ * icl_core::logging::initialize(..) implicitly calls icl_core::config::initialize
  */
 Camera_gpu * XMLInterpreter::getCameraFromXML()
 {

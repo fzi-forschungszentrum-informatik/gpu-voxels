@@ -70,10 +70,15 @@
 #include <kdl/frames.hpp>
 #include <boost/filesystem.hpp>
 
+#include <boost/typeof/typeof.hpp>
+#include <boost/utility/declval.hpp>
+#include <urdf/model.h>
+
 namespace urdf {
   class ModelInterface;
   class Link;
-  typedef boost::shared_ptr<const Link> LinkConstPtr;
+  typedef BOOST_TYPEOF(boost::declval<urdf::ModelInterface>().links_) VectorOfLinkConstPtr;
+  typedef typename VectorOfLinkConstPtr::mapped_type LinkConstPtr;
   class Geometry;
   typedef boost::shared_ptr<const Geometry> GeometryConstPtr;
   class Pose;

@@ -242,8 +242,6 @@ ENDIF()
 
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
-ADD_DEFINITIONS(-DTIXML_USE_STL)
-
 # IcMaker operating system defines
 # ===================================================
 IF(WIN32)
@@ -465,10 +463,11 @@ IF (UNIX AND APPLE)
   ENDIF()
 ENDIF()
 
-# In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Debug:
-IF(${CMAKE_GENERATOR} MATCHES " Makefiles")
+# In case of Makefiles or Ninja if the user does not setup CMAKE_BUILD_TYPE, assume it's RelWithDebInfo:
+IF(${CMAKE_GENERATOR} MATCHES " Makefiles" OR ${CMAKE_GENERATOR} MATCHES "Ninja")
     IF(NOT CMAKE_BUILD_TYPE)
-        SET(CMAKE_BUILD_TYPE Debug CACHE STRING
+        MESSAGE("CMAKE_BUILD_TYPE not set. Setting to default RelWithDebInfo.")
+        SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
             "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
     ENDIF(NOT CMAKE_BUILD_TYPE)
 ENDIF()

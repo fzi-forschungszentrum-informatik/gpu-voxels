@@ -156,11 +156,11 @@ BOOST_AUTO_TEST_CASE(bitvector_bitshift)
 
 
 
-      BOOST_MESSAGE("-------- Shifting " << shift << " Bits ----------");
+      BOOST_TEST_MESSAGE("-------- Shifting " << shift << " Bits ----------");
 
-      BOOST_MESSAGE("Before shift " << my_bitvector);
+      BOOST_TEST_MESSAGE("Before shift " << my_bitvector);
       performLeftShift(my_bitvector, shift);
-      BOOST_MESSAGE("After shift " << my_bitvector);
+      BOOST_TEST_MESSAGE("After shift " << my_bitvector);
 
       // Non BV Bits should be gone:
       BOOST_CHECK_MESSAGE(!my_bitvector.getBit(eBVM_FREE), "Unset eBVM_FREE.");
@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(bitvector_bitshift)
       BOOST_CHECK_MESSAGE(my_bitvector.getBit(eBVM_SWEPT_VOLUME_END - shift), "Set eBVM_SWEPT_VOLUME_END - shift");
       BOOST_CHECK_MESSAGE(my_bitvector.getBit(eBVM_UNDEFINED - shift), "Set eBVM_UNKNOWN - shift");
 
-      BOOST_MESSAGE("-------- Shifted " << shift << " Bits ----------");
+      BOOST_TEST_MESSAGE("-------- Shifted " << shift << " Bits ----------");
     }
     PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvector_bitshift", "bitvector_bitshift", "bitvector");
   }

@@ -301,6 +301,31 @@ void kernelInsertGlobalPointCloud(DistanceVoxel* voxelmap, const Vector3ui dimen
 
 template<class Voxel>
 __global__
+void kernelInsertCoordinateTuples(Voxel* voxelmap, const Vector3ui dimensions, const float voxel_side_length,
+                                  const Vector3ui *coordinates, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning,
+                                  bool *points_outside_map)
+{
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizePoints; i += blockDim.x * gridDim.x)
+  {
+    const Vector3ui uint_coords = coordinates[i];
+    //check if point is in the range of the voxel map
+    if ((uint_coords.x < dimensions.x) && (uint_coords.y < dimensions.y)
+        && (uint_coords.z < dimensions.z))
+    {
+      Voxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions, uint_coords)];
+      voxel->insert(voxel_meaning);
+    }
+    else
+    {
+      if(points_outside_map) *points_outside_map = true;
+//       printf("Point (%u,%u,%u) is not in the range of the voxel map \n", points[i].x, points[i].y,
+//              points[i].z);
+    }
+  }
+}
+
+template<class Voxel>
+__global__
 void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,
                                 BitVoxelMeaning voxel_meaning, const Vector3ui dimensions, const float voxel_side_length,
                                 bool *points_outside_map)

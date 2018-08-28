@@ -24,7 +24,7 @@
 #include <boost/test/unit_test.hpp>
 #include <gpu_voxels/test/testing_fixtures.hpp>
 
-BOOST_GLOBAL_FIXTURE(GlobalFixture)
+BOOST_GLOBAL_FIXTURE(GlobalFixture);
 
 
 //

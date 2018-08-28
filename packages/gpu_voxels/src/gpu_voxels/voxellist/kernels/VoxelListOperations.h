@@ -45,6 +45,15 @@ void kernelInsertGlobalPointCloud(MapVoxelID* id_list, Vector3ui* coord_list, Vo
                                   const Vector3f* points, const std::size_t sizePoints,
                                   const uint32_t offset_new_points, const BitVoxelMeaning voxel_meaning);
 
+/*!
+ * Insert voxel coordinate tuples
+ */
+template<class Voxel>
+__global__
+void kernelInsertCoordinateTuples(MapVoxelID* id_list, Vector3ui* coord_list, Voxel* voxel_list,
+                                  const Vector3ui ref_map_dim, const Vector3ui* coordinates, const std::size_t sizeVoxels,
+                                  const uint32_t offset_new_voxels, const BitVoxelMeaning voxel_meaning);
+
 /**
  * @brief kernelInsertMetaPointCloud Inserts a MetaPointCloud into the voxellist
  * @param voxellist Device data-pointer of voxellist
@@ -165,6 +174,11 @@ __global__
 void kernelInsertGlobalPointCloud(OctreeVoxelID* id_list, Vector3ui* coord_list, Voxel* voxel_list,
                                   const Vector3ui ref_map_dim, const float voxel_side_length,
                                   const Vector3f* points, const std::size_t sizePoints,
+                                  const uint32_t offset_new_points, const BitVoxelMeaning voxel_meaning);
+template<class Voxel>
+__global__
+void kernelInsertCoordinateTuples(OctreeVoxelID* id_list, Vector3ui* coord_list, Voxel* voxel_list,
+                                  const Vector3ui ref_map_dim, const Vector3ui* coordinates, const std::size_t sizePoints,
                                   const uint32_t offset_new_points, const BitVoxelMeaning voxel_meaning);
 
 /**

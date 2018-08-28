@@ -669,5 +669,38 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_PROGRAM()
 
+
+#------------- Example Program using showing the boundary checks for inserting into a map ------------
+ICMAKER_SET("geometrygeneration" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
+
+ICMAKER_ADD_HEADERS(
+  )
+
+ICMAKER_ADD_SOURCES(
+  GeometryGeneration.cpp
+  )
+
+ICMAKER_ADD_CUDA_FILES(
+  )
+
+ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_EXAMPLES_BOUNDCHECK_)
+ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
+
+ICMAKER_INTERNAL_DEPENDENCIES(
+  icl_core
+  icl_core_config
+  icl_core_logging
+  gpu_voxels
+  gpu_voxels_distance_map_converter
+  )
+
+ICMAKER_EXTERNAL_DEPENDENCIES(
+  CUDA
+  )
+
+ICMAKER_BUILD_PROGRAM()
+
+
 #------------- adding examples in subdirectories ------------
 ADD_SUBDIRECTORY(swept_fitter)

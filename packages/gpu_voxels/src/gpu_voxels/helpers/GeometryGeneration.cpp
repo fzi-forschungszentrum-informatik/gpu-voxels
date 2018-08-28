@@ -104,6 +104,28 @@ std::vector<Vector3f> createBoxOfPoints(Vector3f min, Vector3f max, float delta)
   return box_cloud;
 }
 
+std::vector<Vector3ui> createBoxOfPoints(Vector3f min, Vector3f max, float delta, float voxel_side_length)
+{
+  Vector3f minCroped(min.x >= 0.0f ? min.x : 0.0f, min.y >= 0.0f ? min.y : 0.0f, min.z >= 0.0f ? min.z : 0.0f );
+  Vector3ui minimum(floor(minCroped.x / voxel_side_length), floor(minCroped.y / voxel_side_length), floor(minCroped.z / voxel_side_length));
+  Vector3ui maximum(ceil(max.x / voxel_side_length), ceil(max.y / voxel_side_length), ceil(max.z / voxel_side_length));
+  uint32_t d = round(delta / voxel_side_length);
+
+  std::vector<Vector3ui> box_coordinates;
+  for(float x_dim = minimum.x; x_dim <= maximum.x; x_dim += d)
+  {
+    for(float y_dim = minimum.y; y_dim <= maximum.y; y_dim += d)
+    {
+      for(float z_dim = minimum.z; z_dim <= maximum.z; z_dim += d)
+      {
+        Vector3ui point(x_dim, y_dim, z_dim);
+        box_coordinates.push_back(point);
+      }
+    }
+  }
+  return box_coordinates;
+}
+
 
 std::vector<Vector3f> createSphereOfPoints(Vector3f center, float radius, float delta)
 {
@@ -130,6 +152,32 @@ std::vector<Vector3f> createSphereOfPoints(Vector3f center, float radius, float 
   return sphere_cloud;
 }
 
+std::vector<Vector3ui> createSphereOfPoints(Vector3f center, float radius, float delta, float voxel_side_length)
+{
+  std::vector<Vector3ui> sphere_coordinates;
+  Vector3f bbox_min(center - Vector3f(radius));
+  Vector3f bbox_max(center + Vector3f(radius));
+  Vector3f point;
+
+  for(float x_dim = bbox_min.x; x_dim <= bbox_max.x; x_dim += delta)
+  {
+    for(float y_dim = bbox_min.y; y_dim <= bbox_max.y; y_dim += delta)
+    {
+      for(float z_dim = bbox_min.z; z_dim <= bbox_max.z; z_dim += delta)
+      {
+        point = Vector3f(x_dim, y_dim, z_dim);
+
+        if((center - point).length() <= radius)
+        {
+          Vector3ui coordinates = Vector3ui(round(point.x / voxel_side_length), round(point.y / voxel_side_length), round(point.z / voxel_side_length));
+          sphere_coordinates.push_back(coordinates);
+        }
+      }
+    }
+  }
+  return sphere_coordinates;
+}
+
 std::vector<Vector3f> createCylinderOfPoints(Vector3f center, float radius, float length_along_z, float delta)
 {
   std::vector<Vector3f> cylinder_cloud;
@@ -154,6 +202,36 @@ std::vector<Vector3f> createCylinderOfPoints(Vector3f center, float radius, floa
     }
   }
   return cylinder_cloud;
+}
+
+std::vector<Vector3ui> createCylinderOfPoints(Vector3f center, float radius, float length_along_z, float delta, float voxel_side_length)
+{
+  Vector3f r(radius / voxel_side_length, radius / voxel_side_length, length_along_z / voxel_side_length / 2.0);
+  Vector3f centerScaled(center.x / voxel_side_length, center.y / voxel_side_length, center.z / voxel_side_length);
+  Vector3ui minimum(floor(centerScaled.x - r.x), floor(centerScaled.y - r.y), floor(centerScaled.z - r.z));
+  Vector3ui maximum(ceil(centerScaled.x + r.x), ceil(centerScaled.y + r.y), ceil(centerScaled.z + r.z));
+  uint32_t d = round(delta / voxel_side_length);
+
+  Vector3ui centerCoords(round(centerScaled.x), round(centerScaled.y), round(centerScaled.z));
+  std::vector<Vector3ui> cylinder_coordinates;
+  Vector3ui point;
+  for(float x_dim = minimum.x; x_dim <= maximum.x; x_dim += d)
+  {
+    for(float y_dim = minimum.y; y_dim <= maximum.y; y_dim += d)
+    {
+      for(float z_dim = minimum.z; z_dim <= maximum.z; z_dim += d)
+      {
+        point = Vector3ui(x_dim, y_dim, z_dim);
+
+        if( sqrt ((centerCoords.x - point.x) * (centerCoords.x - point.x) +
+                  (centerCoords.y - point.y) * (centerCoords.y - point.y)) <= (radius / voxel_side_length) )
+        {
+          cylinder_coordinates.push_back(point);
+        }
+      }
+    }
+  }
+  return cylinder_coordinates;
 }
 
 void createEquidistantPointsInBox(const size_t max_nr_points,

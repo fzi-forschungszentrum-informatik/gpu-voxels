@@ -14,7 +14,7 @@
  * \section req_libs Required libraries to build GPU-Voxels
  * The software is tested on 64 Bit Ubuntu Linux Trusty (14.04) and Xenial (16.04). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:
  * <ul>
- * <li>CUDA &gt; 7.5, 8.0 and 9.1</li>
+ * <li>CUDA &gt; 7.5, 8.0 and 9.2</li>
  * <li>PCL</li>
  * <li>OpenNI</li>
  * <li>Boost</li>
@@ -24,7 +24,7 @@
  * For the visualizer you will also need:
  * <ul>
  * <li>GLEW (libglew1.10 Version: 1.10.0-3, libglew-dev Version: 1.10.0-3)</li>
- * <li>GLM (libglm-dev Version: 0.9.5.1-1) Probably you will have to patch one file: See <a title="GLM Bugtracker" href="https://github.com/g-truc/glm/issues/530" target="_blank">https://github.com/g-truc/glm/issues/530</a></li>
+ * <li>GLM (libglm-dev Version: 0.9.5.1-1) On Ubuntu 16.04 you will have to patch one file: See <a title="GLM Bugtracker" href="https://github.com/g-truc/glm/issues/530" target="_blank">https://github.com/g-truc/glm/issues/530</a></li>
  * <li>OpenGL</li>
  * <li>GLUT (freeglut3 Version: 2.8.1-1, freeglut3-dev Version: 2.8.1-1)</li>
  * </ul>

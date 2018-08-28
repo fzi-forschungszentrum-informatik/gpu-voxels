@@ -60,6 +60,26 @@ void kernelInsertGlobalPointCloud(MapVoxelID* id_list, Vector3ui* coord_list, Vo
   }
 }
 
+template<class Voxel>
+__global__
+void kernelInsertCoordinateTuples(MapVoxelID* id_list, Vector3ui* coord_list, Voxel* voxel_list,
+                                  const Vector3ui ref_map_dim, const Vector3ui* coordinates, const std::size_t sizeVoxels,
+                                  const uint32_t offset_new_voxels, const BitVoxelMeaning voxel_meaning)
+{
+  //printf("RefMapDim = [%d, %d, %d] \n",ref_map_dim.x, ref_map_dim.y, ref_map_dim.z);
+
+  Voxel new_voxel = Voxel();
+  new_voxel.insert(voxel_meaning);
+
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizeVoxels; i += blockDim.x * gridDim.x)
+  {
+    Vector3ui uint_coords = coordinates[i];
+    coord_list[i+offset_new_voxels] = uint_coords;
+    voxel_list[i+offset_new_voxels] = new_voxel;
+    id_list[i+offset_new_voxels] = voxelmap::getVoxelIndexUnsigned(ref_map_dim, uint_coords);
+
+  }
+}
 
 template<class Voxel>
 __global__
@@ -339,6 +359,23 @@ void kernelInsertGlobalPointCloud(OctreeVoxelID* id_list, Vector3ui* coord_list,
   }
 }
 
+template<class Voxel>
+__global__
+void kernelInsertCoordinateTuples(OctreeVoxelID* id_list, Vector3ui* coord_list, Voxel* voxel_list,
+                                  const Vector3ui ref_map_dim, const Vector3ui* coordinates, const std::size_t sizeVoxels,
+                                  const uint32_t offset_new_points, const BitVoxelMeaning voxel_meaning)
+{  
+  Voxel new_voxel = Voxel();
+  new_voxel.insert(voxel_meaning);
+  
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizeVoxels; i += blockDim.x * gridDim.x)
+  {
+    Vector3ui integer_coordinates = coordinates[i];
+    coord_list[i+offset_new_points] = integer_coordinates;
+    voxel_list[i+offset_new_points] = new_voxel;
+    id_list[i+offset_new_points] = NTree::morton_code60(integer_coordinates);
+  }
+}
 
 template<class Voxel>
 __global__

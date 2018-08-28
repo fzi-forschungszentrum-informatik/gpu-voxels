@@ -142,7 +142,12 @@ public:
 
   virtual void insertPointCloud(const PointCloud &pointcloud, const BitVoxelMeaning voxel_meaning);
 
-  virtual void insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning);
+  virtual void insertPointCloud(const Vector3f* d_points, uint32_t size, const BitVoxelMeaning voxel_meaning);
+
+
+  virtual void insertCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning);
+
+  virtual void insertCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning);
 
   /**
    * @brief insertMetaPointCloud Inserts a MetaPointCloud into the map.

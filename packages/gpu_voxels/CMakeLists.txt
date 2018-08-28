@@ -132,10 +132,20 @@ MESSAGE(STATUS "----------------------------------------------------------------
 
 
 ###############################################################################
+
 # Change these lines to increase performance if your GPU's compute capability is higher
 # GPU-Voxels requires GPU CUDA capabilities >= 2.0
 #SET(ICMAKER_CUDA_COMPUTE_VERSION 20)
 SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
+SET(ICMAKER_CUDA_ARCH compute_${ICMAKER_CUDA_COMPUTE_VERSION})
+SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION})
+
+## Uncomment this definition if you want to avoid PTX JIT compilation at first runtime. 
+## Having both a compute_ and a sm_ code target will include both PTX and CUBIN in the final binary.
+## IMPORTANT: Check your device's compute capability. the sm_xy argument needs to match your device to have any effect!
+## Version table: https://en.wikipedia.org/wiki/CUDA#GPUs_supported
+## See also: https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#extended-notation
+#SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION},sm_${ICMAKER_CUDA_COMPUTE_VERSION})
 
 SET(ICMAKER_CUDA_PTXAS_VERBOSE "") # "--resource-usage") #nvcc outputs register and memory usage data for each kernel
 SET(ICMAKER_CUDA_WALL "-Xcompiler=-Wall")
@@ -152,7 +162,7 @@ ELSE()
  SET(ICMAKER_CUDA_THRUST_DEBUG "" )
 ENDIF()
 
-SET(ICMAKER_CUDA_CPPDEFINES "${ICMAKER_CUDA_DEBUG} ${ICMAKER_CUDA_MAXREGS} ${ICMAKER_CUDA_PTXAS_VERBOSE} -gencode=arch=compute_${ICMAKER_CUDA_COMPUTE_VERSION},code=compute_${ICMAKER_CUDA_COMPUTE_VERSION} ${ICMAKER_CUDA_THRUST_DEBUG} ${ICMAKER_CUDA_WALL}")
+SET(ICMAKER_CUDA_CPPDEFINES "${ICMAKER_CUDA_DEBUG} ${ICMAKER_CUDA_MAXREGS} ${ICMAKER_CUDA_PTXAS_VERBOSE} -gencode=arch=${ICMAKER_CUDA_ARCH},code=[${ICMAKER_CUDA_CODE}] ${ICMAKER_CUDA_THRUST_DEBUG} ${ICMAKER_CUDA_WALL}")
 
 MESSAGE("ICMAKER_CUDA_CPPDEFINES: ${ICMAKER_CUDA_CPPDEFINES}")
 

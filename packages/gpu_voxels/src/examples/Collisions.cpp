@@ -54,13 +54,10 @@ int main(int argc, char* argv[])
   gvl = gpu_voxels::GpuVoxels::getInstance();
   gvl->initialize(200, 200, 200, 0.01);
 
-
-
   // We add different maps with objects, to collide them
   gvl->addMap(gpu_voxels::MT_BITVECTOR_VOXELLIST,"myPointcloud");
   gvl->addMap(gpu_voxels::MT_PROBAB_VOXELMAP,"myObstacles");
   gvl->addMap(gpu_voxels::MT_BITVECTOR_VOXELLIST, "mySweptVolume");
-
 
   // We load a pointcloud
   if (!gvl->insertPointCloudFromFile("myPointcloud", "robot4cmRes.pcd", true,
@@ -70,7 +67,6 @@ int main(int argc, char* argv[])
   }
   gvl->visualizeMap("myPointcloud");
 
-
   /*
    * We add a SWEPT VOLUME.
    * With a Swept Volume we can "voxelize" a moving object (like a robot) in every step and insert it into a map.
@@ -78,7 +74,6 @@ int main(int argc, char* argv[])
    * The ID within the sweep is incremented with the single poses
    * so we can later identify, which pose created a collision.
    */
-
   const int num_swept_volumes = 50;// < eBVM_SWEPT_VOLUME_END;
   gpu_voxels::Vector3f center0_min(0.3,0.7,0.3);
   gpu_voxels::Vector3f center0_max(0.4,0.8,0.7);
@@ -90,9 +85,6 @@ int main(int argc, char* argv[])
     gvl->insertBoxIntoMap(corner0_min, corner0_max, "mySweptVolume", v);
   }
   gvl->visualizeMap("mySweptVolume");
-
-
-
 
   // These coordinates are used for two boxes, wich will represent our obstacles
   gpu_voxels::Vector3f center1_min(0.5,0.5,0.5);
@@ -121,7 +113,6 @@ int main(int argc, char* argv[])
     corner2_min = center2_min + gpu_voxels::Vector3f(0 , 0.4 * x, 0);
     corner2_max = center2_max + gpu_voxels::Vector3f(0 , 0.4 * x, 0);
     gvl->insertBoxIntoMap(corner2_min, corner2_max, "myObstacles", gpu_voxels::eBVM_OCCUPIED, 2);
-
 
     /*
      * Now we can collide different Objects in different ways.

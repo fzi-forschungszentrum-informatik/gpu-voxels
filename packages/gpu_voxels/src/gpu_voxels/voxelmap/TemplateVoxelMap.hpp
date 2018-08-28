@@ -578,7 +578,7 @@ void TemplateVoxelMap<Voxel>::insertPointCloud(const PointCloud &pointcloud, con
 }
 
 template<class Voxel>
-void TemplateVoxelMap<Voxel>::insertPointCloud(const Vector3f* points_d, uint32_t size, const BitVoxelMeaning voxel_meaning)
+void TemplateVoxelMap<Voxel>::insertPointCloud(const Vector3f* d_points, uint32_t size, const BitVoxelMeaning voxel_meaning)
 {
   // reset warning indicator:
   HANDLE_CUDA_ERROR(cudaMemset((void*)m_dev_points_outside_map, 0, sizeof(bool)));
@@ -588,7 +588,44 @@ void TemplateVoxelMap<Voxel>::insertPointCloud(const Vector3f* points_d, uint32_
   computeLinearLoad(size, &num_blocks, &threads_per_block);
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
   kernelInsertGlobalPointCloud<<<num_blocks, threads_per_block>>>(m_dev_data, m_dim, m_voxel_side_length,
-                                                                  points_d, size, voxel_meaning, m_dev_points_outside_map);
+                                                                  d_points, size, voxel_meaning, m_dev_points_outside_map);
+  CHECK_CUDA_ERROR();
+
+  HANDLE_CUDA_ERROR(cudaMemcpy(&points_outside_map, m_dev_points_outside_map, sizeof(bool), cudaMemcpyDeviceToHost));
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  if(points_outside_map)
+  {
+    LOGGING_WARNING_C(VoxelmapLog, VoxelMap, "You tried to insert points that lie outside the map dimensions!" << endl);
+  }
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning)
+{
+  // copy points to the gpu
+  lock_guard guard(this->m_mutex);
+  Vector3ui* d_coordinates;
+  HANDLE_CUDA_ERROR(cudaMalloc(&d_coordinates, coordinates.size() * sizeof(Vector3ui)));
+  HANDLE_CUDA_ERROR(
+      cudaMemcpy(d_coordinates, &coordinates[0], coordinates.size() * sizeof(Vector3ui), cudaMemcpyHostToDevice));
+
+  insertCoordinateList(d_coordinates, coordinates.size(), voxel_meaning);
+
+  HANDLE_CUDA_ERROR(cudaFree(d_coordinates));
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning)
+{
+  // reset warning indicator:
+  HANDLE_CUDA_ERROR(cudaMemset((void*)m_dev_points_outside_map, 0, sizeof(bool)));
+  bool points_outside_map;
+
+  uint32_t num_blocks, threads_per_block;
+  computeLinearLoad(size, &num_blocks, &threads_per_block);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  kernelInsertCoordinateTuples<<<num_blocks, threads_per_block>>>(m_dev_data, m_dim, m_voxel_side_length,
+                                                                  d_coordinates, size, voxel_meaning, m_dev_points_outside_map);
   CHECK_CUDA_ERROR();
 
   HANDLE_CUDA_ERROR(cudaMemcpy(&points_outside_map, m_dev_points_outside_map, sizeof(bool), cudaMemcpyDeviceToHost));

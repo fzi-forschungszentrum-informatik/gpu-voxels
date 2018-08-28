@@ -153,7 +153,7 @@ public:
   Visualizer();
   ~Visualizer();
 
-  bool initalizeVisualizer(int& argc, char *argv[]);
+  bool initializeVisualizer(int& argc, char *argv[]);
   void initializeDrawTextFlags();
 
   //callbacks
@@ -260,9 +260,9 @@ private:
    */
   bool initGL(int32_t *argc, char **argv);
   /**
-   * Initializes the visualizer context with the parameter from the config xml file
+   * Initializes the visualizer context 
    */
-  bool initializeContextFromXML(int& argc, char *argv[]);
+  bool initializeContextFromXML();
 
   void deleteGLBuffer(DataContext* con);
   void generateGLBufferForDataContext(DataContext* con);
