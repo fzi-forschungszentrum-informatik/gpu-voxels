@@ -8,6 +8,7 @@ cmake_minimum_required (VERSION 2.8)
 project (gvl_linkage_test)
 
 # First we have to find our dependencies:
+FIND_PACKAGE(CUDA REQUIRED)
 FIND_PACKAGE(icl_core REQUIRED )
 FIND_PACKAGE(gpu_voxels REQUIRED)
 FIND_PACKAGE(Boost COMPONENTS system REQUIRED)
@@ -33,6 +34,7 @@ target_include_directories (gvl_linkage_test_lib
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC ${gpu_voxels_INCLUDE_DIRS}
     PUBLIC ${orocos_kdl_INCLUDE_DIRS} # this should be removed in upcoming versions.
+    PUBLIC ${CUDA_INCLUDE_DIRS}
 )
 
 # Add an executable that calls the lib:
@@ -45,5 +47,5 @@ target_link_libraries (gvl_linkage_test
     LINK_PUBLIC ${Boost_SYSTEM_LIBRARY}
     LINK_PUBLIC ${icl_core_LIBRARIES}
     LINK_PUBLIC ${gpu_voxels_LIBRARIES}
-
+    LINK_PUBLIC ${CUDA_LIBRARIES}
 )

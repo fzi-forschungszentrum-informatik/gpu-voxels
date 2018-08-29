@@ -55,5 +55,6 @@ target_link_libraries (gvl_ompl_planner
     LINK_PUBLIC ${icl_core_LIBRARIES}
     LINK_PUBLIC ${gpu_voxels_LIBRARIES}
     LINK_PUBLIC ${OMPL_LIBRARIES}
+    LINK_PUBLIC ${CUDA_LIBRARIES}
 )
 

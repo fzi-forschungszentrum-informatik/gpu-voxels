@@ -474,10 +474,10 @@ V1.2.1 (2018-08-28):
 Octree and 18.04 bugfixes, insertCoordinateList and geometry generation with integer coordinates.
 
 Important Bufixes:
-- Octrees issues on Pascal GPUs have been fixed. Thanks to Florian!
-- Icmaker updated to avoid issues on CMake 3.6.2 and newer
+- Octrees issues on Pascal GPUs have been fixed. Fixes #60. Thanks to Florian!
+- Icmaker updated to avoid issues on CMake 3.6.2 and newer. Fixes #58
 - Fix Boost 1.65.1 compatibility issues for Ubuntu 18.04
-- Fix CUBIN compilation in code=sm_** settings. Thanks to @r2b0 and Florian!
+- Fix CUBIN compilation in code=sm_** settings. Thanks to @r2b0 and Florian! Fixes #73 and #54
 
 Known Issues:
 - the GLM headers provided by Ubuntu 16.04 have to be patched to allow usage of the visualizer.
@@ -500,8 +500,12 @@ Additional changes:
   - Example: geometry_generation::createBoxOfPoints(corner_min, corner_max, delta, side_length);
   - Available for maps, lists and octrees. Can create boxes, spheres and cylinders. Thanks to Herbert for his contribution!
 - GpuVoxels::insertBoxIntoMap now uses the integer coordinate based creation and insertion functionality, avoiding discretization issues
-- Remove warnings regarding logging and visualizer initialization
-- Fix visualizer warning by always creating the shared memory segment on initialization
+- Remove warnings regarding logging and visualizer initialization. Fixes #72
+- Fix visualizer warning by always creating the shared memory segment on initialization. Fixes #72
 - Removed unused shader loading code
 - Updated URDF code for compatibility with new ROS releases
+
+V1.2.2 (2018-08-29):
+====================
+Fix missing CUDA include and link directive in gvl_ompl_planner and example_howto_link
 

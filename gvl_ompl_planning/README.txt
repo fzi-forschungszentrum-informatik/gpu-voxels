@@ -13,6 +13,7 @@ This example uses GPU-Voxels data structures and collision checking to plan the 
 * build GPU-Voxels with C++11 enabled and install to gpu-voxels/export
 
  cd <gpu-voxels-path>
+ # make sure SET(CMAKE_CXX_STANDARD 11) is uncommented in packages/gpu_voxels/CMakeLists.txt
  mkdir build
  cd build
  cmake -DCMAKE_DISABLE_FIND_PACKAGE_PCL=TRUE ..
@@ -40,6 +41,7 @@ This example uses GPU-Voxels data structures and collision checking to plan the 
 * build PCL 1.8.1 from source                                                                                                                                              
 
 * build GPU-Voxels with PCL 1.8.1
+ # make sure SET(CMAKE_CXX_STANDARD 11) is uncommented in packages/gpu_voxels/CMakeLists.txt
  cd build
  cmake .. -DCMAKE_PREFIX_PATH=~/pcl-1.8.1/build:$CMAKE_PREFIX_PATH # use pcl version 1.8.1
  make && make install
