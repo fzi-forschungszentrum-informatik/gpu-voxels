@@ -15,7 +15,13 @@ include(LibFindMacros)
 
 # Ros installation directory
 IF(NOT ROS_ROOT)
-  IF(EXISTS "/opt/ros/indigo/include/ros/time.h")
+  IF(EXISTS "/opt/ros/melodic/include/ros/time.h")
+    set(ROS_ROOT /opt/ros/melodic)
+  ELSEIF(EXISTS "/opt/ros/kinetic/include/ros/time.h")
+    set(ROS_ROOT /opt/ros/kinetic)
+  ELSEIF(EXISTS "/opt/ros/jade/include/ros/time.h")
+    set(ROS_ROOT /opt/ros/jade)
+  ELSEIF(EXISTS "/opt/ros/indigo/include/ros/time.h")
     set(ROS_ROOT /opt/ros/indigo)
   ELSEIF(EXISTS "/opt/ros/hydro/include/ros/time.h")
     set(ROS_ROOT /opt/ros/hydro)
@@ -65,6 +71,16 @@ PRINT_LIBRARY_STATUS(ROS
   DETAILS "[${ROS_LIBRARIES}][${ROS_INCLUDE_DIRS}]"
   COMPONENTS "${ROS_FIND_COMPONENTS}"
 )
+
+
+IF(ROS_INCLUDE_DIRS EQUAL "/usr/include")
+  IF(ROS_ROOT AND NOT ROS_ROOT EQUAL "/usr/include")
+    MESSAGE(WARNING "ROS_ROOT set to ${ROS_ROOT} but ROS_INCLUDE_DIRS set to ${ROS_INCLUDE_DIRS}. This may cause errors. Consider removing the ubuntu-maintained packages in /usr.")
+  ELSE()
+    MESSAGE(STATUS "using system wide installed ROS in /usr")
+  ENDIF()
+ENDIF()
+
 
 ### Handle components
 

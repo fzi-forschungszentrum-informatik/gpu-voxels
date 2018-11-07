@@ -4,6 +4,8 @@ IcMaker - The build system for the interchange libraries
 Project icmaker is intended to be used for building the various interchange
 libraries.
 
+It is published under BSD license. See LICENSE for more details.
+
 How to build IC libraries with IcMaker
 ======================================
 
