@@ -1,6 +1,6 @@
 # this is for emacs file handling -*- mode: cmake; indent-tabs-mode: nil -*-
 
-# SET(CMAKE_CXX_STANDARD 11) # uncomment to activate C++11 mode
+SET(CMAKE_CXX_STANDARD 11) # uncomment to activate C++11 mode
 
 # --- To be used by other modules ---
 SET(GPU_VOXELS_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}/src" CACHE INTERNAL "")
