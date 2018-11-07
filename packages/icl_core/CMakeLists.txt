@@ -14,6 +14,10 @@ IF(NOT DEFINED ICMAKER_DIRECTORY)
   find_package(icmaker REQUIRED)
   INCLUDE(UseFullIcMaker REQUIRED)
   project(icl_core)
+  catkin_package(
+    INCLUDE_DIRS src
+    LIBRARIES icl_core icl_core_config icl_core_logging icl_core_thread
+  )
 ENDIF()
 
 
@@ -47,4 +51,3 @@ IF (BUILD_TESTS)
   ADD_SUBDIRECTORY (src/ts/icl_core_thread)
   ADD_SUBDIRECTORY (src/ts/icl_core_crypt)
 ENDIF (BUILD_TESTS)
-

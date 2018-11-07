@@ -10,9 +10,17 @@ ICMAKER_ADD_HEADERS(
   UdpLoggingServer.h
   )
 
-ICMAKER_ADD_MOC_HEADERS(
-  UdpLoggingServer.h
+
+
+IF (QT4_FOUND)
+  ICMAKER_ADD_MOC_HEADERS(
+    UdpLoggingServer.h
   )
+ENDIF()
+
+IF (Qt5_FOUND)
+  SET(CMAKE_AUTOMOC TRUE)
+ENDIF()
 
 ICMAKER_INTERNAL_DEPENDENCIES(
   icl_core
