@@ -1,0 +1,24 @@
+#- Try to find the Ibeo SDK libraries
+# Once done, this will define
+#
+#  IBEOSDK_FOUND - system has IbeoSDK
+#  IBEOSDK_LIBRARIES - link these to use IbeoSDK libraries
+#  IBEOSDK_INCLUDE_DIRS - link these to use IbeoSDK include dirs
+#  IBEOSDK_SHARED_LIBRARY - link these to use the shared IbeoSDK library
+
+find_path(IBEOSDK_LIBRARIES NAMES libibeosdk_d.so
+  PATHS $ENV{IBEOSDK_ROOT}/libs ${CMAKE_PREFIX_PATH}/libs
+)
+
+find_path(IBEOSDK_INCLUDE_DIRS NAMES ibeosdk/IbeoSDK.hpp
+  PATHS $ENV{IBEOSDK_ROOT}/src ${CMAKE_PREFIX_PATH}/src
+)
+
+if(IBEOSDK_LIBRARIES AND IBEOSDK_INCLUDE_DIRS)
+  SET(IBEOSDK_FOUND TRUE CACHE BOOL "" FORCE)
+  SET(IBEOSDK_SHARED_LIBRARY "${IBEOSDK_LIBRARIES}/libibeosdk_d.so" CACHE PATH "" FORCE)
+endif(IBEOSDK_LIBRARIES AND IBEOSDK_INCLUDE_DIRS)
+
+PRINT_LIBRARY_STATUS(IBEOSDK
+  DETAILS "[${IBEOSDK_LIBRARIES}][${IBEOSDK_INCLUDE_DIRS}]"
+)
