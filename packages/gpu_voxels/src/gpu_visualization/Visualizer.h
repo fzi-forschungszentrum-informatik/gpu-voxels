@@ -339,7 +339,7 @@ private:
   void keyboardFlipVisibility(glm::int8_t index);
   void nextKeyboardMode();
   void lastKeyboardMode();
-  std::string keyboardModetoString(int8_t index);
+  std::string keyboardModetoString(glm::int8_t index);
   void keyboardDrawTriangles();
 
   /**
@@ -411,7 +411,7 @@ private:
 
   std::vector<Primitive*> m_primitives;
 
-  int8_t m_keyboardmode;
+  glm::int8_t m_keyboardmode;
   u_int8_t m_trianglemode;
 
   //benchmark variables
