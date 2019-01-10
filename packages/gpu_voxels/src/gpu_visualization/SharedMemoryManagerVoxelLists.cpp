@@ -70,40 +70,43 @@ bool SharedMemoryManagerVoxelLists::getVoxelListName(std::string& list_name, con
 
 bool SharedMemoryManagerVoxelLists::getVisualizationData(Cube*& cubes, uint32_t& size, const uint32_t index)
 {
-  bool error = false;
-
   std::string handler_name = shm_variable_name_voxellist_handler_dev_pointer + boost::lexical_cast<std::string>(index);
   std::string number_cubes_name = shm_variable_name_voxellist_num_voxels + boost::lexical_cast<std::string>(index);
 
-  //Find the handler object
-  std::pair<cudaIpcMemHandle_t*, std::size_t> res_h = shmm->getMemSegment().find<cudaIpcMemHandle_t>(
-      handler_name.c_str());
-  error = res_h.second == 0;
-  Cube* dev_data_pointer;
+  // Find shared memory handles for: Cubes device pointer, number of cubes
+  std::pair<cudaIpcMemHandle_t*, std::size_t> shm_cubes_handle = shmm->getMemSegment().find<cudaIpcMemHandle_t>(handler_name.c_str());
+  std::pair<uint32_t*, std::size_t> shm_size = shmm->getMemSegment().find<uint32_t>(number_cubes_name.c_str());
 
-  if (!error)
+  if (shm_cubes_handle.second == 0 || shm_size.second == 0)
   {
-    cudaIpcMemHandle_t handler = *res_h.first;
-    // get to device data pointer from the handler
-    cudaError_t cuda_error = cudaIpcOpenMemHandle((void**) &dev_data_pointer, (cudaIpcMemHandle_t) handler,
-                                                  cudaIpcMemLazyEnablePeerAccess);
-    // the handle is closed by Visualizer.cu
+    // Shared memory handles not found
+    return false;
+  }
+
+  size_t new_size = *shm_size.first;
+  if (new_size > 0)
+  {
+    Cube* new_cubes;
+    cudaError_t cuda_error = cudaIpcOpenMemHandle((void**) &new_cubes, *shm_cubes_handle.first, cudaIpcMemLazyEnablePeerAccess);
     if (cuda_error == cudaSuccess)
     {
-      //Find the number of cubes
-      std::pair<uint32_t*, std::size_t> res_d = shmm->getMemSegment().find<uint32_t>(number_cubes_name.c_str());
-      error = res_d.second == 0;
-      if (!error)
-      {
-        cubes = dev_data_pointer;
-        size = *res_d.first;
-        return true;
-      }
+      cubes = new_cubes;
+      size = new_size;
+    }
+    else
+    {
+      // IPC handle to device pointer could not be opened
+      cudaIpcCloseMemHandle(new_cubes);
+      return false;
     }
   }
-  /*If an error occurred */
-  cudaIpcCloseMemHandle(dev_data_pointer);
-  return false;
+  else
+  {
+    cubes = NULL; // No memory is allocated when voxellist is empty
+    size = new_size;
+  }
+
+  return true;
 }
 
 void SharedMemoryManagerVoxelLists::setBufferSwappedToFalse(const uint32_t index)

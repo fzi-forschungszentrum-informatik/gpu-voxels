@@ -204,7 +204,7 @@ public:
    * \param new_meaning If not NULL, the meaning of the copied Voxels is set to this meaning.
    * \return true if succeeded, false otherwise
    */
-  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL) = 0;
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset, const BitVoxelMeaning* new_meaning = NULL) = 0;
 
   /*!
    * \brief merge copies the data from the other map into this map.

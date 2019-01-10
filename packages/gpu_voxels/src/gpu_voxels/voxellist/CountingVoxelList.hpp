@@ -38,9 +38,9 @@ namespace voxellist {
 
 
 CountingVoxelList::CountingVoxelList(const Vector3ui ref_map_dim,
-                                     const float voxel_sidelength,
+                                     const float voxel_side_length,
                                      const MapType map_type)
-  : TemplateVoxelList<CountingVoxel, MapVoxelID>(ref_map_dim, voxel_sidelength, map_type)
+  : TemplateVoxelList<CountingVoxel, MapVoxelID>(ref_map_dim, voxel_side_length, map_type)
 {
   // We already resize the result vector for Bitvector Checks
   // m_dev_colliding_bits_result_list.resize(cMAX_NR_OF_BLOCKS);

@@ -30,6 +30,8 @@
 #include <gpu_voxels/helpers/GeometryGeneration.h>
 #include <gpu_voxels/test/testing_fixtures.hpp>
 
+#include <boost/make_shared.hpp>
+
 #include <boost/test/unit_test.hpp>
 
 using namespace gpu_voxels;
@@ -410,6 +412,79 @@ BOOST_AUTO_TEST_CASE(bitvoxellist_findMatchingVoxels)
     BOOST_CHECK(collisions_per_meaning[11] == 0 && collisions_per_meaning[12] == 0 && collisions_per_meaning[13] == 0);
     BOOST_CHECK(collisions_per_meaning[10] == 0 && collisions_per_meaning[20] == 0);
     PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_findMatchingVoxels", "bitvoxellist_findMatchingVoxels::collisionReverse", "voxellists");
+  }
+}
+
+
+BOOST_AUTO_TEST_CASE(bitvoxellist_findMatching_omit)
+{
+  // this test depends on the limits of the voxellist, in part because of voxellist out_of_bounds checking
+  int dimX = 500;
+  int dimY = dimX;
+  int dimZ = 200;
+  
+  PERF_MON_START("bitvoxellist_findMatching_omit");
+  for(int omit = 0; omit <= 1; omit++)
+  {
+    for(int i = 0; i < iterationCount; i++)
+    {
+      float side_length = 0.01;
+
+      //create lists
+      GpuVoxelsMapSharedPtr voxellist1_shrd_ptr(new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST));
+      GpuVoxelsMapSharedPtr voxellist2_shrd_ptr(new CountingVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_COUNTING_VOXELLIST));
+      GpuVoxelsMapSharedPtr matching_shrd_ptr(new BitVectorVoxelList(Vector3ui(dimX, dimY, dimZ), side_length, MT_BITVECTOR_VOXELLIST));
+
+      //points which are not colliding to bloat the lists
+      std::vector<Vector3f> box1 = createBoxOfPoints(Vector3f(2.1, 0.1, 5.1), Vector3f(4.9, 4.9, 9.9), 0.02f);
+      std::vector<Vector3f> box2 = createBoxOfPoints(Vector3f(5.1, 5.1, 10.1), Vector3f(9.9, 9.9, 14.9), 0.3f);
+
+      //points actually participating in collision
+      std::vector<Vector3f> collisionPoints1;
+      for(int j = 0; j < 40; j++)
+      {
+        collisionPoints1.push_back(Vector3f(j / 40.0 * 5.0, 1.0, 1.0));
+      }
+      std::vector<Vector3f> collisionPoints2;
+      for(int j = 0; j < 30; j++)
+      {
+        collisionPoints2.push_back(Vector3f(j / 30.0 * 5.0, 2.0, 1.0));
+      }
+      std::vector<Vector3f> collisionPoints3;
+      for(int j = 0; j < 20; j++)
+      {
+        collisionPoints3.push_back(Vector3f(j / 20.0 * 5.0, 3.0, 1.0));
+      }
+
+      //insert ==> voxellist1_shrd_ptr will be the list with more entries
+      voxellist1_shrd_ptr->insertPointCloud(box1, BitVoxelMeaning(10));
+      voxellist1_shrd_ptr->insertPointCloud(collisionPoints1, BitVoxelMeaning(11));
+      voxellist1_shrd_ptr->insertPointCloud(collisionPoints2, BitVoxelMeaning(12));
+      voxellist1_shrd_ptr->insertPointCloud(collisionPoints3, BitVoxelMeaning(13));
+      voxellist2_shrd_ptr->insertPointCloud(box2, BitVoxelMeaning(20));
+      voxellist2_shrd_ptr->insertPointCloud(collisionPoints1, BitVoxelMeaning(21));
+      voxellist2_shrd_ptr->insertPointCloud(collisionPoints2, BitVoxelMeaning(22));
+      voxellist2_shrd_ptr->insertPointCloud(collisionPoints3, BitVoxelMeaning(23));
+
+      PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_findMatching_omit", "bitvoxellist_findMatching_omit::data_generation", "voxellists");
+
+      // Now we collide the lists in different orders and verify the result.
+      // The collision checker internally swaps lists due to performance reasons.
+      // So we test for if the output contains data from the given input list:
+      
+      gpu_voxels::Vector3i offset;
+      voxellist1_shrd_ptr->as<voxellist::BitVectorVoxelList>()->findMatchingVoxels(
+        voxellist2_shrd_ptr->as<voxellist::CountingVoxelList>(),
+        offset,
+        matching_shrd_ptr->as<voxellist::BitVectorVoxelList>(),
+        omit // don't omit coords
+      );
+
+      //first collide list1 with list2
+      size_t num_coll = matching_shrd_ptr->as<voxellist::BitVectorVoxelList>()->getDimensions().x;
+      BOOST_CHECK(num_coll == 90);
+      PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("bitvoxellist_findMatching_omit", "bitvoxellist_findMatching_omit::collision", "voxellists");
+    }
   }
 }
 
@@ -953,6 +1028,132 @@ BOOST_AUTO_TEST_CASE(countingvoxellist_remove_underpopulated)
   }
 }
 
+BOOST_AUTO_TEST_CASE(voxellist_copy_coords_to_host)
+{
+  PERF_MON_START("voxellist_copy_coords_to_host");
+
+  float side_length = 0.1f;
+  float delta = side_length;
+
+  Vector3f box1_min = Vector3f(0.9,0.9,0.9);
+  Vector3f box1_max = Vector3f(1.1,1.1,1.1);
+  std::vector<Vector3f> box1 = geometry_generation::createBoxOfPoints(box1_min, box1_max, delta);
+
+  Vector3f box2_min = Vector3f(0.3,0.3,0.3);
+  Vector3f box2_max = Vector3f(0.5,0.5,0.5);
+  std::vector<Vector3f> box2 = geometry_generation::createBoxOfPoints(box2_min, box2_max, delta);
+
+  for (int i = 0; i < iterationCount; i++)
+  {
+    BitVectorVoxelList list(Vector3ui(16, 16, 16), side_length, MT_BITVECTOR_VOXELLIST);
+
+    list.insertPointCloud(box1, (BitVoxelMeaning) 20);
+    list.insertPointCloud(box2, (BitVoxelMeaning) 40);
+
+    // Copy coords with bits 15..25 to host (i.e. box1)
+    std::vector<Vector3ui> filtered_coordinates;
+    list.copyCoordsToHostBvmBounded(filtered_coordinates, (BitVoxelMeaning) 15, (BitVoxelMeaning) 25);
+
+    // Check that filtered coordinates are within bounds of box1
+    for (size_t i = 0; i < filtered_coordinates.size(); i++)
+    {
+      Vector3f point;
+      point.x = filtered_coordinates[i].x * side_length;
+      point.y = filtered_coordinates[i].y * side_length;
+      point.z = filtered_coordinates[i].z * side_length;
+      BOOST_CHECK_MESSAGE(box1_min.x <= point.x && point.x <= box1_max.x && box1_min.y <= point.y && point.y <= box1_max.y && box1_min.z <= point.z && point.z <= box1_max.z, "Invalid point " << point.x << ", " << point.y << ", " << point.z);
+    }
+
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("voxellist_copy_coords_to_host", "voxellist_copy_coords_to_host", "voxellists");
+  }
+}
+
+BOOST_AUTO_TEST_CASE(voxellist_merge_bvm)
+{
+  PERF_MON_START("voxellist_merge_bvm");
+
+  float side_length = 0.1f;
+  float delta = side_length;
+
+  for (int i = 0; i < iterationCount; i++)
+  {
+    BitVectorVoxelList list(Vector3ui(16, 16, 16), side_length, MT_BITVECTOR_VOXELLIST);
+    boost::shared_ptr<BitVectorVoxelMap> map = boost::make_shared<BitVectorVoxelMap>(Vector3ui(16, 16, 16), side_length, MT_BITVECTOR_VOXELMAP);
+
+    // Insert box coordinates into map
+    Vector3f box_min = Vector3f(0.9,0.9,0.9);
+    Vector3f box_max = Vector3f(1.1,1.1,1.1);
+    std::vector<Vector3ui> box_coordinates = geometry_generation::createBoxOfPoints(box_min, box_max, delta, side_length);
+    map->insertCoordinateList(box_coordinates, eBVM_OCCUPIED);
+
+    // Merge into list
+    list.merge(map, Vector3i());
+
+    // Copy from list to host
+    std::vector<Vector3ui> filtered_coordinates;
+    list.copyCoordsToHost(filtered_coordinates);
+
+    // We should now have two equal sets of coordinates (possibly in different orders)
+    BOOST_REQUIRE(filtered_coordinates.size() == box_coordinates.size());
+    while (!filtered_coordinates.empty())
+    {
+      Vector3ui el = filtered_coordinates.back();
+      filtered_coordinates.pop_back();
+
+      std::vector<Vector3ui>::iterator correspondence = std::find(box_coordinates.begin(), box_coordinates.end(), el);
+      BOOST_REQUIRE(correspondence != box_coordinates.end());
+      box_coordinates.erase(correspondence);
+    }
+
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("voxellist_merge_bvm", "voxellist_merge_bvm", "voxellists");
+  }
+}
+
+BOOST_AUTO_TEST_CASE(voxellist_cloning)
+{
+  PERF_MON_START("voxellist_cloning");
+
+  float side_length = 0.1f;
+  float delta = side_length;
+
+  for (int i = 0; i < iterationCount; i++)
+  {
+    boost::shared_ptr<BitVectorVoxelList> list1 = boost::make_shared<BitVectorVoxelList>(Vector3ui(16, 16, 16), side_length, MT_BITVECTOR_VOXELLIST);
+    boost::shared_ptr<BitVectorVoxelList> list2 = boost::make_shared<BitVectorVoxelList>(Vector3ui(16, 16, 16), side_length, MT_BITVECTOR_VOXELLIST);
+    boost::shared_ptr<BitVectorVoxelList> list3 = boost::make_shared<BitVectorVoxelList>(Vector3ui(32, 16, 16), side_length, MT_BITVECTOR_VOXELLIST);
+
+    // Insert box coordinates into list1
+    Vector3f box_min = Vector3f(0.9,0.9,0.9);
+    Vector3f box_max = Vector3f(1.1,1.1,1.1);
+    std::vector<Vector3ui> box_coordinates = geometry_generation::createBoxOfPoints(box_min, box_max, delta, side_length);
+    list1->insertCoordinateList(box_coordinates, eBVM_OCCUPIED);
+
+    // Merge into list2 and list3
+    list2->clone(*list1);
+    list3->clone(*list1);
+
+    // Check list2 for equality
+    std::vector<Vector3ui> cloned_coordinates;
+    list2->copyCoordsToHost(cloned_coordinates);
+
+    BOOST_REQUIRE_MESSAGE(cloned_coordinates.size() == box_coordinates.size(), "Cloned invalid number of coordinates");
+    while (!cloned_coordinates.empty())
+    {
+      Vector3ui el = cloned_coordinates.back();
+      cloned_coordinates.pop_back();
+
+      std::vector<Vector3ui>::iterator correspondence = std::find(box_coordinates.begin(), box_coordinates.end(), el);
+      BOOST_REQUIRE_MESSAGE(correspondence != box_coordinates.end(), "Coordinate [" <<  el.x << ", " << el.y << ", " << el.z << "] missing in cloned coordinates");
+      box_coordinates.erase(correspondence);
+    }
+
+    // Check that list3 is empty (nothing should be cloned here since dimensions are not equal)
+    list3->copyCoordsToHost(cloned_coordinates);
+    BOOST_CHECK_MESSAGE(cloned_coordinates.empty(), "Copied coordinates when dimensions were invalid");
+
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("voxellist_cloning", "voxellist_cloning", "voxellists");
+  }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

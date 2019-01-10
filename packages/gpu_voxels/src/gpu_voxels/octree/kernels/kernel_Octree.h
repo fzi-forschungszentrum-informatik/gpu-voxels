@@ -210,7 +210,7 @@ public:
   }
 };
 
-__host__ __device__
+__device__
 static void getStatusString(char* status, uint8_t nodeStatus)
 {
   for (uint32_t i = 0; i < 8; ++i)

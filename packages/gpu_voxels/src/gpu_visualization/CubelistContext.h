@@ -85,6 +85,15 @@ public:
     m_number_of_cubes = numberOfCubes;
   }
 
+  void unmapCubesShm()
+  {
+    if (m_d_cubes != NULL)
+    {
+      cudaIpcCloseMemHandle(m_d_cubes);
+      m_d_cubes = NULL;
+    }
+  }
+
   virtual void updateVBOOffsets()
   {
     thrust::exclusive_scan(m_num_voxels_per_type.begin(), m_num_voxels_per_type.end(), m_vbo_offsets.begin());

@@ -118,7 +118,7 @@ public:
   // This can either represent a MORTON or Voxelmap Bitvector Voxel List:
   typedef BitVoxelList<BIT_VECTOR_LENGTH, VoxelIDType> TemplatedBitVectorVoxelList;
 
-  BitVoxelList(const Vector3ui ref_map_dim, const float voxel_sidelength, const MapType map_type);
+  BitVoxelList(const Vector3ui ref_map_dim, const float voxel_side_length, const MapType map_type);
 
   virtual ~BitVoxelList();
 
@@ -144,42 +144,48 @@ public:
   size_t collideWithTypeMask(const voxelmap::TemplateVoxelMap<Voxel> *map, const BitVectorVoxel& types_to_check, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWithBitcheck(const voxellist::BitVectorVoxelList* map, const u_int8_t margin = 0, const Vector3i &offset = Vector3i());
 
-
   size_t collideCountingPerMeaning(const GpuVoxelsMapSharedPtr other, std::vector<size_t>&  collisions_per_meaning, const Vector3i &offset_ = Vector3i());
+  
+  /**
+   * @brief findMatchingVoxels 
+   * \param other Const second input list, first is this
+   * \param margin as in collideWithBitcheck, currently ignored
+   * \param offset
+   * \param matching_voxels_list1 Contains all Voxels from this whose position matches a Voxel from other
+   * \param matching_voxels_list2 Contains all Voxels from other whose position matches a Voxel from this
+   * \param omit_coords Controls whether the matching_voxels_lists will have an empty m_dev_coord_list
+   */
+  void findMatchingVoxels(const TemplatedBitVectorVoxelList *other,
+                          const u_int8_t margin, const Vector3i &offset,
+                          TemplatedBitVectorVoxelList* matching_voxels_list1, 
+                          TemplatedBitVectorVoxelList* matching_voxels_list2, 
+                          bool omit_coords = true) const;
+
+  /**
+   * @brief findMatchingVoxels 
+   * \param other Const second input list, first is this
+   * \param offset
+   * \param matching_voxels_list Contains all Voxels from this whose position matches a Voxel from other
+   * \param omit_coords Controls whether the matching_voxels_list will have an empty m_dev_coord_list
+   */
+  void findMatchingVoxels(const CountingVoxelList *other,
+                          const Vector3i &offset, 
+                          TemplatedBitVectorVoxelList* matching_voxels_list, 
+                          bool omit_coords = true) const;
+
   /**
    * @brief Shifts all swept-volume-IDs by shift_size towards lower IDs.
    * Currently this is limited to a shift size <64
    * @param shift_size Shift size of bitshift
    */
   void shiftLeftSweptVolumeIDs(uint8_t shift_size);
+  
+  virtual void copyCoordsToHostBvmBounded(std::vector<Vector3ui>& host_vec, BitVoxelMeaning min_step, BitVoxelMeaning max_step);
 
 protected:
 //  virtual void clearVoxelMapRemoteLock(const uint32_t bit_index);
 
 private:
-
-  /**
-   * @brief findMatchingVoxels Assure to lock the input maps before calling this function.
-   * \param list1 Const input
-   * \param list2 Const input
-   * \param margin TODO: never used?
-   * \param offset
-   * \param matching_voxels_list1 Contains all Voxels from list1 whose position matches a Voxel from list2
-   * \param matching_voxels_list2 Contains all Voxels from list2 whose position matches a Voxel from list1
-   */
-  void findMatchingVoxels(const TemplatedBitVectorVoxelList *list1, const TemplatedBitVectorVoxelList *list2,
-                          const u_int8_t margin, const Vector3i &offset,
-                          TemplatedBitVectorVoxelList* matching_voxels_list1, TemplatedBitVectorVoxelList* matching_voxels_list2) const;
-
-  /**
-   * @brief findMatchingVoxels Assure to lock the input maps before calling this function.
-   * \param list1 Const input
-   * \param list2 Const input
-   * \param offset
-   * \param matching_voxels_list1 Contains all Voxels from list1 whose position matches a Voxel from list2
-   */
-  void findMatchingVoxels(const TemplatedBitVectorVoxelList *list1, const CountingVoxelList *list2,
-                          const Vector3i &offset, TemplatedBitVectorVoxelList* matching_voxels_list1) const;
 
   thrust::device_vector< BitVectorVoxel > m_dev_colliding_bits_result_list;
   thrust::host_vector< BitVectorVoxel > m_colliding_bits_result_list;

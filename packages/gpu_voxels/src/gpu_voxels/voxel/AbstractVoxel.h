@@ -23,7 +23,7 @@
 #ifndef GPU_VOXELS_VOXEL_ABSTRACT_VOXEL_H_INCLUDED
 #define GPU_VOXELS_VOXEL_ABSTRACT_VOXEL_H_INCLUDED
 
-#include <host_defines.h>
+#include <cuda_runtime.h>
 #include <stdint.h>
 #include <gpu_voxels/helpers/common_defines.h>
 

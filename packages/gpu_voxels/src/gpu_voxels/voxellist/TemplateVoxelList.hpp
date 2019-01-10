@@ -25,10 +25,13 @@
 #include <fstream>
 #include <gpu_voxels/logging/logging_voxellist.h>
 #include <gpu_voxels/voxellist/kernels/VoxelListOperations.hpp>
+#include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
+#include <gpu_voxels/voxelmap/BitVoxelMap.hpp>
 #include <thrust/execution_policy.h>
 #include <thrust/unique.h>
 #include <thrust/pair.h>
 #include <thrust/tuple.h>
+#include <thrust/copy.h>
 #include <thrust/count.h>
 #include <thrust/sort.h>
 #include <thrust/remove.h>
@@ -90,8 +93,8 @@ struct applyOffsetOperator : public thrust::unary_function<thrust::tuple<Vector3
 };
 
 template<class Voxel, class VoxelIDType>
-TemplateVoxelList<Voxel, VoxelIDType>::TemplateVoxelList(const Vector3ui ref_map_dim, const float voxel_sidelength, const MapType map_type)
-  : m_voxel_side_length(voxel_sidelength),
+TemplateVoxelList<Voxel, VoxelIDType>::TemplateVoxelList(const Vector3ui ref_map_dim, const float voxel_side_length, const MapType map_type)
+  : m_voxel_side_length(voxel_side_length),
     m_ref_map_dim(ref_map_dim)
 {
   this->m_map_type = map_type;
@@ -559,6 +562,66 @@ void TemplateVoxelList<Voxel, VoxelIDType>::clearMap()
   m_dev_id_list.clear();
 }
 
+struct filterByBoundaries
+{
+  Vector3ui upper_bound;
+  Vector3ui lower_bound;
+
+  filterByBoundaries(Vector3ui upper, Vector3ui lower) : upper_bound(upper), lower_bound(lower) {}
+
+  __host__ __device__
+  bool operator()(Vector3ui a)
+  {
+    bool inBound = ((a.x >= lower_bound.x) && (a.y >= lower_bound.y) && (a.z >= lower_bound.z)
+                      && (a.x < upper_bound.x) && (a.y < upper_bound.y) && (a.z < upper_bound.z));
+    return inBound;
+  }
+};
+
+struct sumVector3ui
+{
+  __host__ __device__
+  Vector3ui operator()(Vector3ui a, Vector3ui b)
+  {
+    return Vector3ui(a.x + b.x, a.y + b.y, a.z + b.z);
+  }
+};
+
+template<class Voxel, class VoxelIDType>
+Vector3f TemplateVoxelList<Voxel, VoxelIDType>::getCenterOfMass() const
+{
+  Vector3ui lower(0,0,0);
+  Vector3ui upper = m_ref_map_dim;
+  return getCenterOfMass(lower, upper);
+}
+
+template<class Voxel, class VoxelIDType>
+Vector3f TemplateVoxelList<Voxel, VoxelIDType>::getCenterOfMass(Vector3ui lower_bound, Vector3ui upper_bound) const
+{
+  filterByBoundaries filter(upper_bound, lower_bound);
+  int voxelCount = thrust::count_if(m_dev_coord_list.begin(), m_dev_coord_list.end(), filter);
+
+  if(voxelCount <= 0)
+  {
+    LOGGING_INFO_C(VoxellistLog, TemplateVoxelList, "No Voxels Found in given Bounding Box: Lower Bound (" 
+        << lower_bound.x << "|" << lower_bound.y << "|" << lower_bound.z << ")  "
+        << "Upper Bound (" << upper_bound.x << "|" << upper_bound.y << "|" << upper_bound.z << ")" << endl);
+
+    return Vector3f();
+  }
+
+  //filter by axis alligned bounding box
+  thrust::device_vector<Vector3ui> inBoundaries(voxelCount);
+  thrust::copy_if(m_dev_coord_list.begin(), m_dev_coord_list.end(), inBoundaries.begin(), filter);
+
+  //calculate sum of all voxelpositions
+  Vector3ui sumVector = thrust::reduce(inBoundaries.begin(), inBoundaries.end(), Vector3ui(), sumVector3ui());
+  //divide by voxel count
+  Vector3f metricSum = sumVector * m_voxel_side_length;
+  Vector3f coM = Vector3f(metricSum.x / voxelCount, metricSum.y / voxelCount, metricSum.z / voxelCount);
+  return coM;
+}
+
 template<class Voxel, class VoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::writeToDisk(const std::string path)
 {
@@ -654,27 +717,176 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::readFromDisk(const std::string path)
 template<class Voxel, class VoxelIDType>
 bool TemplateVoxelList<Voxel, VoxelIDType>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning *new_meaning)
 {
+  LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
   return false;
 }
 
 template<>
 bool TemplateVoxelList<CountingVoxel, MapVoxelID>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning *new_meaning)
 {
-  return false;
-}
-
-template<>
-bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning *new_meaning)
-{
   switch (other->getMapType())
   {
     case MT_BITVECTOR_VOXELLIST:
     {
-      BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>* m = (BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>*) other.get();
+      BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>* m = other->as<BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID> >();
 
       boost::lock(this->m_mutex, m->m_mutex);
       lock_guard guard(this->m_mutex, boost::adopt_lock);
       lock_guard guard2(m->m_mutex, boost::adopt_lock);
+
+      uint32_t num_new_voxels = m->getDimensions().x;
+      uint32_t offset_new_entries = m_dev_list.size();
+      // resize capacity
+      this->resize(offset_new_entries + num_new_voxels);
+
+      // We append the given list to our own list of points.
+      thrust::copy(
+        thrust::make_zip_iterator( thrust::make_tuple(m->m_dev_coord_list.begin(), m->m_dev_id_list.begin()) ),
+        thrust::make_zip_iterator( thrust::make_tuple(m->m_dev_coord_list.end(),   m->m_dev_id_list.end()) ),
+        thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ) );
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+      // If an offset was given, we have to alter the newly added voxels.
+      if(voxel_offset != Vector3i())
+      {
+        thrust::transform(
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.end(),   m_dev_id_list.end()) ),
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
+          applyOffsetOperator<MapVoxelID>(m_ref_map_dim, voxel_offset));
+          HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+      }
+
+      make_unique();
+
+      return true;
+    }
+
+    case MT_COUNTING_VOXELLIST:
+    {
+      CountingVoxelList* m = other->as<CountingVoxelList>();
+
+      boost::lock(this->m_mutex, m->m_mutex);
+      lock_guard guard(this->m_mutex, boost::adopt_lock);
+      lock_guard guard2(m->m_mutex, boost::adopt_lock);
+
+      uint32_t num_new_voxels = m->getDimensions().x;
+      uint32_t offset_new_entries = m_dev_list.size();
+      // resize capacity
+      this->resize(offset_new_entries + num_new_voxels);
+
+      // We append the given list to our own list of points.
+      thrust::copy(
+        thrust::make_zip_iterator( thrust::make_tuple(m->m_dev_list.begin(), m->m_dev_coord_list.begin(), m->m_dev_id_list.begin()) ),
+        thrust::make_zip_iterator( thrust::make_tuple(m->m_dev_list.end(),   m->m_dev_coord_list.end(),   m->m_dev_id_list.end()) ),
+        thrust::make_zip_iterator( thrust::make_tuple(m_dev_list.begin()+offset_new_entries, m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ) );
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+      // If an offset was given, we have to alter the newly added voxels.
+      if(voxel_offset != Vector3i())
+      {
+        thrust::transform(
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.end(),   m_dev_id_list.end()) ),
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
+          applyOffsetOperator<MapVoxelID>(m_ref_map_dim, voxel_offset));
+          HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+      }
+
+      make_unique();
+
+      return true;
+    }
+    default:
+    {
+      LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+      return false;
+    }
+  }
+}
+
+template<typename Voxel>
+struct is_occupied
+{
+  is_occupied(float occupied_threshold)
+    : occupied_threshold(occupied_threshold)
+  {
+  }
+
+  __host__ __device__
+  bool operator()(const Voxel& voxel)
+  {
+    return voxel.isOccupied(occupied_threshold);
+  }
+
+  float occupied_threshold;
+};
+
+template<typename Voxel>
+struct voxelid_to_voxelcoord
+{
+  voxelid_to_voxelcoord(const Voxel* base_ptr, Vector3ui dim)
+    : base_ptr(base_ptr)
+    , dim(dim)
+  {
+  }
+
+  __host__ __device__
+  Vector3ui operator()(MapVoxelID voxel_id)
+  {
+    return voxelmap::mapToVoxels(base_ptr, dim, base_ptr + voxel_id);
+  }
+
+  const Voxel* base_ptr;
+  Vector3ui dim;
+};
+
+template<typename Voxel>
+struct voxelid_to_voxel
+{
+  voxelid_to_voxel(Voxel* base_ptr)
+    : base_ptr(base_ptr)
+  {
+  }
+
+  __host__ __device__
+  Voxel& operator()(MapVoxelID voxel_id)
+  {
+    return *(base_ptr + voxel_id);
+  }
+
+  Voxel* base_ptr;
+};
+
+template<typename Voxel>
+struct voxel_to_voxelid : public thrust::unary_function<const Voxel&, MapVoxelID>
+{
+  voxel_to_voxelid(const Voxel* base_ptr)
+    : base_ptr(base_ptr)
+  {
+  }
+
+  __host__ __device__
+  MapVoxelID operator()(const Voxel& voxel) const
+  {
+    return &voxel - base_ptr;
+  }
+
+  const Voxel* base_ptr;
+};
+
+template<>
+bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning *new_meaning)
+{
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
+
+  switch (other->getMapType())
+  {
+    case MT_BITVECTOR_VOXELLIST:
+    {
+      BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID>* m = other->as<BitVoxelList<BIT_VECTOR_LENGTH, MapVoxelID> >();
 
       uint32_t num_new_voxels = m->getDimensions().x;
       uint32_t offset_new_entries = m_dev_list.size();
@@ -714,11 +926,7 @@ bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::merge(const Gpu
     }
     case MT_COUNTING_VOXELLIST:
     {
-      CountingVoxelList* m = (CountingVoxelList*) other.get();
-
-      boost::lock(this->m_mutex, m->m_mutex);
-      lock_guard guard(this->m_mutex, boost::adopt_lock);
-      lock_guard guard2(m->m_mutex, boost::adopt_lock);
+      CountingVoxelList* m = other->as<CountingVoxelList>();
 
       uint32_t num_new_voxels = m->getDimensions().x;
       uint32_t offset_new_entries = m_dev_list.size();
@@ -754,6 +962,68 @@ bool TemplateVoxelList<BitVoxel<BIT_VECTOR_LENGTH>, MapVoxelID>::merge(const Gpu
 
       make_unique();
 
+      return true;
+    }
+    case MT_BITVECTOR_VOXELMAP:
+    {
+      voxelmap::BitVectorVoxelMap* m = (voxelmap::BitVectorVoxelMap*) other.get();
+
+      boost::lock(this->m_mutex, m->m_mutex);
+      lock_guard guard(this->m_mutex, boost::adopt_lock);
+      lock_guard guard2(m->m_mutex, boost::adopt_lock);
+
+      size_t offset_new_entries = m_dev_list.size();
+
+      // Resize list to add space for new voxels
+      size_t num_new_entries = thrust::count_if(
+        thrust::device_ptr<BitVectorVoxel>(m->getDeviceDataPtr()),
+        thrust::device_ptr<BitVectorVoxel>(m->getDeviceDataPtr() + m->getVoxelMapSize()),
+        is_occupied<BitVectorVoxel>(0.0f)); // Threshold doesn't matter for BitVectors
+      this->resize(offset_new_entries + num_new_entries);
+
+      // Fill MapVoxelIDs of occupied voxels into end of m_dev_id_list
+      thrust::copy_if(
+        thrust::counting_iterator<MapVoxelID>(0),                     // src.begin
+        thrust::counting_iterator<MapVoxelID>(m->getVoxelMapSize()),  // src.end
+        thrust::device_ptr<BitVectorVoxel>(m->getDeviceDataPtr()),    // stencil.begin (predicate is used here)
+        m_dev_id_list.begin() + offset_new_entries,                   // dest.begin
+        is_occupied<BitVectorVoxel>(0.0f)); // Threshold doesn't matter for BitVectors
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+      // Fill m_dev_coord_list and m_dev_list by transforming added values in m_dev_id_list
+      thrust::transform(
+        m_dev_id_list.begin() + offset_new_entries,
+        m_dev_id_list.end(),
+        m_dev_coord_list.begin() + offset_new_entries,
+        voxelid_to_voxelcoord<BitVectorVoxel>(m->getDeviceDataPtr(), m->getDimensions()));
+      thrust::transform(
+        m_dev_id_list.begin() + offset_new_entries,
+        m_dev_id_list.end(),
+        m_dev_list.begin() + offset_new_entries,
+        voxelid_to_voxel<BitVectorVoxel>(m->getDeviceDataPtr()));
+      HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+
+      // If an offset was given, we have to alter the newly added voxels.
+      if(voxel_offset != Vector3i())
+      {
+        thrust::transform(
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.end(),   m_dev_id_list.end()) ),
+          thrust::make_zip_iterator( thrust::make_tuple(m_dev_coord_list.begin()+offset_new_entries, m_dev_id_list.begin()+offset_new_entries) ),
+          applyOffsetOperator<MapVoxelID>(m_ref_map_dim, voxel_offset));
+          HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+      }
+
+      // if a new meaning was given, iterate over the voxellist and overwrite the meaning
+      if (new_meaning)
+      {
+        BitVectorVoxel fillVoxel;
+        fillVoxel.bitVector().setBit(*new_meaning);
+        thrust::fill(m_dev_list.begin()+offset_new_entries, m_dev_list.end(), fillVoxel);
+        HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+      }
+
+      make_unique();
       return true;
     }
     default:
@@ -991,6 +1261,30 @@ bool TemplateVoxelList<Voxel, VoxelIDType>::equals(const TemplateVoxelList<Other
   equal &= thrust::equal(m_dev_coord_list.begin(), m_dev_coord_list.end(), other.m_dev_coord_list.begin());
 
   return equal;
+}
+
+template <class Voxel, class VoxelIDType>
+void TemplateVoxelList<Voxel, VoxelIDType>::clone(const TemplateVoxelList<Voxel, VoxelIDType>& other)
+{
+  if (this->m_voxel_side_length != other.m_voxel_side_length || this->m_ref_map_dim != other.m_ref_map_dim)
+  {
+    LOGGING_ERROR_C(VoxellistLog, TemplateVoxelList, "Voxellist cannot be cloned since map reference dimensions or voxel side length are not equal" << endl);
+    return;
+  }
+
+  boost::lock(this->m_mutex, other.m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other.m_mutex, boost::adopt_lock);
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  this->m_dev_id_list.resize(other.m_dev_id_list.size());
+  this->m_dev_coord_list.resize(other.m_dev_coord_list.size());
+  this->m_dev_list.resize(other.m_dev_list.size());
+
+  thrust::copy(other.m_dev_id_list.begin(), other.m_dev_id_list.end(), this->m_dev_id_list.begin());
+  thrust::copy(other.m_dev_coord_list.begin(), other.m_dev_coord_list.end(), this->m_dev_coord_list.begin());
+  thrust::copy(other.m_dev_list.begin(), other.m_dev_list.end(), this->m_dev_list.begin());
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 } // end of namespace voxellist

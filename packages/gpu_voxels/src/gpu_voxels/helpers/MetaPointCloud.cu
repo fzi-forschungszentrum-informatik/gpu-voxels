@@ -381,6 +381,18 @@ int16_t MetaPointCloud::getCloudNumber(const std::string& name) const
   return -1;
 }
 
+bool MetaPointCloud::hasCloud(const std::string& name) const
+{
+  for (std::map<uint16_t, std::string>::const_iterator it=m_point_cloud_names.begin(); it!=m_point_cloud_names.end(); ++it)
+  {
+    if (name.compare(it->second) == 0)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 void MetaPointCloud::destruct()
 {
   if (m_dev_ptr_to_point_clouds_struct)

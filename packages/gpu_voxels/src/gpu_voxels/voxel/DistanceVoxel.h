@@ -120,6 +120,9 @@ public:
   __host__ __device__
   void insert(const uint32_t voxel_meaning);
 
+  __host__ __device__
+  bool isOccupied(float col_threshold) const;
+
   /**
    * @brief insert Inserts new data into this voxel
    * @param voxel_type if type is occupied, mark voxel as obstacle

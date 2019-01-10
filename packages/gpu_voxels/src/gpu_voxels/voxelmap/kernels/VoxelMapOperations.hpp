@@ -324,6 +324,119 @@ void kernelInsertCoordinateTuples(Voxel* voxelmap, const Vector3ui dimensions, c
   }
 }
 
+// DistanceVoxel specialization
+template<>
+__global__
+void kernelInsertCoordinateTuples(DistanceVoxel* voxelmap, const Vector3ui dimensions, const float voxel_side_length,
+                                  const Vector3ui *coordinates, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning,
+                                  bool *points_outside_map)
+{
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizePoints; i += blockDim.x * gridDim.x)
+  {
+    const Vector3ui uint_coords = coordinates[i];
+    //check if point is in the range of the voxel map
+    if ((uint_coords.x < dimensions.x) && (uint_coords.y < dimensions.y)
+        && (uint_coords.z < dimensions.z))
+    {
+      DistanceVoxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions, uint_coords)];
+      voxel->insert(uint_coords, voxel_meaning);
+    }
+    else
+    {
+      if(points_outside_map) *points_outside_map = true;
+//       printf("Point (%u,%u,%u) is not in the range of the voxel map \n", points[i].x, points[i].y,
+//              points[i].z);getVoxelIndexUnsigned
+    }
+  }
+}
+
+template<class Voxel>
+__global__
+void kernelInsertDilatedCoordinateTuples(Voxel* voxelmap, const Vector3ui dimensions,
+                                  const Vector3ui *coordinates, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning,
+                                  bool *points_outside_map)
+{
+  const int32_t SE_SIZE = 1;
+
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < sizePoints; i += blockDim.x * gridDim.x)
+  {
+    const Vector3ui uint_center_coords = coordinates[i];
+    // Check if center voxel is in range of the voxel map
+    if ((uint_center_coords.x >= dimensions.x) || (uint_center_coords.y >= dimensions.y) || (uint_center_coords.z >= dimensions.z))
+    {
+      if(points_outside_map) *points_outside_map = true;
+      continue;
+    }
+
+    // Iterate neighbors
+    for (int32_t x = -SE_SIZE; x <= SE_SIZE; x++)
+    {
+      for (int32_t y = -SE_SIZE; y <= SE_SIZE; y++)
+      {
+        for (int32_t z = -SE_SIZE; z <= SE_SIZE; z++)
+        {
+          Vector3i int_neighbor_coords = Vector3i(uint_center_coords) + Vector3i(x, y, z);
+          // Check if neighbor voxel is in range of the voxel map
+          if ((int_neighbor_coords.x < dimensions.x) && (int_neighbor_coords.y < dimensions.y) && (int_neighbor_coords.z < dimensions.z)
+              && (int_neighbor_coords.x >= 0) && (int_neighbor_coords.y >= 0) && (int_neighbor_coords.z >= 0))
+          {
+            Voxel* voxel = &voxelmap[getVoxelIndexUnsigned(dimensions, Vector3ui((uint32_t) int_neighbor_coords.x, (uint32_t) int_neighbor_coords.y, (uint32_t) int_neighbor_coords.z))];
+            voxel->insert(voxel_meaning);
+          }
+        }
+      }
+    }
+  }
+}
+
+template<class Voxel>
+__global__
+void kernelErode(Voxel* voxelmap_out, const Voxel* voxelmap_in, const Vector3ui dimensions, float erode_threshold, float occupied_threshold)
+{
+  const int32_t SE_SIZE = 1;
+  Vector3ui uint_center_coords(blockIdx.x * blockDim.x + threadIdx.x, blockIdx.y * blockDim.y + threadIdx.y, blockIdx.z * blockDim.z + threadIdx.z);
+  if ((uint_center_coords.x >= dimensions.x) || (uint_center_coords.y >= dimensions.y) || (uint_center_coords.z >= dimensions.z))
+    return;
+
+  // Count number of occupied neighbors, and total number of neighbors (might be less that 27 at map borders)
+  uint32_t total = 0;
+  uint32_t occupied = 0;
+  for (int32_t x = -SE_SIZE; x <= SE_SIZE; x++)
+  {
+    for (int32_t y = -SE_SIZE; y <= SE_SIZE; y++)
+    {
+      for (int32_t z = -SE_SIZE; z <= SE_SIZE; z++)
+      {
+        const Vector3i int_neighbor_coords = Vector3i(uint_center_coords) + Vector3i(x, y, z);
+        // Check if neighbor voxel is in range of the voxel map, and is not the center voxel
+        if ((int_neighbor_coords.x < dimensions.x) && (int_neighbor_coords.y < dimensions.y) && (int_neighbor_coords.z < dimensions.z)
+            && (int_neighbor_coords.x >= 0) && (int_neighbor_coords.y >= 0) && (int_neighbor_coords.z >= 0)
+            && (x != 0 || y != 0 || z != 0))
+        {
+          total++;
+          const Voxel& neighbor_voxel = voxelmap_in[getVoxelIndexUnsigned(dimensions, Vector3ui((uint32_t) int_neighbor_coords.x, (uint32_t) int_neighbor_coords.y, (uint32_t) int_neighbor_coords.z))];
+          if (neighbor_voxel.isOccupied(occupied_threshold))
+          {
+            occupied++;
+          }
+        }
+      }
+    }
+  }
+
+  Voxel& voxel_out = voxelmap_out[getVoxelIndexUnsigned(dimensions, uint_center_coords)];
+  if (((float) occupied) / total < erode_threshold)
+  {
+    // Clear voxel
+    voxel_out = Voxel();
+  }
+  else
+  {
+    // Keep voxel
+    voxel_out = voxelmap_in[getVoxelIndexUnsigned(dimensions, uint_center_coords)];
+  }
+}
+
 template<class Voxel>
 __global__
 void kernelInsertMetaPointCloud(Voxel* voxelmap, const MetaPointCloudStruct* meta_point_cloud,

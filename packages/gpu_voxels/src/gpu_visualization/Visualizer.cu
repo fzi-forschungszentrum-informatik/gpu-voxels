@@ -24,6 +24,8 @@
 #include <gpu_visualization/shaders/SimpleVertexShader.h>
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.h>
 
+#include <ctime>
+
 namespace gpu_voxels {
 namespace visualization {
 
@@ -236,13 +238,27 @@ bool Visualizer::initializeContextFromXML()
 
 bool Visualizer::initializeVisualizer(int& argc, char *argv[])
 {
-  try
+  LOGGING_INFO_C(Visualization, Visualizer, "Trying to open the Visualizer shared memory segment created by a process using VisProvider." << endl);
+  time_t total_wait = 30; // total time used for trying to open shared memory file (seconds)
+  size_t period = 500; // time to sleep between consecutive tries (milliseconds)
+
+  time_t start = time(0);
+  bool success = false;
+  while (!success && time(0) < start + total_wait)
   {
-    m_shm_manager_visualizer = new SharedMemoryManagerVisualizer();
-  } catch (boost::interprocess::interprocess_exception& e)
+    try
+    {
+      m_shm_manager_visualizer = new SharedMemoryManagerVisualizer();
+      success = true;
+    } catch (boost::interprocess::interprocess_exception& e)
+    {
+      usleep(period * 1000);
+    }
+  }
+  if (!success)
   {
     m_shm_manager_visualizer = NULL;
-    LOGGING_INFO_C(Visualization, Visualizer, "Couldn't open the shared memory segment of Visualizer!" << endl);
+    LOGGING_WARNING_C(Visualization, Visualizer, "Couldn't open the shared memory segment of Visualizer!" << endl);
   }
 
   return initializeContextFromXML() & initGL(&argc, argv);
@@ -764,7 +780,7 @@ bool Visualizer::fillGLBufferWithoutPrecounting(VoxelmapContext* context)
  * Fills the VBO from a Cubelist extracted from Voxellist or Octree with the translation_scale vectors.
  */
 void Visualizer::fillGLBufferWithCubelist(CubelistContext* context, uint32_t index)
-{ 
+{
   thrust::device_vector<uint32_t> indices(context->m_num_voxels_per_type.size(), 0);
   calculateNumberOfCubeTypes(context);
 
@@ -1628,7 +1644,7 @@ void Visualizer::renderFunction(void)
         if (updateVoxelListContext(m_cur_context->m_voxel_lists[i], i))
         {
           fillGLBufferWithCubelist(m_cur_context->m_voxel_lists[i], i);
-          cudaIpcCloseMemHandle(m_cur_context->m_voxel_lists[i]->getCubesDevicePointer()); // unmap shared mem
+          m_cur_context->m_voxel_lists[i]->unmapCubesShm();
         }
         m_shm_manager_voxellists->setBufferSwappedToFalse(i);
       }
@@ -2783,7 +2799,7 @@ std::stringstream returnString;
       cudaFree(d_found_flag);
 
       // unmap the CUDA shared mem
-      cudaIpcCloseMemHandle(vm_context->getCubesDevicePointer());
+      vm_context->unmapCubesShm();
     }
   }
 

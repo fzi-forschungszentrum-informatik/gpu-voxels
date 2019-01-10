@@ -69,8 +69,6 @@ public:
   void exactDistances3D(std::vector<Vector3f>& points);
   void parallelBanding3D(uint32_t m1 = 1, uint32_t m2 = 1, uint32_t m3 = 1, uint32_t m1_blocksize = gpu_voxels::PBA_DEFAULT_M1_BLOCK_SIZE, uint32_t m2_blocksize = gpu_voxels::PBA_DEFAULT_M2_BLOCK_SIZE, uint32_t m3_blocksize = gpu_voxels::PBA_DEFAULT_M3_BLOCK_SIZE, bool detailtimer = false);
 
-  void clone(DistanceVoxelMap& other);
-
   void fill_pba_uninit(DistanceVoxelMap& other);
   void fill_pba_uninit();
 

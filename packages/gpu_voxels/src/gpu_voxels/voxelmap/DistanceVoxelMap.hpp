@@ -643,20 +643,6 @@ void DistanceVoxelMap::parallelBanding3D(uint32_t m1, uint32_t m2, uint32_t m3, 
 
 }
 
-/**
- * @brief DistanceVoxelMap::clone clone other DVM
- * @param other DVM to be cloned
- */
-void DistanceVoxelMap::clone(DistanceVoxelMap& other) {
-  thrust::device_ptr<DistanceVoxel> other_begin(other.m_dev_data);
-  thrust::device_ptr<DistanceVoxel> other_end(other_begin + other.getVoxelMapSize());
-  thrust::device_ptr<DistanceVoxel> this_begin(this->m_dev_data);
-
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-  thrust::copy(other_begin, other_end, this_begin);
-  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
-}
-
 void DistanceVoxelMap::fill_pba_uninit() {
   this->fill_pba_uninit(*this); //obstacles have (own_coords,0) format; all else are setPBAUninitialised
 }

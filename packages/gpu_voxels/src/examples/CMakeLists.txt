@@ -579,7 +579,7 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 ICMAKER_BUILD_PROGRAM()
 
 #------------- Example Program for the two primitiveArray APIs ------------
-ICMAKER_SET("primitivearraytest" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
+ICMAKER_SET("primitive_array_test" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 
 ICMAKER_ADD_HEADERS(
 
@@ -671,7 +671,7 @@ ICMAKER_BUILD_PROGRAM()
 
 
 #------------- Example Program using showing the boundary checks for inserting into a map ------------
-ICMAKER_SET("geometrygeneration" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
+ICMAKER_SET("geometry_generation" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
 
 ICMAKER_ADD_HEADERS(
   )
@@ -701,6 +701,40 @@ ICMAKER_EXTERNAL_DEPENDENCIES(
 
 ICMAKER_BUILD_PROGRAM()
 
+#------------- Example Program distance_ros_demo ------------
+ICMAKER_SET("distance_ros_demo" IDE_FOLDER ${EXAMPLES_IDE_FOLDER})
+add_definitions(-DIC_PERFORMANCE_MONITOR)
+
+ICMAKER_ADD_HEADERS(
+  )
+
+ICMAKER_ADD_SOURCES(
+  DistanceROSDemo.cpp
+  )
+
+ICMAKER_ADD_CUDA_FILES(
+  )
+
+ICMAKER_LOCAL_CPPDEFINES(-DGPU_VOXELS_EXPORT_SYMBOLS -Wno-unknown-pragmas)
+ICMAKER_GLOBAL_CPPDEFINES(-D_IC_BUILDER_GPU_VOXELS_EXAMPLES_DISTANCE_ROS_DEMO_)
+ICMAKER_INCLUDE_DIRECTORIES(${GPU_VOXELS_INCLUDE_DIRS})
+
+ICMAKER_INTERNAL_DEPENDENCIES(
+  gpu_voxels
+  )
+
+ICMAKER_EXTERNAL_DEPENDENCIES(
+  icl_core
+  icl_core_config
+  icl_core_logging
+  icl_core_performance_monitor
+  Boost_SYSTEM
+  ROS
+  CUDA
+  PCL
+  )
+
+ICMAKER_BUILD_PROGRAM()
 
 #------------- adding examples in subdirectories ------------
 ADD_SUBDIRECTORY(swept_fitter)

@@ -89,7 +89,7 @@ bool VisTemplateVoxelList<Voxel, VoxelIDType>::visualize(const bool force_repain
     uint32_t cube_buffer_size;
     Cube *d_cubes_buffer;
 
-    if(m_internal_buffer_1)
+    if (m_internal_buffer_1)
     {
       // extractCubes() allocates memory for the m_dev_buffer_1, if the pointer is NULL
       m_voxellist->extractCubes(&m_dev_buffer_1);
@@ -106,16 +106,17 @@ bool VisTemplateVoxelList<Voxel, VoxelIDType>::visualize(const bool force_repain
       m_internal_buffer_1 = true;
     }
 
-    if(cube_buffer_size > 0)
+    if (cube_buffer_size > 0)
     {
-      // first open or create and the set the values
       HANDLE_CUDA_ERROR(cudaIpcGetMemHandle(m_shm_memHandle, d_cubes_buffer));
       *m_shm_num_cubes = cube_buffer_size;
       *m_shm_bufferSwapped = true;
-      return true;
-    }else{
-      return false;
+    } else {
+      *m_shm_memHandle = cudaIpcMemHandle_t(); // an empty memory handle, since no memory is allocated in this case
+      *m_shm_num_cubes = 0;
+      *m_shm_bufferSwapped = true;
     }
+    return true;
   }
   return false;
 }

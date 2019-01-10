@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(matrix_inverse)
 
       BOOST_CHECK(identity.apprx_equal(result, 0.00000011));
     }else{
-      BOOST_CHECK(false && "Error in matrix inversion.");
+      BOOST_CHECK_MESSAGE(false, "Error in matrix inversion.");
     }
     PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("matrix_inverse", "matrix_inverse", "cudaMath");
   }

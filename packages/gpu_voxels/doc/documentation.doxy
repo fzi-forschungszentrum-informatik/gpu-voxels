@@ -12,9 +12,9 @@
  * But as CUDA does not support Shared Memory (so no visualization available) for ARMs we did not investigate that further.
  *
  * \section req_libs Required libraries to build GPU-Voxels
- * The software is tested on 64 Bit Ubuntu Linux Trusty (14.04) and Xenial (16.04). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:
+ * The software is tested on 64 Bit Ubuntu Linux Trusty (14.04), Xenial (16.04) and Bionic (18.04). Nevertheless it should run on every decent Linux-Distribution and even on MacOS. As long as you have the following packages available:
  * <ul>
- * <li>CUDA &gt; 7.5, 8.0 and 9.2</li>
+ * <li>CUDA &gt; 7.5, 8.0 9.x or 10.0</li>
  * <li>PCL</li>
  * <li>OpenNI</li>
  * <li>Boost</li>
@@ -23,17 +23,25 @@
  *
  * For the visualizer you will also need:
  * <ul>
- * <li>GLEW (libglew1.10 Version: 1.10.0-3, libglew-dev Version: 1.10.0-3)</li>
- * <li>GLM (libglm-dev Version: 0.9.5.1-1) On Ubuntu 16.04 you will have to patch one file: See <a title="GLM Bugtracker" href="https://github.com/g-truc/glm/issues/530" target="_blank">https://github.com/g-truc/glm/issues/530</a></li>
+ * <li>GLEW libglew-dev Version: 1.10.0-3 or newer)</li>
+ * <li>GLM (libglm-dev Version: 0.9.5.1-1 or newer) On Ubuntu 16.04 you will have to patch one file: See <a title="GLM Bugtracker" href="https://github.com/g-truc/glm/issues/530" target="_blank">https://github.com/g-truc/glm/issues/530</a></li>
  * <li>OpenGL</li>
  * <li>GLUT (freeglut3 Version: 2.8.1-1, freeglut3-dev Version: 2.8.1-1)</li>
  * </ul>
- *  
- * \section enablingc11 Enabling C++11
- * C++11 is not enabled by default. To compile in C++11 mode add this to the top of packages/gpu_voxels/CMakeLists.txt: SET(CMAKE_CXX_STANDARD 11)
+ *
+ * \section enablingc11 Compiling without C++11
+ * C++11 is enabled by default. To compile without C++11 mode comment out this at the top of packages/gpu_voxels/CMakeLists.txt:\n
+ *  SET(CMAKE_CXX_STANDARD 11) \n
+ * This is important if you are still using ROS Indigo and need to compile without C++11 support for compatibility reasons. There is a separate indigo branch, that only differs in this line to disable C++11 during compilation. \n
  *
  * \section known_iss Known issues
- * There is a known bug in GLM on Ubuntu 16.04 that has to be patched to allow usage of the visualizer. Apply the patch described <a href="https://github.com/g-truc/glm/issues/530">here</a> to /usr/include/glm/detail/func_common.inl
+ * There is a known bug in GLM on Ubuntu 16.04 that has to be patched to allow usage of the visualizer. Apply the patch described <a href="https://github.com/g-truc/glm/issues/530">here</a> to /usr/include/glm/detail/func_common.inl \n
+ * If the ROS dependency was found, but the GPU-Voxels URDF features are still unabailable, run `source /opt/ros/YOUR_ROS_DISTRO/setup.bash` before running cmake.
+ * Eigen 3 issues: can be fixed by cloning a more current unstable Eigen version and placing it in CMAKE_PREFIX_PATH. See http://eigen.tuxfamily.org/index.php?title=Main_Page#Download\n
+ *  Some observed Eigen issues: \n
+ *  On Ubuntu 18.04 with CUDA 10.0: "math_functions.hpp not found"\n
+ *  Eigen 3.3.4 and 3.3.5 with CUDA 9.0, 9.1, 9.2: Error: class "Eigen::half" has no member "x"\n
+ * Cuda 8.0: Code compiled with Cuda 8.0 works fine with older GPU drivers such as 375.66, but there are runtime errors with driver 384.111 and newer ("PTX JIT compilation failed"). Easy fix: use Cuda 10 with a current 410 or newer driver version. Cuda 10 is also available for Ubuntu 14.04 and 16.04.
  *
  * \section add_tools Additional Tools
  * As soon as you want to experiment with your own geometrical models, you will have to “voxelize” them. Models are represented as dense pointclouds in GPU-Voxels. I am using the really nice tool <b><em>binvox </em></b>to perform this task on the GPU. You can download it at <a title="Binvox" href="http://www.patrickmin.com/binvox/" target="_blank">http://www.patrickmin.com/binvox/</a>
@@ -41,7 +49,7 @@
  * Huge thanks to Patrick Min (<a title="Patrick Min" href="http://www.patrickmin.com/" target="_blank">http://www.patrickmin.com/</a>) for offering the tool for free as a download!
  * \n\n\n
  * ==> After installing the libs, continue with \ref Compiling.
- * 
+ *
  */
 
 

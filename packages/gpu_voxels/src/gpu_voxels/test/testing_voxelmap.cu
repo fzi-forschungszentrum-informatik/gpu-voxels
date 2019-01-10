@@ -515,6 +515,174 @@ BOOST_AUTO_TEST_CASE(iostream_bitvoxel)
   }
 }
 
+BOOST_AUTO_TEST_CASE(voxelmap_closing)
+{
+  PERF_MON_START("voxelmap_closing");
+  float side_length = 0.1f;
+  Vector3ui dim(16, 16, 16);
+  float occupied_threshold = 0.0f;
+  ProbabilisticVoxel voxelmap_h[dim.x * dim.y * dim.z];
+
+  for(int i = 0; i < iterationCount; i++)
+  {
+    Vector3f center_min = Vector3f(0.9,0.9,0.9);
+    Vector3f center_max = Vector3f(1.1,1.1,1.1);
+    std::vector<Vector3ui> box_coordinates = geometry_generation::createBoxOfPoints(center_min, center_max, side_length, side_length);
+
+    // Check normal insertion
+    {
+      ProbVoxelMap voxelmap_d(dim, side_length, MT_PROBAB_VOXELMAP);
+      voxelmap_d.insertCoordinateList(box_coordinates, eBVM_OCCUPIED);
+
+      HANDLE_CUDA_ERROR(cudaMemcpy((void**) &voxelmap_h, voxelmap_d.getDeviceDataPtr(), sizeof(ProbabilisticVoxel) * dim.x * dim.y * dim.z, cudaMemcpyDeviceToHost));
+      for (size_t x = 0; x < dim.x; x++)
+      {
+        for (size_t y = 0; y < dim.y ; y++)
+        {
+          for (size_t z = 0; z < dim.z; z++)
+          {
+            size_t index = getVoxelIndexUnsigned(dim, Vector3ui(x, y, z));
+            bool occupied = voxelmap_h[index].isOccupied(occupied_threshold);
+            BOOST_CHECK_MESSAGE(occupied == (9 <= x && x <= 11 && 9 <= y && y <= 11 && 9 <= z && z <= 11), "Voxel at " << x << ", " << y << ", " << z << " has wrong occupation=" << occupied);
+          }
+        }
+      }
+    }
+
+    // Check dilated insertion
+    {
+      ProbVoxelMap voxelmap_d(dim, side_length, MT_PROBAB_VOXELMAP);
+      voxelmap_d.insertDilatedCoordinateList(box_coordinates, eBVM_OCCUPIED);
+
+      HANDLE_CUDA_ERROR(cudaMemcpy((void**) &voxelmap_h, voxelmap_d.getDeviceDataPtr(), sizeof(ProbabilisticVoxel) * dim.x * dim.y * dim.z, cudaMemcpyDeviceToHost));
+      for (size_t x = 0; x < dim.x; x++)
+      {
+        for (size_t y = 0; y < dim.y ; y++)
+        {
+          for (size_t z = 0; z < dim.z; z++)
+          {
+            size_t index = getVoxelIndexUnsigned(dim, Vector3ui(x, y, z));
+            bool occupied = voxelmap_h[index].isOccupied(occupied_threshold);
+            BOOST_CHECK_MESSAGE(occupied == (8 <= x && x <= 12 && 8 <= y && y <= 12 && 8 <= z && z <= 12), "Voxel at " << x << ", " << y << ", " << z << " has wrong occupation=" << occupied);
+          }
+        }
+      }
+    }
+
+    // Check closed insertion (dilation + erosion)
+    {
+      ProbVoxelMap voxelmap_d(dim, side_length, MT_PROBAB_VOXELMAP);
+      voxelmap_d.insertClosedCoordinateList(box_coordinates, eBVM_OCCUPIED, 1.0);
+
+      HANDLE_CUDA_ERROR(cudaMemcpy((void**) &voxelmap_h, voxelmap_d.getDeviceDataPtr(), sizeof(ProbabilisticVoxel) * dim.x * dim.y * dim.z, cudaMemcpyDeviceToHost));
+      for (size_t x = 0; x < dim.x; x++)
+      {
+        for (size_t y = 0; y < dim.y ; y++)
+        {
+          for (size_t z = 0; z < dim.z; z++)
+          {
+            size_t index = getVoxelIndexUnsigned(dim, Vector3ui(x, y, z));
+            bool occupied = voxelmap_h[index].isOccupied(occupied_threshold);
+            BOOST_CHECK_MESSAGE(occupied == (9 <= x && x <= 11 && 9 <= y && y <= 11 && 9 <= z && z <= 11), "Voxel at " << x << ", " << y << ", " << z << " has wrong occupation=" << occupied);
+          }
+        }
+      }
+    }
+
+    center_min = Vector3f(0.6,0.6,0.6);
+    center_max = Vector3f(1.2,1.2,1.2);
+    box_coordinates = geometry_generation::createBoxOfPoints(center_min, center_max, 2 * side_length, side_length);
+
+    // Check lonely erosion
+    {
+      ProbVoxelMap voxelmap_src_d(dim, side_length, MT_PROBAB_VOXELMAP);
+      ProbVoxelMap voxelmap_dest_d(dim, side_length, MT_PROBAB_VOXELMAP);
+      voxelmap_src_d.insertCoordinateList(box_coordinates, eBVM_OCCUPIED);
+      voxelmap_src_d.erodeLonelyInto(voxelmap_dest_d);
+
+      HANDLE_CUDA_ERROR(cudaMemcpy((void**) &voxelmap_h, voxelmap_dest_d.getDeviceDataPtr(), sizeof(ProbabilisticVoxel) * dim.x * dim.y * dim.z, cudaMemcpyDeviceToHost));
+      for (size_t x = 0; x < dim.x; x++)
+      {
+        for (size_t y = 0; y < dim.y ; y++)
+        {
+          for (size_t z = 0; z < dim.z; z++)
+          {
+            size_t index = getVoxelIndexUnsigned(dim, Vector3ui(x, y, z));
+            bool occupied = voxelmap_h[index].isOccupied(occupied_threshold);
+            BOOST_CHECK_MESSAGE(occupied == false, "Voxel at " << x << ", " << y << ", " << z << " has wrong occupation=" << occupied);
+          }
+        }
+      }
+    }
+
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("voxelmap_closing", "voxelmap_closing", "voxelmap");
+  }
+}
+
+BOOST_AUTO_TEST_CASE(voxelmap_cloning)
+{
+  PERF_MON_START("voxelmap_cloning");
+  float side_length = 0.1f;
+  Vector3ui dim(16, 16, 16);
+  float occupied_threshold = 0.0f;
+  ProbabilisticVoxel voxelmap_h[dim.x * dim.y * dim.z];
+
+  for(int i = 0; i < iterationCount; i++)
+  {
+    Vector3f center_min = Vector3f(0.9,0.9,0.9);
+    Vector3f center_max = Vector3f(1.1,1.1,1.1);
+    std::vector<Vector3ui> box_coordinates = geometry_generation::createBoxOfPoints(center_min, center_max, side_length, side_length);
+
+    // Check cloning with correct dimensions
+    {
+      ProbVoxelMap voxelmap1_d(dim, side_length, MT_PROBAB_VOXELMAP);
+      voxelmap1_d.insertCoordinateList(box_coordinates, eBVM_OCCUPIED);
+
+      ProbVoxelMap voxelmap2_d(dim, side_length, MT_PROBAB_VOXELMAP);
+      voxelmap2_d.clone(voxelmap1_d);
+
+      HANDLE_CUDA_ERROR(cudaMemcpy((void**) &voxelmap_h, voxelmap2_d.getDeviceDataPtr(), sizeof(ProbabilisticVoxel) * dim.x * dim.y * dim.z, cudaMemcpyDeviceToHost));
+      for (size_t x = 0; x < dim.x; x++)
+      {
+        for (size_t y = 0; y < dim.y ; y++)
+        {
+          for (size_t z = 0; z < dim.z; z++)
+          {
+            size_t index = getVoxelIndexUnsigned(dim, Vector3ui(x, y, z));
+            bool occupied = voxelmap_h[index].isOccupied(occupied_threshold);
+            BOOST_CHECK_MESSAGE(occupied == (9 <= x && x <= 11 && 9 <= y && y <= 11 && 9 <= z && z <= 11), "Voxel at " << x << ", " << y << ", " << z << " has wrong occupation=" << occupied);
+          }
+        }
+      }
+    }
+
+    // Check cloning with incorrect dimensions
+    {
+      ProbVoxelMap voxelmap1_d(dim, side_length, MT_PROBAB_VOXELMAP);
+      voxelmap1_d.insertCoordinateList(box_coordinates, eBVM_OCCUPIED);
+
+      ProbVoxelMap voxelmap2_d(dim, 2 * side_length, MT_PROBAB_VOXELMAP);
+      voxelmap2_d.clone(voxelmap1_d);
+
+      HANDLE_CUDA_ERROR(cudaMemcpy((void**) &voxelmap_h, voxelmap2_d.getDeviceDataPtr(), sizeof(ProbabilisticVoxel) * dim.x * dim.y * dim.z, cudaMemcpyDeviceToHost));
+      for (size_t x = 0; x < dim.x; x++)
+      {
+        for (size_t y = 0; y < dim.y ; y++)
+        {
+          for (size_t z = 0; z < dim.z; z++)
+          {
+            size_t index = getVoxelIndexUnsigned(dim, Vector3ui(x, y, z));
+            bool occupied = voxelmap_h[index].isOccupied(occupied_threshold);
+            BOOST_CHECK_MESSAGE(!occupied, "Voxel at " << x << ", " << y << ", " << z << " has wrong occupation=" << occupied);
+          }
+        }
+      }
+    }
+
+    PERF_MON_SILENT_MEASURE_AND_RESET_INFO_P("voxelmap_cloning", "voxelmap_cloning", "voxelmap");
+  }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 

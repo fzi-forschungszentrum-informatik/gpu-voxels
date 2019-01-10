@@ -109,9 +109,9 @@ void KinematicChain::setConfiguration(const JointValueMap &jointmap)
   for(size_t i = 0; i < m_linknames.size(); i++)
   {
     std::string linkname = m_linknames[i];
-    int16_t pc_num = m_links_meta_cloud->getCloudNumber(linkname);
-    if(pc_num != -1)
-    {      
+    if (m_links_meta_cloud->hasCloud(linkname))
+    {
+      int16_t pc_num = m_links_meta_cloud->getCloudNumber(linkname);
       m_links_meta_cloud->transformSubCloud(pc_num, &transformation, m_transformed_links_meta_cloud);
     }
     // Sending the actual transformation for this link to the GPU.

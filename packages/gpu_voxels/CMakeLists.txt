@@ -1,6 +1,6 @@
 # this is for emacs file handling -*- mode: cmake; indent-tabs-mode: nil -*-
 
-SET(CMAKE_CXX_STANDARD 11) # uncomment to activate C++11 mode
+SET(CMAKE_CXX_STANDARD 11) # comment out to deactivate C++11 when using ROS indigo to avoid incompatibilities
 
 # --- To be used by other modules ---
 SET(GPU_VOXELS_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}/src" CACHE INTERNAL "")
@@ -25,19 +25,19 @@ FIND_PACKAGE(GLM)
 FIND_PACKAGE(OpenGL)
 FIND_PACKAGE(GLUT)
 
+# Dependencies for ROS interconnect
+FIND_PACKAGE(ROS)
+
 # Dependencies for URDF loading (also requires ROS for kdl/frames.hpp)
 FIND_PACKAGE(urdfdom)
 FIND_PACKAGE(orocos_kdl)
 FIND_PACKAGE(kdl_parser)
 
-# Dependencied for Benchmarking against Octomap
+# Dependencies for Benchmarking against Octomap
 FIND_PACKAGE(Octomap)
 
 # Dependencies for PCL interfaces
 FIND_PACKAGE(PCL)
-
-# Dependencies for ROS interconnect
-FIND_PACKAGE(ROS)
 
 FIND_PACKAGE(pcl_ros)
 
@@ -82,9 +82,9 @@ ELSE(ROS_FOUND)
   MESSAGE(STATUS "[WARNING] Building GPU-Voxels without ROS connections. ROS not found.")
 ENDIF(ROS_FOUND)
 
-IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
+IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with URDF support. urdfdom, orocos and kdl_parser and ROS-kdl were found.")
-ELSE(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
+ELSE(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
   MESSAGE(STATUS "[WARNING] Building GPU-Voxels without URDF support. Could not find the following packages:")
   IF(NOT urdfdom_FOUND)
     MESSAGE(STATUS "    urdfdom")
@@ -95,10 +95,10 @@ ELSE(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
   IF(NOT kdl_parser_FOUND)
     MESSAGE(STATUS "    kdl_parser")
   ENDIF(NOT kdl_parser_FOUND)
-  IF(NOT ROS_FOUND)
-    MESSAGE(STATUS "    ROS")
-  ENDIF(NOT ROS_FOUND)
-ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
+  IF(ROS_FOUND)
+    MESSAGE(STATUS "!!! to fix this, source /opt/ros/YOUR_ROS_DISTRO/setup.bash before building !!!")
+  ENDIF(ROS_FOUND)
+ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
 
 #IF(OPENNI2_FOUND)
 #  MESSAGE(STATUS "[OK]      Building GPU-Voxels with Kinect support. OpenNI2 was found.")
@@ -137,8 +137,12 @@ MESSAGE(STATUS "----------------------------------------------------------------
 # GPU-Voxels requires GPU CUDA capabilities >= 2.0
 #SET(ICMAKER_CUDA_COMPUTE_VERSION 20)
 SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
+
 SET(ICMAKER_CUDA_ARCH compute_${ICMAKER_CUDA_COMPUTE_VERSION})
 SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION})
+
+#Usage example for specifying PTX for compute_35 and cubin for sm_51:
+# SET(ICMAKER_CUDA_CODE compute_35,sm_51)
 
 ## Uncomment this definition if you want to avoid PTX JIT compilation at first runtime. 
 ## Having both a compute_ and a sm_ code target will include both PTX and CUBIN in the final binary.

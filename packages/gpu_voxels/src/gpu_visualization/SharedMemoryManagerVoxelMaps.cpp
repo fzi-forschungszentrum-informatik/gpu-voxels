@@ -83,8 +83,8 @@ bool SharedMemoryManagerVoxelMaps::getVoxelMapDimension(Vector3ui& dim, const ui
 bool SharedMemoryManagerVoxelMaps::getVoxelMapSideLength(float& voxel_side_length, const uint32_t index)
 {
   std::string index_str = boost::lexical_cast<std::string>(index);
-  std::string sidelength_var_name = shm_variable_name_voxel_side_length + index_str;
-  std::pair<float*, std::size_t> res = shmm->getMemSegment().find<float>(sidelength_var_name.c_str());
+  std::string side_length_var_name = shm_variable_name_voxel_side_length + index_str;
+  std::pair<float*, std::size_t> res = shmm->getMemSegment().find<float>(side_length_var_name.c_str());
   if (res.second == 0)
   {
     return false;

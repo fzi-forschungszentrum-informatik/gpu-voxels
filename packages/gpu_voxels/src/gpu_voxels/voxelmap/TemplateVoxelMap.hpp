@@ -29,9 +29,17 @@
 #include <gpu_voxels/voxelmap/kernels/VoxelMapOperations.hpp>
 #include <gpu_voxels/voxel/DefaultCollider.hpp>
 #include <gpu_voxels/voxel/SVCollider.hpp>
+#include <gpu_voxels/voxellist/TemplateVoxelList.h>
 
+#include <cfloat>
+
+#include <thrust/copy.h>
+#include <thrust/count.h>
 #include <thrust/fill.h>
 #include <thrust/gather.h>
+#include <thrust/device_vector.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/zip_iterator.h>
 
 // temp:
 #include <time.h>
@@ -260,6 +268,107 @@ void TemplateVoxelMap<DistanceVoxel>::clearMap()
 //                 cudaMemcpyHostToDevice));
 
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+struct sumVector3ui
+{
+  __host__ __device__
+  sumVector3ui() : sum(), count()
+  {
+  }
+
+  __host__ __device__
+  sumVector3ui(Vector3ui sum, uint32_t count) : sum(sum), count(count)
+  {
+  }
+
+  __host__ __device__
+  sumVector3ui operator()(sumVector3ui a, sumVector3ui b)
+  {
+    return sumVector3ui(a.sum + b.sum, a.count + b.count) ;
+  }
+
+  Vector3ui sum;
+  uint32_t count;
+};
+
+template<class Voxel>
+struct toCoordsIfInBoundsAndOccupied
+{
+  Vector3ui upper_bound;
+  Vector3ui lower_bound;
+  Vector3ui dim;
+
+  toCoordsIfInBoundsAndOccupied(Vector3ui upper, Vector3ui lower, Vector3ui dimensions) : 
+    upper_bound(upper), lower_bound(lower), dim(dimensions) 
+  {
+  }
+
+  __host__ __device__
+  sumVector3ui operator()(thrust::tuple<Voxel, int> t)
+  {
+    Voxel v = thrust::get<0>(t);
+    Vector3ui a = mapToVoxels(thrust::get<1>(t), dim);
+
+    bool inBound = ((a.x >= lower_bound.x) && (a.y >= lower_bound.y) && (a.z >= lower_bound.z)
+                      && (a.x < upper_bound.x) && (a.y < upper_bound.y) && (a.z < upper_bound.z));
+
+    return (inBound && v.isOccupied(0.0f)) ? sumVector3ui(a, 1) : sumVector3ui(); //return 0/0/0 if not occupied and in bounds
+  }
+};
+
+template<>
+Vector3f TemplateVoxelMap<DistanceVoxel>::getCenterOfMass() const
+{
+  LOGGING_INFO_C(VoxelmapLog, TemplateVoxelMap, "Center of Mass is not implemented for DistanceVoxel yet, because the it doesnt has IsOccupied" << endl);
+  return Vector3f();
+}
+
+template<class Voxel>
+Vector3f TemplateVoxelMap<Voxel>::getCenterOfMass() const
+{
+  Vector3ui lower(0,0,0);
+  Vector3ui upper = m_dim;
+  return getCenterOfMass(lower, upper);
+}
+
+template<>
+Vector3f TemplateVoxelMap<DistanceVoxel>::getCenterOfMass(Vector3ui lower_bound, Vector3ui upper_bound) const
+{
+  LOGGING_INFO_C(VoxelmapLog, TemplateVoxelMap, "Center of Mass is not implemented for DistanceVoxel yet, because the it doesnt has IsOccupied" << endl);
+  return Vector3f();
+}
+
+template<class Voxel>
+Vector3f TemplateVoxelMap<Voxel>::getCenterOfMass(Vector3ui lower_bound, Vector3ui upper_bound) const
+{
+  //filter by axis aligned bounding box
+  uint32_t boundary_voxel_count = (upper_bound.x - lower_bound.x)
+    * (upper_bound.y - lower_bound.y) * (upper_bound.z - lower_bound.z);
+  if(boundary_voxel_count <= 0)
+  {
+    LOGGING_INFO_C(VoxelmapLog, TemplateVoxelMap, "No Voxels Found in given Bounding Box: Lower Bound (" 
+        << lower_bound.x << "|" << lower_bound.y << "|" << lower_bound.z << ")  "
+        << "Upper Bound (" << upper_bound.x << "|" << upper_bound.y << "|" << upper_bound.z << ")" << endl);
+
+    return Vector3f();
+  }
+
+  toCoordsIfInBoundsAndOccupied<Voxel> filter(upper_bound, lower_bound, m_dim);
+
+  thrust::device_ptr<Voxel> data_begin(m_dev_data);
+  typedef thrust::counting_iterator<int> count_it;
+
+  //calculate sum of all voxelpositions
+  sumVector3ui sumVector = thrust::transform_reduce(
+    thrust::make_zip_iterator(thrust::make_tuple(data_begin,                   count_it(0))),
+    thrust::make_zip_iterator(thrust::make_tuple(data_begin + m_voxelmap_size, count_it(m_voxelmap_size))),
+    filter, sumVector3ui(Vector3ui(), 0), sumVector3ui());
+  //divide by voxel count
+  Vector3f metricSum = sumVector.sum * m_voxel_side_length;
+  uint32_t voxelCount = sumVector.count;
+  Vector3f coM = Vector3f(metricSum.x / voxelCount, metricSum.y / voxelCount, metricSum.z / voxelCount);
+  return coM;
 }
 
 template<class Voxel>
@@ -637,6 +746,107 @@ void TemplateVoxelMap<Voxel>::insertCoordinateList(const Vector3ui* d_coordinate
 }
 
 template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertDilatedCoordinateList(Voxel* d_dest_data, const Vector3ui* d_src_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning)
+{
+  // reset warning indicator:
+  HANDLE_CUDA_ERROR(cudaMemset((void*)m_dev_points_outside_map, 0, sizeof(bool)));
+  bool points_outside_map;
+
+  uint32_t num_blocks, threads_per_block;
+  computeLinearLoad(size, &num_blocks, &threads_per_block);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  kernelInsertDilatedCoordinateTuples<<<num_blocks, threads_per_block>>>(d_dest_data, m_dim, d_src_coordinates, size, voxel_meaning, m_dev_points_outside_map);
+  CHECK_CUDA_ERROR();
+
+  HANDLE_CUDA_ERROR(cudaMemcpy(&points_outside_map, m_dev_points_outside_map, sizeof(bool), cudaMemcpyDeviceToHost));
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  if(points_outside_map)
+  {
+    LOGGING_WARNING_C(VoxelmapLog, VoxelMap, "You tried to insert points that lie outside the map dimensions!" << endl);
+  }
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertDilatedCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning)
+{
+  thrust::device_vector<Vector3ui> d_coordinates(coordinates);
+  this->insertDilatedCoordinateList(d_coordinates.data().get(), coordinates.size(), voxel_meaning);
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertDilatedCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning)
+{
+  insertDilatedCoordinateList(this->m_dev_data, d_coordinates, size, voxel_meaning);
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertClosedCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning, float erode_threshold, float occupied_threshold, Voxel* d_buffer)
+{
+  insertDilatedCoordinateList(d_buffer, d_coordinates, size, voxel_meaning);
+  erode(this->m_dev_data, d_buffer, erode_threshold, occupied_threshold);
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertClosedCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning, float erode_threshold, float occupied_threshold, TemplateVoxelMap<Voxel>& buffer)
+{
+  thrust::device_vector<Vector3ui> d_coordinates(coordinates);
+  this->insertClosedCoordinateList(d_coordinates.data().get(), coordinates.size(), voxel_meaning, erode_threshold, occupied_threshold, buffer);
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertClosedCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning, float erode_threshold, float occupied_threshold, TemplateVoxelMap<Voxel>& buffer)
+{
+  this->insertClosedCoordinateList(d_coordinates, size, voxel_meaning, erode_threshold, occupied_threshold, buffer.m_dev_data);
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertClosedCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning, float erode_threshold, float occupied_threshold)
+{
+  thrust::device_vector<Vector3ui> d_coordinates(coordinates);
+  this->insertClosedCoordinateList(d_coordinates.data().get(), coordinates.size(), voxel_meaning, erode_threshold, occupied_threshold);
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::insertClosedCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning, float erode_threshold, float occupied_threshold)
+{
+  // Allocate temporary buffer
+  thrust::device_vector<Voxel> d_buffer(this->getVoxelMapSize());
+  thrust::fill(d_buffer.begin(), d_buffer.end(), Voxel());
+  this->insertClosedCoordinateList(d_coordinates, size, voxel_meaning, erode_threshold, occupied_threshold, d_buffer.data().get());
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::erode(Voxel* dest_data, const Voxel* src_data, float erode_threshold, float occupied_threshold) const
+{
+  const uint32_t BLOCK_SIDE_LENGTH = 8;
+  dim3 num_blocks, threads_per_block;
+  threads_per_block.x = BLOCK_SIDE_LENGTH;
+  threads_per_block.y = BLOCK_SIDE_LENGTH;
+  threads_per_block.z = BLOCK_SIDE_LENGTH;
+  num_blocks.x = (m_dim.x + threads_per_block.x - 1) / threads_per_block.x;
+  num_blocks.y = (m_dim.y + threads_per_block.y - 1) / threads_per_block.y;
+  num_blocks.z = (m_dim.z + threads_per_block.z - 1) / threads_per_block.z;
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  kernelErode<<<num_blocks, threads_per_block>>>(dest_data, src_data, this->m_dim, erode_threshold, occupied_threshold);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  CHECK_CUDA_ERROR();
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::erodeInto(TemplateVoxelMap<Voxel>& dest, float erode_threshold, float occupied_threshold) const
+{
+  assert(this->m_dim == dest.m_dim);
+  erode(dest.m_dev_data, this->m_dev_data, erode_threshold, occupied_threshold);
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::erodeLonelyInto(TemplateVoxelMap<Voxel>& dest, float occupied_threshold) const
+{
+  this->erodeInto(dest, FLT_EPSILON, occupied_threshold);
+}
+
+template<class Voxel>
 void TemplateVoxelMap<Voxel>::insertMetaPointCloud(const MetaPointCloud &meta_point_cloud,
                                                    BitVoxelMeaning voxel_meaning)
 {
@@ -831,15 +1041,48 @@ bool TemplateVoxelMap<Voxel>::readFromDisk(const std::string path)
 template<class Voxel>
 bool TemplateVoxelMap<Voxel>::merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset, const BitVoxelMeaning* new_meaning)
 {
-  LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-  return false;
+  Vector3f tmp = metric_offset / m_voxel_side_length; // scale to voxel size
+  return this->merge(other, Vector3i((int) tmp.x, (int) tmp.y, (int)tmp.z), new_meaning);
 }
 
 template<class Voxel>
-bool TemplateVoxelMap<Voxel>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning* new_meaning)
-{
-  LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
-  return false;
+bool TemplateVoxelMap<Voxel>::merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset, const BitVoxelMeaning* new_meaning) {
+  if (voxel_offset != Vector3i()) {
+    LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, "You tried to apply an offset while merging a VoxelList into a DistanceVoxelMap (not supported yet)!" << endl);
+    return false;
+  }
+
+  boost::lock(this->m_mutex, other->m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other->m_mutex, boost::adopt_lock);
+
+  switch (other->getMapType())
+  {
+    case MT_BITVECTOR_VOXELLIST:
+    {
+      voxellist::TemplateVoxelList<BitVectorVoxel, MapVoxelID>* voxelList = other->as<voxellist::TemplateVoxelList<BitVectorVoxel, MapVoxelID> >();
+      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), eBVM_OCCUPIED);
+      return true;
+    }
+
+    case MT_PROBAB_VOXELLIST:
+    {
+      voxellist::TemplateVoxelList<ProbabilisticVoxel, MapVoxelID>* voxelList = other->as<voxellist::TemplateVoxelList<ProbabilisticVoxel, MapVoxelID> >();
+      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), eBVM_OCCUPIED);
+      return true;
+    }
+
+    case MT_COUNTING_VOXELLIST:
+    {
+      voxellist::TemplateVoxelList<CountingVoxel, MapVoxelID>* voxelList = other->as<voxellist::TemplateVoxelList<CountingVoxel, MapVoxelID> >();
+      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), eBVM_OCCUPIED);
+      return true;
+    }
+
+    default:
+      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+      return false;
+  }
 }
 
 template<class Voxel>
@@ -852,6 +1095,28 @@ template<class Voxel>
 Vector3f TemplateVoxelMap<Voxel>::getMetricDimensions() const
 {
   return Vector3f(m_dim.x, m_dim.y, m_dim.z) * getVoxelSideLength();
+}
+
+template<class Voxel>
+void TemplateVoxelMap<Voxel>::clone(const TemplateVoxelMap<Voxel>& other)
+{
+  if (this->m_voxel_side_length != other.m_voxel_side_length || this->m_dim != other.m_dim)
+  {
+    LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, "Voxelmap cannot be cloned since map reference dimensions or voxel side length are not equal" << endl);
+    return;
+  }
+
+  boost::lock(this->m_mutex, other.m_mutex);
+  lock_guard guard(this->m_mutex, boost::adopt_lock);
+  lock_guard guard2(other.m_mutex, boost::adopt_lock);
+
+  thrust::device_ptr<Voxel> other_begin(other.m_dev_data);
+  thrust::device_ptr<Voxel> other_end(other_begin + other.getVoxelMapSize());
+  thrust::device_ptr<Voxel> this_begin(this->m_dev_data);
+
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  thrust::copy(other_begin, other_end, this_begin);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 // ------ END Global API functions ------

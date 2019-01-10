@@ -18,7 +18,7 @@
  * \author  Herbert Pietrzyk
  * \date    2018-08-02
  *
- *
+ *  This example uses helper functions to fill voxellists with Boxes, cylinders and spheres.
  */
 //----------------------------------------------------------------------
 #include <cstdlib>

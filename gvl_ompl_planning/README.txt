@@ -31,6 +31,7 @@ This example uses GPU-Voxels data structures and collision checking to plan the 
 
 * Launch planner
  export GPU_VOXELS_MODEL_PATH=<gpu-voxels-path>/packages/gpu_voxels/models/
+ # if libs are not found: export LD_LIBRARY_PATH=<gpu-voxels-path>/export/lib:$LD_LIBRARY_PATH
  ./gvl_ompl_planner
 
 * Start Visualizer
@@ -55,5 +56,6 @@ This example uses GPU-Voxels data structures and collision checking to plan the 
  cmake -DCMAKE_PREFIX_PATH=<gpu-voxels-path>/export:~/pcl-1.8.1/build/lib/ ..
  make
  ldd gvl_ompl_planner | grep -F "libpcl" # make sure there are no pcl 1.7 libraries linked in
+ # if libs are not found: export LD_LIBRARY_PATH=<gpu-voxels-path>/export/lib:$LD_LIBRARY_PATH
  ./gvl_ompl_planner 
 

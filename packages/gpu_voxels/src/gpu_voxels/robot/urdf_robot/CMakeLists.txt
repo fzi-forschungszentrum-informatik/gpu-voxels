@@ -11,7 +11,7 @@
 #----------------------------------------------------------------------
 
 #------------- gpu_voxels_urdf_robot libaray -----------------------
-IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
+IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
   ICMAKER_SET("gpu_voxels_urdf_robot" IDE_FOLDER ${GPU_VOXELS_IDE_FOLDER})
 
   ICMAKER_GLOBAL_CPPDEFINES(-D_BUILD_GVL_WITH_URDF_SUPPORT_)
@@ -59,7 +59,6 @@ IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
     kdl_parser
     orocos_kdl
     Boost_FILESYSTEM
-    ROS
     )
 
 
@@ -73,4 +72,4 @@ IF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
     ../robot_interface.h
   )
 
-ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND AND ROS_FOUND)
+ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)

@@ -40,6 +40,7 @@
 #include <boost/interprocess/allocators/allocator.hpp>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
 
 #include <gpu_visualization/logging/logging_visualization.h>
 

@@ -61,6 +61,9 @@
 #include <thrust/scan.h>
 
 #define GLM_FORCE_RADIANS
+#if defined(__CUDACC__) && !defined(CUDA_VERSION) && !defined(GLM_FORCE_CUDA) // fix Cuda10 & Ubuntu14.04 error
+#  include <cuda.h>  // ensure CUDA_VERSION is defined, nvcc does not define it
+#endif
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

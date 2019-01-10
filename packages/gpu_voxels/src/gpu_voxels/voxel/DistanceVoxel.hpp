@@ -102,14 +102,24 @@ void DistanceVoxel::setPBAUninitialised() {
   setObstacle(Vector3ui(PBA_UNINITIALISED_COORD));
 }
 
+__host__ __device__
+bool DistanceVoxel::isOccupied(float col_threshold) const
+{
+  //NOP
+  //TODO just a stub for API compatibility
+  //TODO update as soon as DistanceVoxel rework is done
+  return true;
+}
+
 
 __host__ __device__
 void DistanceVoxel::insert(const uint32_t voxel_meaning)
 {
-    //NOP
+  //NOP
+  //TODO update as soon as DistanceVoxel rework is done
 
-    //TODO remove or hide behind #ifdef?
-    printf("DistanceVoxel.insert(voxel_type: %d) should not be called! use insert(pos, type)\n", voxel_meaning);
+  //TODO remove or hide behind #ifdef?
+  printf("DistanceVoxel.insert(voxel_type: %d) should not be called! use insert(pos, type)\n", voxel_meaning);
 }
 
 __host__ __device__

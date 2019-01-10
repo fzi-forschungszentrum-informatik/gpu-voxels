@@ -509,3 +509,53 @@ V1.2.2 (2018-08-29):
 ====================
 Fix missing CUDA include and link directive in gvl_ompl_planner and example_howto_link
 
+
+V1.3.0 (2019-01-07):
+====================
+CUDA 10.0 and Ubuntu 18.04 compatibility. Use C++11 by default. Add
+ROS-connected DistanceROSDemo example. Improve Visualizer Shared Memory error handling.
+
+Major changes:
+- Added DistanceROSDemo to show-case a ROS node subscribing to PCL point-clouds.
+- Implemented additional merge functions
+  - Added TemplateVoxelMap.merge(TemplateVoxelList)
+  - Added functions to merge TemplateVoxelList into BitVoxelList and CountingVoxelList;
+- Added TemplateVoxelMap::clone and TemplateVoxelList::clone, was previously
+only available in DistanceVoxelMap
+- Added functions that implement the morphological operations Closing, Dilation and Erosion
+- Added function getCenterOfMass to TemplateVoxelList and TemplateVoxelMap
+- Added BitVoxelList::copyCoordsToHostBvmBounded: allows the selective copy of voxels with BitVoxelMeanings in a given range
+- Updated icmaker and icl_core to fix issues with new Boost and CMake versions
+
+Possibly breaking changes:
+- C++11 support is active by default. The new "indigo" branch has C++11 deactivated by default, is identical otherwise
+- changed BitVoxelList::findMatchingVoxels signature:
+  - Implicitly set argument list1 to 'this'.
+  - Add option omit_coords: if true, output VoxelLists will only contain voxel IDs and data but the coord_list will be empty (default). If set to false, voxel coordinates will also be copied to the output lists.
+
+Additional changes:
+- gvl_ompl_planner:
+  - fixed collision check threshold value
+  - updated comments and logging output
+- gvl_ompl_planner: added comment regarding LD_LIBRARY_PATH
+- fix MetaPointCloud name unknown for robot links without geometry
+- updated stb_image.h to version 2.19
+- fix ROS&Urdf CMake discovery issue
+- add tests for TemplateVoxelList and TemplateVoxelMap clone
+- add hollie_from_pointcloud2.pcd for example DistanceVoxelTest.cpp
+- fix a CountingVoxelList visualization issue
+
+Known Issues:
+- Eigen 3 issues: can be fixed by cloning a more current unstable Eigen version and placing it in CMAKE_PREFIX_PATH
+  + on Ubuntu 18.04 with CUDA 10.0: "math_functions.hpp not found"
+  + Eigen 3.3.4 and 3.3.5 with CUDA 9.0, 9.1, 9.2: Error: class "Eigen::half" has no member "x"
+  + see http://eigen.tuxfamily.org/index.php?title=Main_Page#Download
+- If the ROS dependency was found, but the GPU-Voxels URDF features are still unabailable, run `source /opt/ros/YOUR_ROS_DISTRO/setup.bash` before running cmake.
+- Cuda 8.0: Code compiled with Cuda 8.0 works fine with older GPU drivers such as 375.66, but there are runtime errors with driver 384.111 and newer ("PTX JIT compilation failed"). 
+  + Easy fix: use Cuda 10 with a current 410 or newer driver version. Cuda 10 is also available for Ubuntu 14.04 and 16.04.
+- The GLM headers provided by Ubuntu 16.04 have to be patched to allow usage of the visualizer.
+  - see https://github.com/g-truc/glm/issues/530
+  - patch for /usr/include/glm/detail/func_common.inl in packages/gpu_voxels/doc/glm_fix_issu530.patch
+- The constant cMAX_NR_OF_BLOCKS is currently limited to 65535, while current CUDA devices support over 2 billion blocks
+  - relevant during computeLinearLoad calls and collision checking
+

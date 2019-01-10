@@ -9,3 +9,4 @@ To clarify this:
 - GPU-Voxels is distributed under the CDDL license
 - PBA kernel code in GPU-Voxels is distributed under the BSD-like license found in LICENSE_PBA.txt
 - icl_core helber library is distributed under CDDL license
+- stb_image.h is distributed under two licenses, see LICENSE_std_image.txt

@@ -23,9 +23,46 @@
 #include <gpu_voxels/vis_interface/VisProvider.h>
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 
+#include <boost/smart_ptr/shared_ptr.hpp>
+#include <boost/thread.hpp>
+#include <map>
+
+
 namespace gpu_voxels {
 
 using namespace boost::interprocess;
+
+static std::map<std::string, int> shm_states; // map from segment name to usage counter
+static boost::mutex shm_states_mutex; // used to protect shm_states
+
+managed_shared_memory increment_usage(std::string segment_name)
+{
+  boost::lock_guard<boost::mutex> lock(shm_states_mutex);
+  if (shm_states.find(segment_name) == shm_states.end())
+  {
+    shm_states[segment_name] = 1;
+  }
+  else
+  {
+    shm_states[segment_name]++;
+  }
+  permissions per;
+  per.set_unrestricted();
+  return managed_shared_memory(open_or_create, segment_name.c_str(), 65536, 0, per);
+}
+
+void decrement_usage(std::string segment_name)
+{
+  boost::lock_guard<boost::mutex> lock(shm_states_mutex);
+  int& usages = shm_states[segment_name];
+  usages--;
+  if (usages == 0)
+  {
+    shared_memory_object::remove(segment_name.c_str());
+
+    // LOGGING_DEBUG_C(Gpu_voxels, VisProvider, "decrement_usage removed segment [" << segment_name << "] " << endl);
+  }
+}
 
 VisProvider::VisProvider(std::string segment_name, std::string map_name)
   : m_segment(),
@@ -35,25 +72,16 @@ VisProvider::VisProvider(std::string segment_name, std::string map_name)
     m_shm_mapName(),
     m_shm_draw_types(NULL)
 {
-  permissions per;
-  per.set_unrestricted();
-  m_visualizer_segment = managed_shared_memory(open_or_create, shm_segment_name_visualizer.c_str(), 65536, 0, per);
+  m_visualizer_segment = increment_usage(shm_segment_name_visualizer);
 }
 
 VisProvider::~VisProvider()
 {
-  // destroying only the named objects leads weird problems of lacking program execution
-  shared_memory_object::remove(m_segment_name.c_str());
-//  bool destruction_successful = shared_memory_object::remove(m_segment_name.c_str());
-//  if(!destruction_successful)
-//  {
-//    LOGGING_ERROR_C(Gpu_voxels, VisProvider, "Destructor of VisProvider Shared Memory [" << m_segment_name <<
-//                    "] failed! Please delete remaining shared mem files at /dev/shm manually before restarting the provider/visualizer!" << endl);
-//  }
-
-  // Now we try to delete the visualizer shared mem as well. This is likely to fail, as some other instance of this call
-  // may have already deleted it. Therefore we don't care about the result.
-  shared_memory_object::remove(shm_segment_name_visualizer.c_str());
+  if (m_segment.get_segment_manager() != NULL)
+  {
+    decrement_usage(m_segment_name);
+  }
+  decrement_usage(shm_segment_name_visualizer);
 }
 
 void VisProvider::openOrCreateSegment()
@@ -61,9 +89,7 @@ void VisProvider::openOrCreateSegment()
   // Only open/create if not already available
   if (m_segment.get_segment_manager() == NULL) // check whether it's already initialized
   {
-    permissions per;
-    per.set_unrestricted();
-    m_segment = managed_shared_memory(open_or_create, m_segment_name.c_str(), 65536, 0, per);
+    m_segment = increment_usage(m_segment_name);
   }
 }
 

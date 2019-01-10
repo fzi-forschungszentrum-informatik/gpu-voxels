@@ -166,8 +166,51 @@ public:
    */
   virtual void insertMetaPointCloud(const MetaPointCloud &meta_point_cloud, const std::vector<BitVoxelMeaning>& voxel_meanings);
 
-  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset = Vector3f(), const BitVoxelMeaning* new_meaning = NULL);
+  virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3f &metric_offset, const BitVoxelMeaning* new_meaning = NULL);
   virtual bool merge(const GpuVoxelsMapSharedPtr other, const Vector3i &voxel_offset = Vector3i(), const BitVoxelMeaning* new_meaning = NULL);
+
+  /**
+   * @brief insertDilatedCoordinateList Dilates the given coordinates and stores the result in this voxelmap
+   * WARNING: Can lead to unexpected behavior due to race-conditions, when multiple coordinates try to dilate towards the same
+   *          neighbor concurrently. This will be unproblematic for voxel types that only spread "occupied/ not occupied" information
+   *          to neighbors.
+   * @param coordinates the coordinates to be dilated and inserted, in host memory
+   * @param voxel_meaning the voxel_meaning that will be used for inserted voxels
+   */
+  virtual void insertDilatedCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning voxel_meaning);
+
+  /**
+   * @brief insertDilatedCoordinateList Dilates the given coordinates and stores the result in this voxelmap
+   * WARNING: Can lead to unexpected behavior due to race-conditions, when multiple coordinates try to dilate towards the same
+   *          neighbor concurrently. This will be unproblematic for voxel types that only spread "occupied/ not occupied" information
+   *          to neighbors.
+   * @param d_coordinates the coordinates to be dilated and inserted, in device memory
+   * @param voxel_meaning the voxel_meaning that will be used for inserted voxels
+   */
+  virtual void insertDilatedCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning insert_voxel_meaning);
+
+  virtual void insertClosedCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning insert_voxel_meaning, float erode_threshold, float occupied_threshold, TemplateVoxelMap<Voxel>& buffer);
+  virtual void insertClosedCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning insert_voxel_meaning, float erode_threshold, float occupied_threshold, TemplateVoxelMap<Voxel>& buffer);
+
+  virtual void insertClosedCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning insert_voxel_meaning, float erode_threshold, float occupied_threshold = 0);
+  virtual void insertClosedCoordinateList(const std::vector<Vector3ui> &coordinates, const BitVoxelMeaning insert_voxel_meaning, float erode_threshold, float occupied_threshold = 0);
+
+  /**
+   * @brief erodeInto Erodes this voxelmap and stores the result in the given voxelmap
+   * @param dest the destination voxelmap
+   * @param erode_threshold the minimum ratio of neighbors that have to be occupied for a voxel to be kept. 0.0 erodes no voxels,
+   *                        1.0 erodes voxels that have at least one free neighbor, FLT_EPSILON erodes only voxels that have no
+   *                        occupied neighbors
+   * @param occupied_threshold the threshold passed to Voxel::isOccupied to determine if the voxel is occupied
+   */
+  virtual void erodeInto(TemplateVoxelMap<Voxel>& dest, float erode_threshold, float occupied_threshold = 0) const;
+
+  /**
+   * @brief erodeLonelyInto Erodes all voxels that have no neighbors and stores the result in the given voxelmap
+   * @param dest the destination voxelmap
+   * @param occupied_threshold the threshold passed to Voxel::isOccupied to determine if the voxel is occupied
+   */
+  virtual void erodeLonelyInto(TemplateVoxelMap<Voxel>& dest, float occupied_threshold = 0) const;
 
   virtual std::size_t getMemoryUsage() const
   {
@@ -177,6 +220,9 @@ public:
   virtual void clearMap();
   //! set voxel occupancies for a specific voxelmeaning to zero
 
+  virtual Vector3f getCenterOfMass() const;
+  virtual Vector3f getCenterOfMass(Vector3ui lower_bound, Vector3ui upper_bound) const;
+
   virtual bool writeToDisk(const std::string path);
 
   virtual bool readFromDisk(const std::string path);
@@ -184,6 +230,8 @@ public:
   virtual Vector3ui getDimensions() const;
 
   virtual Vector3f getMetricDimensions() const;
+
+  virtual void clone(const TemplateVoxelMap<Voxel>& other);
 
   // ------ END Global API functions ------
 
@@ -236,6 +284,11 @@ protected:
   //! result array for collision check with counter on device
   uint16_t* m_dev_collision_check_results_counter;
 
+  void erode(Voxel* d_dest_data, const Voxel* d_src_data, float erode_threshold, float occupied_threshold) const;
+
+  void insertDilatedCoordinateList(Voxel* d_dest_data, const Vector3ui* d_src_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning);
+
+  void insertClosedCoordinateList(const Vector3ui* d_coordinates, uint32_t size, const BitVoxelMeaning insert_voxel_meaning, float erode_threshold, float occupied_threshold, Voxel* d_buffer);
 };
 
 } // end of namespace voxelmap

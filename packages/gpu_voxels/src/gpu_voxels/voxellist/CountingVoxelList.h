@@ -42,7 +42,7 @@ public:
   //  typedef CountingVoxelList<VoxelIDType> TemplatedCountingVoxelList;
 
   CountingVoxelList(const gpu_voxels::Vector3ui ref_map_dim,
-                    const float voxel_sidelength,
+                    const float voxel_side_length,
                     const gpu_voxels::MapType map_type);
 
   ~CountingVoxelList();
@@ -56,25 +56,6 @@ public:
   void remove_underpopulated(const int8_t threshold);
 
 private:
-  //  /**
-  //   * @brief findMatchingVoxels Assure to lock the input maps before calling this function.
-  //   * \param list1 Const input
-  //   * \param list2 Const input
-  //   * \param margin
-  //   * \param offset
-  //   * \param matching_voxels_list1 Contains all Voxels from list1 whose position matches a Voxel
-  //   from
-  //   * list2
-  //   * \param matching_voxels_list2 Contains all Voxels from list2 whose position matches a Voxel
-  //   from
-  //   * list1
-  //   */
-  //  void findMatchingVoxels(const TemplatedBitVectorVoxelList* list1,
-  //                          const TemplatedBitVectorVoxelList* list2,
-  //                          const u_int8_t margin,
-  //                          const Vector3i& offset,
-  //                          TemplatedBitVectorVoxelList* matching_voxels_list1,
-  //                          TemplatedBitVectorVoxelList* matching_voxels_list2) const;
 
   // thrust::device_vector<CountingVoxel> m_dev_colliding_bits_result_list;
   // thrust::host_vector<CountingVoxel> m_colliding_bits_result_list;

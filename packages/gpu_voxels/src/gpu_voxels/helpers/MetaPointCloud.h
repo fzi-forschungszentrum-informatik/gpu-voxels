@@ -67,7 +67,7 @@ public:
   std::string getCloudName(uint16_t i) const;
   const std::map<uint16_t, std::string> getCloudNames() const;
   int16_t getCloudNumber(const std::string& name) const;
-
+  bool hasCloud(const std::string& name) const;
 
 
   /*!

@@ -23,7 +23,11 @@ namespace voxelmap {
 // ############################### BitVoxelMap ######################################
 // Explicit instantiation of template class to link against from other files where this template is used
 template class BitVoxelMap<BIT_VECTOR_LENGTH>;
+
 // ##################################################################################
+
+template uint32_t BitVoxelMap<BIT_VECTOR_LENGTH>::collisionCheckBitvector<SVCollider>(const BitVoxelMap<BIT_VECTOR_LENGTH>*, SVCollider, BitVector<BIT_VECTOR_LENGTH>&, const uint16_t);
+template uint32_t BitVoxelMap<BIT_VECTOR_LENGTH>::collisionCheckBitvector<SVCollider>(const ProbVoxelMap*, SVCollider, BitVector<BIT_VECTOR_LENGTH>&, const uint16_t);
 
 // ############################### TemplateVoxelMap ######################################
 // Explicitly instantiate template methods to enable GCC to link agains NVCC compiled objects
