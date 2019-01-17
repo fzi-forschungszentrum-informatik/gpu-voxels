@@ -559,3 +559,7 @@ Known Issues:
 - The constant cMAX_NR_OF_BLOCKS is currently limited to 65535, while current CUDA devices support over 2 billion blocks
   - relevant during computeLinearLoad calls and collision checking
 
+V1.3.1 (2019-01-17):
+====================
+Fix findMatchingVoxels usage of binary_search. Could cause segfaults before.
+

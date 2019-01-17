@@ -588,8 +588,8 @@ void BitVoxelList<length, VoxelIDType>::findMatchingVoxels(const CountingVoxelLi
   {
     output = thrust::device_vector<bool>(list1->m_dev_id_list.size());
     thrust::binary_search(thrust::device,
-                          list1->m_dev_id_list.begin(), list1->m_dev_id_list.end(),
                           list2->m_dev_id_list.begin(), list2->m_dev_id_list.end(),
+                          list1->m_dev_id_list.begin(), list1->m_dev_id_list.end(),
                           output.begin());
   }
   catch(thrust::system_error &e)
