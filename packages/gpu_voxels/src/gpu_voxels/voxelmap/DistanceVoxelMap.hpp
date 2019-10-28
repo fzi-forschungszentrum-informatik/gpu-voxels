@@ -41,6 +41,7 @@
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/tuple.h>
 #include <thrust/transform.h>
+#include <thrust/device_malloc_allocator.h>
 
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 
