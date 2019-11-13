@@ -3,7 +3,7 @@
 DEST=3rd-party/eigen-git-mirror
 VERSION="3.3.7"
 
-echo "Cloning Eigen3 $VERSION to $DEST ($(realpath $DEST))"
+echo "Cloning Eigen3 tag $VERSION to $DEST ($(realpath $DEST))"
 mkdir -p $DEST
 git clone https://github.com/eigenteam/eigen-git-mirror.git -b $VERSION $DEST
 
