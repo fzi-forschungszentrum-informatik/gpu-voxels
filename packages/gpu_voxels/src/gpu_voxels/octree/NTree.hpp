@@ -303,6 +303,22 @@ void getFreeBoxResetData(Environment::NodeProb::NodeData::BasicData& basic_data)
   basic_data = Environment::NodeProb::NodeData::BasicData(STATUS_OCCUPANCY_MASK, nf_UPDATE_SUBTREE, 0);
 }
 
+void check_octree_compatibility()
+{
+  int device_count = 0;
+  cuGetNrOfDevices(&device_count);
+  for (int i = 0; i < device_count; ++i)
+  {
+    cudaDeviceProp properties;
+    HANDLE_CUDA_ERROR(cudaGetDeviceProperties(&properties, i));
+    if (properties.major >= 7)
+    {
+      LOGGING_ERROR(CudaLog, "CRITICAL ERROR: Octrees have been temporarily disabled because of critical errors on Turing GPUs (compute capability 7.x+)! A proper fix for octrees is under work.\n");
+      throw std::runtime_error("CRITICAL ERROR: Octrees have been temporarily disabled because of critical errors on Turing GPUs (compute capability 7.x+)! A proper fix for octrees is under work.");
+    }
+  }
+}
+
 /*
  * ########################################################
  */
@@ -312,6 +328,8 @@ NTree<branching_factor, level_count, InnerNode, LeafNode>::NTree(uint32_t numBlo
                                                                  uint32_t numThreadsPerBlock,
                                                                  uint32_t resolution)
 {
+  check_octree_compatibility();
+
   this->numBlocks = numBlocks;
   this->numThreadsPerBlock = numThreadsPerBlock;
   this->allocInnerNodes = 0;
