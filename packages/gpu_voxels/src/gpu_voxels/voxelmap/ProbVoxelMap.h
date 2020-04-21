@@ -46,7 +46,7 @@ public:
 
   template<std::size_t length>
   void insertSensorData(const PointCloud &global_points, const Vector3f &sensor_pose, const bool enable_raycasting, const bool cut_real_robot,
-                        const BitVoxelMeaning robot_voxel_meaning, BitVoxel<length>* robot_map = NULL);
+                        const BitVoxelMeaning robot_voxel_meaning, const Probability prob, BitVoxel<length>* robot_map = NULL);
 
   virtual bool insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
                                                           const std::vector<BitVoxelMeaning>& voxel_meanings = std::vector<BitVoxelMeaning>(),

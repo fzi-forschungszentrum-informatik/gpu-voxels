@@ -51,7 +51,7 @@ ProbVoxelMap::~ProbVoxelMap()
 
 template<std::size_t length>
 void ProbVoxelMap::insertSensorData(const PointCloud &global_points, const Vector3f &sensor_pose, const bool enable_raycasting,
-                                    const bool cut_real_robot, const BitVoxelMeaning robot_voxel_meaning,
+                                    const bool cut_real_robot, const BitVoxelMeaning robot_voxel_meaning, const Probability prob,
                                     BitVoxel<length>* robot_map)
 {
   lock_guard guard(this->m_mutex);
@@ -63,14 +63,14 @@ void ProbVoxelMap::insertSensorData(const PointCloud &global_points, const Vecto
   {
     kernelInsertSensorData<<<m_blocks, m_threads>>>(
         m_dev_data, m_voxelmap_size, m_dim, m_voxel_side_length, sensor_pose,
-        global_points.getConstDevicePointer(), global_points.getPointCloudSize(), cut_real_robot, robot_map, robot_voxel_meaning, RayCaster());
+        global_points.getConstDevicePointer(), global_points.getPointCloudSize(), cut_real_robot, robot_map, robot_voxel_meaning, prob, RayCaster());
     CHECK_CUDA_ERROR();
   }
   else
   {
     kernelInsertSensorData<<<m_blocks, m_threads>>>(
         m_dev_data, m_voxelmap_size, m_dim, m_voxel_side_length, sensor_pose,
-        global_points.getConstDevicePointer(), global_points.getPointCloudSize(), cut_real_robot, robot_map, robot_voxel_meaning, DummyRayCaster());
+        global_points.getConstDevicePointer(), global_points.getPointCloudSize(), cut_real_robot, robot_map, robot_voxel_meaning, prob, DummyRayCaster());
     CHECK_CUDA_ERROR();
   }
   HANDLE_CUDA_ERROR(cudaDeviceSynchronize());

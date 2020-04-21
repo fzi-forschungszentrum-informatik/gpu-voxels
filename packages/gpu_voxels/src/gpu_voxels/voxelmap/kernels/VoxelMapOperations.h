@@ -389,7 +389,7 @@ __global__
 void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
                             const Vector3ui dimensions, const float voxel_side_length, const Vector3f sensor_pose,
                             const Vector3f* sensor_data, const size_t num_points, const bool cut_real_robot,
-                            BitVoxel<length>* robotmap, const uint32_t bit_index, RayCasting rayCaster);
+                            BitVoxel<length>* robotmap, const uint32_t bit_index, const Probability prob, RayCasting rayCaster);
 
 /*!
  * Collide two voxel maps.

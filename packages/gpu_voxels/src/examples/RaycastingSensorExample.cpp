@@ -96,8 +96,8 @@ int main(int argc, char* argv[])
   for(size_t pos = 50; pos < 100; ++pos)
   {
     // We perform the insertion and the raycasting twice, so that in the visualizer we can display either all probabilistic voxels or only the occupied ones (without the free ones)
-    prob_map->insertSensorData(obstacle, Vector3f(pos, 2, pos/2.0), true, true, eBVM_OCCUPIED, rob_map->getDeviceDataPtr());
-    prob_map2->insertSensorData(obstacle, Vector3f(pos, 2, pos/2.0), true, false, eBVM_OCCUPIED, rob_map->getDeviceDataPtr());
+    prob_map->insertSensorData(obstacle, Vector3f(pos, 2, pos/2.0), true, true, eBVM_OCCUPIED, MAX_PROBABILITY, rob_map->getDeviceDataPtr());
+    prob_map2->insertSensorData(obstacle, Vector3f(pos, 2, pos/2.0), true, false, eBVM_OCCUPIED, MAX_PROBABILITY, rob_map->getDeviceDataPtr());
   }
   
   while(true)
