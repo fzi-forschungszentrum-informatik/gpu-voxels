@@ -54,6 +54,8 @@ class AbstractVoxel
   __host__ __device__
   bool isOccupied(float col_threshold) const;
 
+public:
+
 };
 
 } // end of ns

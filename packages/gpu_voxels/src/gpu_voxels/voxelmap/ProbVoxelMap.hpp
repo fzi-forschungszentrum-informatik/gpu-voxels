@@ -108,6 +108,20 @@ size_t ProbVoxelMap::collideWith(const ProbVoxelMap *map, float coll_threshold, 
   return collisionCheckWithCounterRelativeTransform((TemplateVoxelMap*)map, collider, offset); //does the locking
 }
 
+void ProbVoxelMap::move(Voxel* dest_data, const Voxel* src_data, const Vector3f offset) const
+{
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  kernelMoveMap<<<m_blocks, m_threads>>>(dest_data, src_data, m_voxelmap_size, m_voxel_side_length, this->m_dim, offset);
+  HANDLE_CUDA_ERROR(cudaDeviceSynchronize());
+  CHECK_CUDA_ERROR();
+}
+
+void ProbVoxelMap::moveInto(ProbVoxelMap& dest, const Vector3f offset) const
+{
+  assert(this->m_dim == dest.m_dim);
+  move(dest.m_dev_data, this->m_dev_data, offset);
+}
+
 } // end of namespace
 } // end of namespace
 

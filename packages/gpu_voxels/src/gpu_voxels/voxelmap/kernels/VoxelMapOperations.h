@@ -448,6 +448,10 @@ void kernelInsertDilatedCoordinateTuples(Voxel* voxelmap, const Vector3ui dimens
 
 template<class Voxel>
 __global__
+void kernelMoveMap(Voxel* voxelmap_out, const Voxel* voxelmap_in, const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, const Vector3f offset);
+
+template<class Voxel>
+__global__
 void kernelErode(Voxel* voxelmap_out, const Voxel* voxelmap_in, const Vector3ui dimensions, float occupied_threshold, float erode_threshold);
 
 template<class Voxel>

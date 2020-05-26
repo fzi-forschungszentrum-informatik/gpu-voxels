@@ -391,6 +391,36 @@ void kernelInsertDilatedCoordinateTuples(Voxel* voxelmap, const Vector3ui dimens
 
 template<class Voxel>
 __global__
+void kernelMoveMap(Voxel* voxelmap_out, const Voxel* voxelmap_in, const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, const Vector3f offset)
+{
+  const Vector3i mapOffset = mapToVoxelsSigned(voxel_side_length, offset);
+  // printf("Offset: %f %f %f\n", mapOffset.x, mapOffset.y, mapOffset.z);
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
+  {
+    const Vector3ui INcoord = mapToVoxels(i, dimensions);
+    Vector3i OUTcoord;
+    OUTcoord.x = INcoord.x + mapOffset.x;
+    OUTcoord.y = INcoord.y + mapOffset.y;
+    OUTcoord.z = INcoord.z + mapOffset.z;
+
+    ProbabilisticVoxel* voxelOut;
+    if((OUTcoord.x < dimensions.x) && (OUTcoord.y < dimensions.y) && (OUTcoord.z < dimensions.z)){
+      if ((INcoord.x < dimensions.x) && (INcoord.y < dimensions.y) && (INcoord.z < dimensions.z)){
+        //ProbabilisticVoxel* voxelIn = getVoxelPtr(voxelmap_in, dimensions, INcoord.x,
+                                                //INcoord.y, INcoord.z);
+        voxelOut = getVoxelPtr(voxelmap_out, dimensions, OUTcoord.x,
+                                                OUTcoord.y, OUTcoord.z);
+        voxelOut->updateOccupancy(voxelmap_in[i].occupancy());
+      }
+      else{
+        voxelOut->updateOccupancy(eBVM_FREE);
+      }
+    }
+  }
+}
+
+template<class Voxel>
+__global__
 void kernelErode(Voxel* voxelmap_out, const Voxel* voxelmap_in, const Vector3ui dimensions, float erode_threshold, float occupied_threshold)
 {
   const int32_t SE_SIZE = 1;

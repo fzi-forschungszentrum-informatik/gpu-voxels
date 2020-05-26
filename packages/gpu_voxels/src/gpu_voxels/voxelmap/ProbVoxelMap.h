@@ -61,6 +61,9 @@ public:
 
   size_t collideWith(const voxelmap::BitVectorVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWith(const voxelmap::ProbVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+
+  virtual void moveInto(ProbVoxelMap& dest, const Vector3f offset) const;
+  virtual void move(Voxel* dest_data, const Voxel* src_data, const Vector3f offset) const;
 };
 
 } // end of namespace
