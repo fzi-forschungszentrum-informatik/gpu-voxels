@@ -1050,6 +1050,12 @@ bool TemplateVoxelMap<Voxel>::merge(const GpuVoxelsMapSharedPtr other, const Vec
   if (voxel_offset != Vector3i()) {
     LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, "You tried to apply an offset while merging a VoxelList into a DistanceVoxelMap (not supported yet)!" << endl);
     return false;
+
+  }
+
+  BitVoxelMeaning meaning = eBVM_OCCUPIED;
+  if (new_meaning != NULL) {
+  	meaning = *new_meaning;
   }
 
   boost::lock(this->m_mutex, other->m_mutex);
@@ -1061,26 +1067,26 @@ bool TemplateVoxelMap<Voxel>::merge(const GpuVoxelsMapSharedPtr other, const Vec
     case MT_BITVECTOR_VOXELLIST:
     {
       voxellist::TemplateVoxelList<BitVectorVoxel, MapVoxelID>* voxelList = other->as<voxellist::TemplateVoxelList<BitVectorVoxel, MapVoxelID> >();
-      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), eBVM_OCCUPIED);
+      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), meaning);
       return true;
     }
 
     case MT_PROBAB_VOXELLIST:
     {
       voxellist::TemplateVoxelList<ProbabilisticVoxel, MapVoxelID>* voxelList = other->as<voxellist::TemplateVoxelList<ProbabilisticVoxel, MapVoxelID> >();
-      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), eBVM_OCCUPIED);
+      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), meaning);
       return true;
     }
 
     case MT_COUNTING_VOXELLIST:
     {
       voxellist::TemplateVoxelList<CountingVoxel, MapVoxelID>* voxelList = other->as<voxellist::TemplateVoxelList<CountingVoxel, MapVoxelID> >();
-      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), eBVM_OCCUPIED);
+      insertCoordinateList(voxelList->getDeviceCoordPtr(), voxelList->m_dev_coord_list.size(), meaning);
       return true;
     }
 
     default:
-      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << endl);
+      LOGGING_ERROR_C(VoxelmapLog, TemplateVoxelMap, GPU_VOXELS_MAP_OPERATION_NOT_YET_SUPPORTED << " MapType: " << other->getMapType() << endl);
       return false;
   }
 }

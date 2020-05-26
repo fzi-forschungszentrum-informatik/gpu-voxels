@@ -283,7 +283,7 @@ protected:
 
   //! result array for collision check with counter on device
   uint16_t* m_dev_collision_check_results_counter;
-
+  
   void erode(Voxel* d_dest_data, const Voxel* d_src_data, float erode_threshold, float occupied_threshold) const;
 
   void insertDilatedCoordinateList(Voxel* d_dest_data, const Vector3ui* d_src_coordinates, uint32_t size, const BitVoxelMeaning voxel_meaning);
