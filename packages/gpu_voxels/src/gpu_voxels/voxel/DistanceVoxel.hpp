@@ -37,6 +37,11 @@ const Vector3ui DistanceVoxel::getObstacle() const {
 }
 
 __host__ __device__
+const uint32_t DistanceVoxel::getObstacleID() const {
+  return m_obstacle;
+}
+
+__host__ __device__
 DistanceVoxel::pba_dist_t DistanceVoxel::squaredObstacleDistance(Vector3i this_position) const{
   Vector3ui obstacle = getObstacle();
   if (   (this_position.x == PBA_UNINITIALISED_COORD)
