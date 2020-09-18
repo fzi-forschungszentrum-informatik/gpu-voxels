@@ -61,7 +61,7 @@ This is important if you are still using ROS Indigo and need to compile without 
 - Eigen 3 issues: can be fixed by cloning a more current unstable Eigen version and placing it in CMAKE_PREFIX_PATH
   + on Ubuntu 18.04 with CUDA 10.0: "math_functions.hpp not found"
   ```bash
-  git clone git@gitlab.com:libeigen/eigen.git
+  git clone https://gitlab.com/libeigen/eigen.git
   sudo cp -r signature_of_eigen3_matrix_library /usr/include/eigen3
   sudo cp -r unsupported/ /usr/include/eigen3
   sudo cp -r Eigen/ /usr/include/eigen3
