@@ -153,7 +153,7 @@ SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION})
 
 SET(ICMAKER_CUDA_PTXAS_VERBOSE "") # "--resource-usage") #nvcc outputs register and memory usage data for each kernel
 SET(ICMAKER_CUDA_WALL "-Xcompiler=-Wall")
-SET(ICMAKER_CUDA_MAXREGS "--maxrregcount=63") # set to 31 to compile for JetsonTX1; N*blocksize must be smaller than max registers per block
+SET(ICMAKER_CUDA_MAXREGS "--maxrregcount=63") # set to 31 to compile on JetsonTX1/TX2/Nano (compute capability 5.3/6.2); N*blocksize must be smaller than max registers per block
 SET(ICMAKER_CUDA_DEBUG "-lineinfo") # "-lineinfo") #"-g -G") # -G disables optimization. use -lineinfo for profiling
 
 # Enable position independent code
