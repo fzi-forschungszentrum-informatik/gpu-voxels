@@ -1856,8 +1856,8 @@ void Visualizer::move_slice_axis(int offset) {
 
 void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
 {
-  static int8_t decimal_prefix(0);
-  static int8_t decimal_key(0);
+  static glm::int8_t decimal_prefix(0);
+  static glm::int8_t decimal_key(0);
 
   float multiplier = 1.f;
   if (glutGetModifiers() == GLUT_ACTIVE_SHIFT)
@@ -1869,7 +1869,7 @@ void Visualizer::keyboardFunction(unsigned char key, int32_t x, int32_t y)
     multiplier *= 10.f;
   }
 
-  int8_t modi = glutGetModifiers();
+  glm::int8_t modi = glutGetModifiers();
   bool alt_pressed = modi & GLUT_ACTIVE_ALT;
   printf("Keycode: %c, Modifier value: %d, alt_pressed=%u\n", key, modi, alt_pressed);
 
@@ -2122,7 +2122,7 @@ void Visualizer::lastKeyboardMode()
   LOGGING_INFO_C(Visualization, Visualizer, "Keyboardmode set to " << keyboardModetoString(m_keyboardmode) << endl);
 }
 
-void Visualizer::keyboardFlipVisibility(int8_t index)
+void Visualizer::keyboardFlipVisibility(glm::int8_t index)
 {
   switch (m_keyboardmode)
   {
@@ -2142,7 +2142,7 @@ void Visualizer::keyboardFlipVisibility(int8_t index)
       break;
   }
 }
-std::string Visualizer::keyboardModetoString(int8_t index)
+std::string Visualizer::keyboardModetoString(glm::int8_t index)
 {
   switch (index)
   {
