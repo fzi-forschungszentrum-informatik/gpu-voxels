@@ -405,15 +405,16 @@ void kernelMoveMap(Voxel* voxelmap_out, const Voxel* voxelmap_in, const uint32_t
 
     ProbabilisticVoxel* voxelOut;
     if((OUTcoord.x < dimensions.x) && (OUTcoord.y < dimensions.y) && (OUTcoord.z < dimensions.z)){
+      voxelOut = getVoxelPtr(voxelmap_out, dimensions, OUTcoord.x, OUTcoord.y, OUTcoord.z);
       if ((INcoord.x < dimensions.x) && (INcoord.y < dimensions.y) && (INcoord.z < dimensions.z)){
         //ProbabilisticVoxel* voxelIn = getVoxelPtr(voxelmap_in, dimensions, INcoord.x,
                                                 //INcoord.y, INcoord.z);
-        voxelOut = getVoxelPtr(voxelmap_out, dimensions, OUTcoord.x,
-                                                OUTcoord.y, OUTcoord.z);
         voxelOut->updateOccupancy(voxelmap_in[i].occupancy());
       }
       else{
-        voxelOut->updateOccupancy(eBVM_FREE);
+//        voxelOut->updateOccupancy(eBVM_FREE);
+//        voxelOut->updateOccupancy(Probability(-127));
+        voxelOut->updateOccupancy(Probability(-128));
       }
     }
   }
