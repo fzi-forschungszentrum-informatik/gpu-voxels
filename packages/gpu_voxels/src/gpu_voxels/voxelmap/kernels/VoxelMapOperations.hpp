@@ -412,9 +412,7 @@ void kernelMoveMap(Voxel* voxelmap_out, const Voxel* voxelmap_in, const uint32_t
         voxelOut->updateOccupancy(voxelmap_in[i].occupancy());
       }
       else{
-//        voxelOut->updateOccupancy(eBVM_FREE);
-//        voxelOut->updateOccupancy(Probability(-127));
-        voxelOut->updateOccupancy(Probability(-128));
+        voxelOut->updateOccupancy(UNKNOWN_PROBABILITY);
       }
     }
   }
