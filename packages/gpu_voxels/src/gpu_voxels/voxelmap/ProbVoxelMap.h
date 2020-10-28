@@ -29,6 +29,7 @@
 #include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/CollisionInterfaces.h>
+#include <ros/ros.h>
 
 namespace gpu_voxels {
 namespace voxelmap {
@@ -64,6 +65,7 @@ public:
 
   virtual void moveInto(ProbVoxelMap& dest, const Vector3f offset) const;
   virtual void move(Voxel* dest_data, const Voxel* src_data, const Vector3f offset) const;
+  virtual void publishPointcloud(ros::Publisher& publisher, const float occupancyThreshold=0.5);
 };
 
 } // end of namespace

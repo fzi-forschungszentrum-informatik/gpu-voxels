@@ -34,6 +34,8 @@
 #include <gpu_voxels/helpers/cuda_handling.hpp>
 #include <gpu_voxels/helpers/MathHelpers.h>
 
+#include <sensor_msgs/PointCloud2.h>
+
 namespace gpu_voxels
 {
 
@@ -140,6 +142,8 @@ public:
 
   //for testing
   void print();
+
+  sensor_msgs::PointCloud2 getPointCloud2();
 
 private:
 

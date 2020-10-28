@@ -28,6 +28,7 @@
 #include <gpu_voxels/voxel/BitVoxel.h>
 #include <gpu_voxels/voxel/ProbabilisticVoxel.h>
 #include <gpu_voxels/voxel/DistanceVoxel.h>
+#include <gpu_voxels/helpers/PointCloud.h>
 
 #include <thrust/transform.h>
 
@@ -446,9 +447,12 @@ void kernelInsertDilatedCoordinateTuples(Voxel* voxelmap, const Vector3ui dimens
                                   const Vector3ui *coordinates, const std::size_t sizePoints, const BitVoxelMeaning voxel_meaning,
                                   bool *points_outside_map);
 
-template<class Voxel>
 __global__
-void kernelMoveMap(Voxel* voxelmap_out, const Voxel* voxelmap_in, const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, const Vector3f offset);
+void kernelMoveMap(ProbabilisticVoxel* voxelmap_out, const ProbabilisticVoxel* voxelmap_in, const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, const Vector3f offset);
+
+__global__
+void kernelGetProbabilisticPointCloud(const ProbabilisticVoxel* voxelmap, Vector3f* pointCloud, const float occupancyThreshold,
+                                  const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, size_t *cloudSize);
 
 template<class Voxel>
 __global__

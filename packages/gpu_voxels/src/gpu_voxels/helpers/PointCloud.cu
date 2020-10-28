@@ -25,6 +25,7 @@
 #include <gpu_voxels/logging/logging_gpu_voxels.h>
 #include <gpu_voxels/helpers/kernels/HelperOperations.h>
 #include <gpu_voxels/helpers/PointcloudFileHandler.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
 
 namespace gpu_voxels
 {
@@ -355,6 +356,37 @@ void PointCloud::print()
     std::cout << "Point " << i << ": (" << tmp[i].x << ", " << tmp[i].y << ", " << tmp[i].z << ")" << std::endl;
   }
   std::cout << std::endl << std::endl;
+}
+
+sensor_msgs::PointCloud2 PointCloud::getPointCloud2()
+{
+  sensor_msgs::PointCloud2 pointcloud_msg;
+
+  Vector3f* tmp = this->getPoints();
+  size_t mPointCloudSize = this->getPointCloudSize();
+
+  pointcloud_msg.header.frame_id = "/heifu0/odom";//voxel_point_cloud_frame; // use same reference as in transform_...
+  pointcloud_msg.header.stamp = ros::Time::now();
+  pointcloud_msg.height = 1;
+  pointcloud_msg.width = mPointCloudSize;
+  pointcloud_msg.row_step = pointcloud_msg.width * pointcloud_msg.point_step;
+
+  sensor_msgs::PointCloud2Modifier modifier(pointcloud_msg);
+  modifier.setPointCloud2FieldsByString(1, "xyz");
+
+  sensor_msgs::PointCloud2Iterator<float>iter_x(pointcloud_msg, "x");
+  sensor_msgs::PointCloud2Iterator<float>iter_y(pointcloud_msg, "y");
+  sensor_msgs::PointCloud2Iterator<float>iter_z(pointcloud_msg, "z");
+  
+  for(size_t i=0; i<mPointCloudSize; i++)
+  {
+      *iter_x = tmp[i].x;
+      *iter_y = tmp[i].y;
+      *iter_z = tmp[i].z;
+
+      ++iter_x; ++iter_y; ++iter_z;
+  }
+  return pointcloud_msg;
 }
 
 }// end namespace gpu_voxels

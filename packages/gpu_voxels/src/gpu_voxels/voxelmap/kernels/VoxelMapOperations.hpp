@@ -389,9 +389,8 @@ void kernelInsertDilatedCoordinateTuples(Voxel* voxelmap, const Vector3ui dimens
   }
 }
 
-template<class Voxel>
 __global__
-void kernelMoveMap(Voxel* voxelmap_out, const Voxel* voxelmap_in, const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, const Vector3f offset)
+void kernelMoveMap(ProbabilisticVoxel* voxelmap_out, const ProbabilisticVoxel* voxelmap_in, const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, const Vector3f offset)
 {
   const Vector3i mapOffset = mapToVoxelsSigned(voxel_side_length, offset);
   // printf("Offset: %f %f %f\n", mapOffset.x, mapOffset.y, mapOffset.z);
@@ -414,6 +413,27 @@ void kernelMoveMap(Voxel* voxelmap_out, const Voxel* voxelmap_in, const uint32_t
       else{
         voxelOut->updateOccupancy(UNKNOWN_PROBABILITY);
       }
+    }
+  }
+}
+
+__global__
+void kernelGetProbabilisticPointCloud(const ProbabilisticVoxel* voxelmap, Vector3f* pointCloud, const float occupancyThreshold,
+                                  const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, size_t *cloudSize)
+{
+  Vector3f mCenter = getVoxelCenter(voxel_side_length, mapToVoxels(voxelmap_size-1, dimensions));
+  mCenter.x /= 2.0;
+  mCenter.y /= 2.0;
+  mCenter.z /= 2.0;
+  
+  Vector3f vCenter;
+
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
+  {
+    if(voxelmap[i].isOccupied(ProbabilisticVoxel::floatToProbability(occupancyThreshold))){
+      vCenter = getVoxelCenter(voxel_side_length, mapToVoxels(i, dimensions));
+      unsigned int npos = atomicAdd ((unsigned int*)cloudSize,1);
+      pointCloud[npos] = Vector3f(vCenter.x-mCenter.x, vCenter.y-mCenter.y, vCenter.z-mCenter.z);
     }
   }
 }
