@@ -29,8 +29,6 @@
 #include <gpu_voxels/voxel/BitVoxel.hpp>
 #include <gpu_voxels/voxel/ProbabilisticVoxel.hpp>
 #include <gpu_voxels/helpers/PointCloud.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/point_cloud2_iterator.h>
 
 namespace gpu_voxels {
 namespace voxelmap {
@@ -80,11 +78,11 @@ void ProbVoxelMap::insertSensorData(const PointCloud &global_points, const Vecto
 }
 
 /**
- * Publish the voxels of a ProbVoxelMap as a pointcloud in ROS to demonstrate ROS interoperability.
+ * Convert a ProbVoxelMap as a pointcloud in ROS.
  *
  * In RViz: add the pointcloud, set render settings to Boxes, scale to voxel_side_length
  */
-void ProbVoxelMap::publishPointcloud(ros::Publisher& publisher, const float occupancyThreshold)
+void ProbVoxelMap::publishPointcloud(sensor_msgs::PointCloud2* pointcloud_msg, const float occupancyThreshold)
 {
   Vector3f *m_points;
   HANDLE_CUDA_ERROR( cudaMalloc((void** ) &m_points, sizeof(Vector3f)*(m_voxelmap_size-1) ));
@@ -103,9 +101,8 @@ void ProbVoxelMap::publishPointcloud(ros::Publisher& publisher, const float occu
   HANDLE_CUDA_ERROR( cudaMemcpy(points, m_points, sizeof(Vector3f)*cloudSize, cudaMemcpyDeviceToHost));
   PointCloud pointcloud(points, cloudSize);
 
-  sensor_msgs::PointCloud2 pointcloud_msg = pointcloud.getPointCloud2();
+  (*pointcloud_msg) = pointcloud.getPointCloud2();
   
-  publisher.publish(pointcloud_msg);
   HANDLE_CUDA_ERROR(cudaFree(m_points));
   HANDLE_CUDA_ERROR(cudaFree(m_cloudSize));
 }
