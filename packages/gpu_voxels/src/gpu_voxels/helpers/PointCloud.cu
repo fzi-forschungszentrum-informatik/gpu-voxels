@@ -365,7 +365,7 @@ sensor_msgs::PointCloud2 PointCloud::getPointCloud2()
   Vector3f* tmp = this->getPoints();
   size_t mPointCloudSize = this->getPointCloudSize();
 
-  pointcloud_msg.header.frame_id = "/heifu0/odom";//voxel_point_cloud_frame; // use same reference as in transform_...
+  pointcloud_msg.header.frame_id = "GPU_voxels";//voxel_point_cloud_frame; // use same reference as in transform_...
   pointcloud_msg.header.stamp = ros::Time::now();
   pointcloud_msg.height = 1;
   pointcloud_msg.width = mPointCloudSize;
