@@ -82,7 +82,7 @@ void ProbabilisticVoxel::insert(const BitVoxelMeaning voxel_meaning)
       break;
     case eBVM_COLLISION :
     case eBVM_OCCUPIED : 
-	updateOccupancy(cSENSOR_MODEL_OCCUPIED);
+      updateOccupancy(cSENSOR_MODEL_OCCUPIED);
       break;
     case eBVM_UNKNOWN :
     case eBVM_UNDEFINED :

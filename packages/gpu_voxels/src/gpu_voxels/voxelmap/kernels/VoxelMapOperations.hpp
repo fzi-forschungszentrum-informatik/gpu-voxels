@@ -389,6 +389,47 @@ void kernelInsertDilatedCoordinateTuples(Voxel* voxelmap, const Vector3ui dimens
   }
 }
 
+__global__
+void kernelMoveMap(ProbabilisticVoxel* voxelmap_out, const ProbabilisticVoxel* voxelmap_in, const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, const Vector3f offset)
+{
+  const Vector3i mapOffset = mapToVoxelsSigned(voxel_side_length, offset);
+  // printf("Offset: %f %f %f\n", mapOffset.x, mapOffset.y, mapOffset.z);
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
+  {
+    const Vector3ui INcoord = mapToVoxels(i, dimensions);
+    Vector3i OUTcoord;
+    OUTcoord.x = INcoord.x + mapOffset.x;
+    OUTcoord.y = INcoord.y + mapOffset.y;
+    OUTcoord.z = INcoord.z + mapOffset.z;
+
+    ProbabilisticVoxel* voxelOut;
+    if((OUTcoord.x < dimensions.x) && (OUTcoord.y < dimensions.y) && (OUTcoord.z < dimensions.z)){
+      voxelOut = getVoxelPtr(voxelmap_out, dimensions, OUTcoord.x, OUTcoord.y, OUTcoord.z);
+      if ((INcoord.x < dimensions.x) && (INcoord.y < dimensions.y) && (INcoord.z < dimensions.z)){
+        //ProbabilisticVoxel* voxelIn = getVoxelPtr(voxelmap_in, dimensions, INcoord.x,
+                                                //INcoord.y, INcoord.z);
+        voxelOut->updateOccupancy(voxelmap_in[i].occupancy());
+      }
+      else{
+        voxelOut->updateOccupancy(UNKNOWN_PROBABILITY);
+      }
+    }
+  }
+}
+
+__global__
+void kernelGetProbabilisticPointCloud(const ProbabilisticVoxel* voxelmap, Vector3f* pointCloud, const float occupancyThreshold,
+                                  const uint32_t voxelmap_size, const float voxel_side_length, const Vector3ui dimensions, size_t *cloudSize)
+{
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < voxelmap_size; i += gridDim.x * blockDim.x)
+  {
+    if(voxelmap[i].isOccupied(ProbabilisticVoxel::floatToProbability(occupancyThreshold))){
+      unsigned int npos = atomicAdd ((unsigned int*)cloudSize,1);
+      pointCloud[npos] = getVoxelCenter(voxel_side_length, mapToVoxels(i, dimensions));
+    }
+  }
+}
+
 template<class Voxel>
 __global__
 void kernelErode(Voxel* voxelmap_out, const Voxel* voxelmap_in, const Vector3ui dimensions, float erode_threshold, float occupied_threshold)
@@ -765,7 +806,7 @@ __global__
 void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelmap_size,
                             const Vector3ui dimensions, const float voxel_side_length, const Vector3f sensor_pose,
                             const Vector3f* sensor_data, const size_t num_points, const bool cut_real_robot,
-                            BitVoxel<length>* robotmap, const uint32_t bit_index, RayCasting rayCaster)
+                            BitVoxel<length>* robotmap, const uint32_t bit_index, const Probability prob, RayCasting rayCaster)
 {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x; (i < voxelmap_size) && (i < num_points);
       i += gridDim.x * blockDim.x)
@@ -801,7 +842,7 @@ void kernelInsertSensorData(ProbabilisticVoxel* voxelmap, const uint32_t voxelma
           // insert measured data itself afterwards, so it overrides free voxels from raycaster:
           ProbabilisticVoxel* voxel = getVoxelPtr(voxelmap, dimensions, integer_coordinates.x,
                                                   integer_coordinates.y, integer_coordinates.z);
-          voxel->updateOccupancy(cSENSOR_MODEL_OCCUPIED);
+          voxel->updateOccupancy(prob);
         }
       }
     }

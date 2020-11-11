@@ -58,6 +58,9 @@ public:
   __host__ __device__
   const Vector3ui getObstacle() const;
 
+  __host__ __device__
+  const uint32_t getObstacleID() const;
+
   /**
    * @brief get squared distance (optimization: don't compute square root; distances are not accumulated during DVM computation)
    *

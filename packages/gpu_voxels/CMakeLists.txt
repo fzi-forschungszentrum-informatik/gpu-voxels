@@ -199,7 +199,7 @@ ICMAKER_CONFIGURE_PACKAGE()
 
 ###############################################################################
 # Build examples
-ADD_SUBDIRECTORY(src/examples)
+# ADD_SUBDIRECTORY(src/examples)
 
 IF(BUILD_TESTS)
 ENDIF(BUILD_TESTS)

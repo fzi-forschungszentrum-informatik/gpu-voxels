@@ -60,6 +60,12 @@ This is important if you are still using ROS Indigo and need to compile without 
 - If the ROS dependency was found, but the GPU-Voxels URDF features are still unabailable, run `source /opt/ros/YOUR_ROS_DISTRO/setup.bash` before running cmake.
 - Eigen 3 issues: can be fixed by cloning a more current unstable Eigen version and placing it in CMAKE_PREFIX_PATH
   + on Ubuntu 18.04 with CUDA 10.0: "math_functions.hpp not found"
+  ```bash
+  git clone https://gitlab.com/libeigen/eigen.git
+  sudo cp -r signature_of_eigen3_matrix_library /usr/include/eigen3
+  sudo cp -r unsupported/ /usr/include/eigen3
+  sudo cp -r Eigen/ /usr/include/eigen3
+  ```
   + Eigen 3.3.4 and 3.3.5 with CUDA 9.0, 9.1, 9.2: Error: class "Eigen::half" has no member "x"
   + see http://eigen.tuxfamily.org/index.php?title=Main_Page#Download
 - Cuda 8.0: Code compiled with Cuda 8.0 works fine with older GPU drivers such as 375.66, but there are runtime errors with driver 384.111 and newer ("PTX JIT compilation failed"). Easy fix: use Cuda 10 with a current 410 or newer driver version. Cuda 10 is also available for Ubuntu 14.04 and 16.04.

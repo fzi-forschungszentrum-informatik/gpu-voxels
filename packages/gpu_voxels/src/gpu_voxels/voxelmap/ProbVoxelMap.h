@@ -29,6 +29,7 @@
 #include <gpu_voxels/helpers/common_defines.h>
 #include <gpu_voxels/helpers/cuda_datatypes.h>
 #include <gpu_voxels/helpers/CollisionInterfaces.h>
+#include <sensor_msgs/PointCloud2.h>
 
 namespace gpu_voxels {
 namespace voxelmap {
@@ -46,7 +47,7 @@ public:
 
   template<std::size_t length>
   void insertSensorData(const PointCloud &global_points, const Vector3f &sensor_pose, const bool enable_raycasting, const bool cut_real_robot,
-                        const BitVoxelMeaning robot_voxel_meaning, BitVoxel<length>* robot_map = NULL);
+                        const BitVoxelMeaning robot_voxel_meaning, const Probability prob, BitVoxel<length>* robot_map = NULL);
 
   virtual bool insertMetaPointCloudWithSelfCollisionCheck(const MetaPointCloud *robot_links,
                                                           const std::vector<BitVoxelMeaning>& voxel_meanings = std::vector<BitVoxelMeaning>(),
@@ -61,6 +62,10 @@ public:
 
   size_t collideWith(const voxelmap::BitVectorVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
   size_t collideWith(const voxelmap::ProbVoxelMap* map, float coll_threshold = 1.0, const Vector3i &offset = Vector3i());
+
+  virtual void moveInto(ProbVoxelMap& dest, const Vector3f offset) const;
+  virtual void move(Voxel* dest_data, const Voxel* src_data, const Vector3f offset) const;
+  virtual void publishPointcloud(sensor_msgs::PointCloud2* pointcloud_msg, const float occupancyThreshold=0.5);
 };
 
 } // end of namespace
