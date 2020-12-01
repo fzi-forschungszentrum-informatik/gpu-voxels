@@ -58,7 +58,6 @@ using boost::shared_ptr;
 using gpu_voxels::voxelmap::ProbVoxelMap;
 using gpu_voxels::voxelmap::DistanceVoxelMap;
 using gpu_voxels::voxellist::CountingVoxelList;
-//using gpu_voxels::voxellist::MultiModalVoxelList;
 
 shared_ptr<GpuVoxels> gvl;
 
@@ -84,7 +83,7 @@ void killhandler(int)
  *
  * NOTE: could also use msg->frame_id to derive the transform to world coordinates through ROS
  */
-void baslerCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
+void callback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
 {
 	std::vector<Vector3f> point_data;
 	point_data.resize(msg->points.size());
@@ -105,89 +104,6 @@ void baslerCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
 	new_data_received = true;
 
 	LOGGING_INFO(Gpu_voxels, "DistanceROSDemo camera callback. PointCloud size: " << msg->points.size() << endl);
-}
-
-void intelCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
-{
-	std::vector<Vector3f> point_data;
-	point_data.resize(msg->points.size());
-
-	for (uint32_t i = 0; i < msg->points.size(); i++)
-	{
-		point_data[i].x = msg->points[i].x;
-		point_data[i].y = msg->points[i].y;
-		point_data[i].z = msg->points[i].z;
-	}
-
-	//my_point_cloud.add(point_data);
-	my_point_cloud2.update(point_data);
-
-	// transform new pointcloud to world coordinates
-	my_point_cloud2.transformSelf(&tf);
-
-	new_data_received = true;
-
-	LOGGING_INFO(Gpu_voxels, "DistanceROSDemo camera 2 callback. PointCloud size: " << msg->points.size() << endl);
-}
-
-void velodyneCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
-{
-	std::vector<Vector3f> point_data;
-	point_data.resize(msg->points.size());
-
-	for (uint32_t i = 0; i < msg->points.size(); i++)
-	{
-		point_data[i].x = msg->points[i].x;
-		point_data[i].y = msg->points[i].y;
-		point_data[i].z = msg->points[i].z;
-	}
-
-	//my_point_cloud.add(point_data);
-	my_point_cloud3.update(point_data);
-
-	// transform new pointcloud to world coordinates
-	my_point_cloud3.transformSelf(&tf);
-
-	new_data_received = true;
-
-	LOGGING_INFO(Gpu_voxels, "DistanceROSDemo camera 3 callback. PointCloud size: " << msg->points.size() << endl);
-}
-
-void convert_to_ros_type(pcl::PointCloud<pcl::PointXYZ>::Ptr input, sensor_msgs::PointCloud2::Ptr output) {
-	pcl::toROSMsg(*input, *output);
-	output->header.stamp = ros::Time::now();
-	output->header.frame_id = "camera_optical_frame";
-	output->is_dense = false;
-}
-
-template <class VoxelList>
-void publish_pointcloud(shared_ptr<VoxelList>& voxel_list_ptr, ros::Publisher& publisher)
-{
-	double voxel_offset = voxel_side_length * 0.5f;
-
-	std::vector<gpu_voxels::Vector3ui> voxels;
-	voxel_list_ptr->copyCoordsToHost(voxels);
-
-	pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud(new pcl::PointCloud<pcl::PointXYZ>);
-	sensor_msgs::PointCloud2::Ptr msg(new sensor_msgs::PointCloud2);
-
-	msg->height = 1;
-	msg->width = voxels.size();
-
-	for(size_t i=0; i < voxels.size(); i++)
-	{
-		Vector3ui voxel = voxels[i];
-
-		pcl::PointXYZ voxel_point;
-		voxel_point.x = voxel.x * voxel_side_length + voxel_offset;
-		voxel_point.y = voxel.y * voxel_side_length + voxel_offset;
-		voxel_point.z = voxel.z * voxel_side_length + voxel_offset;
-		pointcloud->points.push_back(voxel_point);
-	}
-
-	convert_to_ros_type(pointcloud, msg);
-
-	publisher.publish(msg);
 }
 
 int main(int argc, char* argv[])
