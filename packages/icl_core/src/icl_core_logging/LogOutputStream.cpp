@@ -656,11 +656,16 @@ LogOutputStream::LogMessage::LogMessage(const icl_core::TimeStamp& timestamp,
     log_level(log_level),
     line(line)
 {
-  std::strncpy(LogMessage::log_stream, log_stream, cMAX_IDENTIFIER_LENGTH+1);
-  std::strncpy(LogMessage::filename, filename, cMAX_DESCRIPTION_LENGTH+1);
-  std::strncpy(LogMessage::class_name, class_name, cMAX_IDENTIFIER_LENGTH+1);
-  std::strncpy(LogMessage::object_name, object_name, cMAX_DESCRIPTION_LENGTH+1);
-  std::strncpy(LogMessage::function_name, function_name, cMAX_IDENTIFIER_LENGTH+1);
+  std::strncpy(LogMessage::log_stream, log_stream, cMAX_IDENTIFIER_LENGTH);
+  LogMessage::log_stream[cMAX_IDENTIFIER_LENGTH] = '\0';
+  std::strncpy(LogMessage::filename, filename, cMAX_DESCRIPTION_LENGTH);
+  LogMessage::filename[cMAX_DESCRIPTION_LENGTH] = '\0';
+  std::strncpy(LogMessage::class_name, class_name, cMAX_IDENTIFIER_LENGTH);
+  LogMessage::class_name[cMAX_IDENTIFIER_LENGTH] = '\0';
+  std::strncpy(LogMessage::object_name, object_name, cMAX_DESCRIPTION_LENGTH);
+  LogMessage::object_name[cMAX_DESCRIPTION_LENGTH] = '\0';
+  std::strncpy(LogMessage::function_name, function_name, cMAX_IDENTIFIER_LENGTH);
+  LogMessage::function_name[cMAX_IDENTIFIER_LENGTH] = '\0';
   std::strncpy(LogMessage::message_text, message_text, cDEFAULT_LOG_SIZE+1);
 }
 
