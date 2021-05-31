@@ -1682,7 +1682,7 @@ void Visualizer::renderFunction(void)
 
   if (m_max_fps != 0 && m_delta_time < 1000.f / m_max_fps)
   {
-    float wait = 1000.f / m_max_fps - m_delta_time;
+    int wait = 1000 / m_max_fps - m_delta_time;
     m_delta_time += wait;
     boost::this_thread::sleep(boost::posix_time::milliseconds(wait));
   }
