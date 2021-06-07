@@ -25,6 +25,7 @@
 #ifndef GPU_VOXELS_CUDA_VECTORS_H_INCLUDED
 #define GPU_VOXELS_CUDA_VECTORS_H_INCLUDED
 
+#include <cmath>
 #include <cuda_runtime.h>
 #include <iostream>
 #include <iomanip>
