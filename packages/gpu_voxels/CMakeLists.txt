@@ -8,15 +8,19 @@ SET(JETSON_SUPPORT OFF)
 ## allow compilation without PCL for gvl_ompl_planner
 SET(PCL_SUPPORT ON)
 
+## disable compilation of GPU-Voxels examples
+SET(BUILD_EXAMPLES ON)
+
 # fix for cuda 9.1 thrust cub addArgument runtime segfault
 SET(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 
 # required in order to query CUDA_VERSION_STRING
 FIND_PACKAGE(CUDA)
 
-## C++11
-SET(CMAKE_CXX_STANDARD 11) # comment out to deactivate C++11 when using ROS indigo to avoid incompatibilities
-SET(ICMAKER_CUDA_CXX_STANDARD "--std=c++11") # necessary to compile .cu files with C++11 content
+## set C++ standard
+# Note: C++11 is incompatible with ROS Indigo / Ubuntu 16.04
+SET(CMAKE_CXX_STANDARD 14) 
+SET(ICMAKER_CUDA_CXX_STANDARD "--std=c++14")
 
 # suppress erroneous warnings, see https://github.com/ORNL-CEES/DataTransferKit/pull/404
 # Warning: incompatible with CUDA < 9.0 !
@@ -237,7 +241,9 @@ ICMAKER_CONFIGURE_PACKAGE()
 
 ###############################################################################
 # Build examples
-ADD_SUBDIRECTORY(src/examples)
+IF(BUILD_EXAMPLES)
+  ADD_SUBDIRECTORY(src/examples)
+ENDIF()
 
 IF(BUILD_TESTS)
 ENDIF(BUILD_TESTS)
