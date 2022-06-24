@@ -30,6 +30,8 @@
 #include <gpu_voxels/voxellist/CountingVoxelList.h>
 #include <cstddef>
 
+#include <thrust/host_vector.h>
+
 namespace gpu_voxels {
 namespace voxellist {
 
