@@ -41,14 +41,17 @@
 #undef CUB_NS_PREFIX
 #undef CUB_NS_POSTFIX
 namespace cub = thrust::system::cuda::detail::cub_;
-#else // Cuda 9 or higher
+#elif CUDA_VERSION < 11000  // Cuda 9 or 10
 #define THRUST_CUB_NS_PREFIX namespace thrust {   namespace cuda_cub {
 #define THRUST_CUB_NS_POSTFIX }  }
 #include <thrust/system/cuda/detail/cub/util_type.cuh>
 #undef CUB_NS_PREFIX
 #undef CUB_NS_POSTFIX
 namespace cub = thrust::cuda_cub::cub;
+#else   // cuda 11 or newer
+#include <cub/util_type.cuh>
 #endif
+
 
 namespace gpu_voxels {
 namespace NTree {
