@@ -169,8 +169,10 @@ MESSAGE(STATUS "----------------------------------------------------------------
 
 # Change these lines to increase performance if your GPU's compute capability is higher
 # GPU-Voxels requires GPU CUDA capabilities >= 2.0
-#SET(ICMAKER_CUDA_COMPUTE_VERSION 20)
-SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
+#   examples: GTX980 is 5.2, Jetson TX1 is 5.3
+#   Cuda 11 will print warnings for deprecated architectures like 3.5 and 3.7
+#SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
+SET(ICMAKER_CUDA_COMPUTE_VERSION 52)
 
 SET(ICMAKER_CUDA_ARCH compute_${ICMAKER_CUDA_COMPUTE_VERSION})
 SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION})
