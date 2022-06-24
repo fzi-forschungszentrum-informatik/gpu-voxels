@@ -146,7 +146,7 @@ void kernel_print(InnerNode* root, InnerNode* stack1, InnerNode* stack2)
   int32_t stack1Top = -1;
   int32_t stack2Top = -1;
   stack1[++stack1Top] = *root;
-  printf("L%i: ", level_count - 1);
+  printf("L%lu: ", level_count - 1);
   printf(" root[][%016llX]\n", root);
 //printf(" root[][%016llX]\n", (*octree.root).data);
 
