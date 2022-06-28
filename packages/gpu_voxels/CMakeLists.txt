@@ -2,6 +2,8 @@
 
 # --- Global options ---
 
+cmake_policy(SET CMP0074 OLD)  # use env variables for find_package <PkgName>_ROOT discovery
+
 ## support Jetson mobile GPUs
 SET(JETSON_SUPPORT OFF)
 
