@@ -59,7 +59,7 @@ namespace gpu_voxels
       {
         m_tf_li.lookupTransform(parent, child, ros::Time(0), tf_transform);
       }
-      catch (tf::TransformException ex)
+      catch (tf::TransformException& ex)
       {
         ROS_ERROR("tfHelper::lookup error: %s",ex.what());
         return false;
