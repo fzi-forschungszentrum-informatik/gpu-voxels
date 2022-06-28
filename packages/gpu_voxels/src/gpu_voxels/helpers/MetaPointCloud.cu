@@ -48,7 +48,7 @@ void MetaPointCloud::init(const std::vector<uint32_t> &_point_cloud_sizes)
   // Memory is only allocated once with the accumulated cloud size:
   m_point_clouds_local->accumulated_cloud_size = m_accumulated_pointcloud_size;
   m_accumulated_cloud = new Vector3f[m_accumulated_pointcloud_size];
-  memset(m_accumulated_cloud, 0, sizeof(Vector3f)*m_accumulated_pointcloud_size);
+  memset((float*)m_accumulated_cloud, 0, sizeof(Vector3f)*m_accumulated_pointcloud_size); // float* cast suppresses memset warning
 
   // The pointers in clouds_base_addresses point into the accumulated memory:
   Vector3f* tmp_addr = m_accumulated_cloud;
