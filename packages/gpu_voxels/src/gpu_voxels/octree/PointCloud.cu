@@ -19,10 +19,11 @@ namespace cub = thrust::system::cuda::detail::cub_;
 #else // Cuda 9 or higher
 #define THRUST_CUB_NS_PREFIX namespace thrust {   namespace cuda_cub {
 #define THRUST_CUB_NS_POSTFIX }   }
-#include <thrust/system/cuda/detail/cub/device/device_radix_sort.cuh>
-#undef CUB_NS_PREFIX
-#undef CUB_NS_POSTFIX
-namespace cub = thrust::cuda_cub::cub;
+/* #include <thrust/system/cuda/detail/cub/device/device_radix_sort.cuh> */
+#include <cub/device/device_radix_sort.cuh>
+/* #undef CUB_NS_PREFIX */
+/* #undef CUB_NS_POSTFIX */
+/* namespace cub = thrust::cuda_cub::cub; */
 #endif
 
 #include <thrust/sort.h>

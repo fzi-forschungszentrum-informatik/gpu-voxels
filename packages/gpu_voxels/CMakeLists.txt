@@ -61,7 +61,7 @@ ENDIF(CUDA_FOUND)
 IF(GLEW_FOUND AND GLM_FOUND AND OPENGL_FOUND AND GLUT_FOUND)
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with visualization. GLEW, GLM, OpenGL and GLUT were found.")
 ELSE(GLEW_FOUND AND GLM_FOUND AND OPENGL_FOUND AND GLUT_FOUND)
-  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without visualization because the following packages are missing:") 
+  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without visualization because the following packages are missing:")
   IF(NOT GLEW_FOUND)
     MESSAGE(STATUS "    Glew")
   ENDIF(NOT GLEW_FOUND)
@@ -136,7 +136,7 @@ MESSAGE(STATUS "----------------------------------------------------------------
 # Change these lines to increase performance if your GPU's compute capability is higher
 # GPU-Voxels requires GPU CUDA capabilities >= 2.0
 #SET(ICMAKER_CUDA_COMPUTE_VERSION 20)
-SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
+SET(ICMAKER_CUDA_COMPUTE_VERSION 61)
 
 SET(ICMAKER_CUDA_ARCH compute_${ICMAKER_CUDA_COMPUTE_VERSION})
 SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION})
@@ -144,7 +144,7 @@ SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION})
 #Usage example for specifying PTX for compute_35 and cubin for sm_51:
 # SET(ICMAKER_CUDA_CODE compute_35,sm_51)
 
-## Uncomment this definition if you want to avoid PTX JIT compilation at first runtime. 
+## Uncomment this definition if you want to avoid PTX JIT compilation at first runtime.
 ## Having both a compute_ and a sm_ code target will include both PTX and CUBIN in the final binary.
 ## IMPORTANT: Check your device's compute capability. the sm_xy argument needs to match your device to have any effect!
 ## Version table: https://en.wikipedia.org/wiki/CUDA#GPUs_supported

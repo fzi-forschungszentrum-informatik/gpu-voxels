@@ -1684,7 +1684,7 @@ void Visualizer::renderFunction(void)
   {
     float wait = 1000.f / m_max_fps - m_delta_time;
     m_delta_time += wait;
-    boost::this_thread::sleep(boost::posix_time::milliseconds(wait));
+    boost::this_thread::sleep(boost::posix_time::milliseconds(long(wait)));
   }
 }
 
