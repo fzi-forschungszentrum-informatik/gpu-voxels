@@ -24,6 +24,7 @@
 #ifndef GPU_VOXELS_VOXELLIST_BITVOXELLIST_H
 #define GPU_VOXELS_VOXELLIST_BITVOXELLIST_H
 
+#include <thrust/host_vector.h>
 #include <gpu_voxels/voxel/BitVoxel.h>
 #include <gpu_voxels/voxel/SVCollider.h>
 #include <gpu_voxels/voxellist/TemplateVoxelList.h>

@@ -37,6 +37,7 @@
 #include <thrust/remove.h>
 #include <thrust/binary_search.h>
 #include <thrust/system_error.h>
+#include <thrust/host_vector.h>
 
 namespace gpu_voxels {
 namespace voxellist {
