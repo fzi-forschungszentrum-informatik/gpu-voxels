@@ -16,13 +16,16 @@
 #if __CUDACC_VER_MAJOR__ < 9
 #include <thrust/system/cuda/detail/cub.h>
 namespace cub = thrust::system::cuda::detail::cub_;
-#else // Cuda 9 or higher
+#include <thrust/system/cuda/detail/cub/device/device_radix_sort.cuh>
+#elif __CUDACC_VER_MAJOR__ < 11  // Cuda 9 or 10
 #define THRUST_CUB_NS_PREFIX namespace thrust {   namespace cuda_cub {
-#define THRUST_CUB_NS_POSTFIX }   }
+#define THRUST_CUB_NS_POSTFIX }  }
 #include <thrust/system/cuda/detail/cub/device/device_radix_sort.cuh>
 #undef CUB_NS_PREFIX
 #undef CUB_NS_POSTFIX
 namespace cub = thrust::cuda_cub::cub;
+#else   // cuda 11 or newer
+#include <cub/device/device_radix_sort.cuh>
 #endif
 
 #include <thrust/sort.h>

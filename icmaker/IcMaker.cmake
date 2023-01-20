@@ -91,6 +91,10 @@ IF(POLICY CMP0015)
     CMAKE_POLICY(SET CMP0015 NEW)
 ENDIF()
 
+cmake_policy(SET CMP0017 NEW)  # prefer system CMake modules
+cmake_policy(SET CMP0072 OLD)  # use old FindOpenGL behavior
+cmake_policy(SET CMP0074 OLD)  # use env variables for find_package <PkgName>_ROOT discovery
+
 # ----------------------------------------------------------------------------
 #  Current version number:
 # ----------------------------------------------------------------------------

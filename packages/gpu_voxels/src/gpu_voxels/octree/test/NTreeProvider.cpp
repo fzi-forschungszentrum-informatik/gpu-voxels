@@ -511,7 +511,7 @@ void NTreeProvider::ros_point_cloud(const sensor_msgs::PointCloud2::ConstPtr& ms
       try
       {
         m_tf_listener->lookupTransform(to_frame, from_frame, ros::Time(0), transform);
-      } catch (tf::TransformException ex)
+      } catch (tf::TransformException& ex)
       {
         ROS_ERROR("%s", ex.what());
       }

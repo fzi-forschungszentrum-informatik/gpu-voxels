@@ -25,6 +25,7 @@
 #ifndef GPU_VOXELS_CUDA_VECTORS_H_INCLUDED
 #define GPU_VOXELS_CUDA_VECTORS_H_INCLUDED
 
+#include <cmath>
 #include <cuda_runtime.h>
 #include <iostream>
 #include <iomanip>
@@ -228,6 +229,24 @@ struct Vector3f
     x -= b.x;
     y -= b.y;
     z -= b.z;
+    return *this;
+  }
+
+  __device__ __host__
+  inline Vector3f& operator*=(const float& b)
+  {
+    x *= b;
+    y *= b;
+    z *= b;
+    return *this;
+  }
+
+  __device__ __host__
+  inline Vector3f& operator/=(const float& b)
+  {
+    x /= b;
+    y /= b;
+    z /= b;
     return *this;
   }
 

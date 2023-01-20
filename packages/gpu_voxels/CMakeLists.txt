@@ -1,16 +1,42 @@
 # this is for emacs file handling -*- mode: cmake; indent-tabs-mode: nil -*-
 
-SET(CMAKE_CXX_STANDARD 11) # comment out to deactivate C++11 when using ROS indigo to avoid incompatibilities
+# --- Global options ---
+
+cmake_policy(SET CMP0074 OLD)  # use env variables for find_package <PkgName>_ROOT discovery
+
+## support Jetson mobile GPUs
+SET(JETSON_SUPPORT OFF)
+
+## allow compilation without PCL for gvl_ompl_planner
+SET(PCL_SUPPORT ON)
+
+## disable compilation of GPU-Voxels examples
+SET(BUILD_EXAMPLES ON)
+
+# fix for cuda 9.1 thrust cub addArgument runtime segfault
+SET(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+
+# required in order to query CUDA_VERSION_STRING
+FIND_PACKAGE(CUDA)
+
+## set C++ standard
+# Note: C++11 is incompatible with ROS Indigo / Ubuntu 16.04
+SET(CMAKE_CXX_STANDARD 14) 
+SET(ICMAKER_CUDA_CXX_STANDARD "--std=c++14")
+
+# suppress erroneous warnings, see https://github.com/ORNL-CEES/DataTransferKit/pull/404
+# Warning: incompatible with CUDA < 9.0 !
+MESSAGE(STATUS "------------- GPU Voxels found CUDA version ${CUDA_VERSION_STRING} ------------")
+IF(CUDA_VERSION_STRING VERSION_LESS "9")
+  SET(SUPPRESS_NVCC_DEFAULTED_WARNINGS "")
+ELSE()
+  SET(SUPPRESS_NVCC_DEFAULTED_WARNINGS "-Xcudafe --diag_suppress=esa_on_defaulted_function_ignored")
+ENDIF()
 
 # --- To be used by other modules ---
 SET(GPU_VOXELS_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}/src" CACHE INTERNAL "")
 SET(GPU_VOXELS_IDL_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src" CACHE INTERNAL "")
 SET(GPU_VOXELS_IDE_FOLDER "gpu_voxels")
-
-# --- Global options ---
-
-SET(CUDA_USE_STATIC_CUDA_RUNTIME OFF) # fix for cuda 9.1 thrust cub addArgument runtime segfault
-FIND_PACKAGE(CUDA)
 
 FIND_PACKAGE(Boost COMPONENTS system thread filesystem date_time unit_test_framework chrono)
 
@@ -37,7 +63,9 @@ FIND_PACKAGE(kdl_parser)
 FIND_PACKAGE(Octomap)
 
 # Dependencies for PCL interfaces
-FIND_PACKAGE(PCL)
+IF (PCL_SUPPORT)
+  FIND_PACKAGE(PCL)
+ENDIF (PCL_SUPPORT)
 
 FIND_PACKAGE(pcl_ros)
 
@@ -47,6 +75,14 @@ FIND_PACKAGE(OpenNi)
 
 # ICL Package management
 ICMAKER_REGISTER_PACKAGE(gpu_voxels)
+
+# Check if pcl/io/openni_grabber.h exists
+FIND_FILE(PCL_OPENNI_GRABBER_FILE pcl/io/openni_grabber.h ${PCL_INCLUDE_DIRS})
+IF(${PCL_OPENNI_GRABBER_FILE} STREQUAL "PCL_OPENNI_GRABBER_FILE-NOTFOUND")
+  SET(PCL_OPENNI_GRABBER_FILE_FOUND OFF)
+ELSE()
+  SET(PCL_OPENNI_GRABBER_FILE_FOUND ON)
+ENDIF()
 
 MESSAGE(STATUS "--------------------------------------------------------------------------")
 MESSAGE(STATUS "------------------------ GPU Voxels configuration ------------------------")
@@ -106,11 +142,11 @@ ENDIF(urdfdom_FOUND AND orocos_kdl_FOUND AND kdl_parser_FOUND)
 #  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without Kinect support. OpenNI2 not found.")
 #ENDIF(OPENNI2_FOUND)
 
-IF(OPENNI_FOUND)
-  MESSAGE(STATUS "[OK]      Building GPU-Voxels with Kinect support. OpenNI was found.")
+IF(OPENNI_FOUND AND PCL_OPENNI_GRABBER_FILE_FOUND)
+  MESSAGE(STATUS "[OK]      Building GPU-Voxels with Kinect support. OpenNI and ${PCL_OPENNI_GRABBER_FILE} was found.")
 ELSE(OPENNI_FOUND)
-  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without Kinect support. OpenNI not found.")
-ENDIF(OPENNI_FOUND)
+  MESSAGE(STATUS "[WARNING] Building GPU-Voxels without Kinect support. OpenNI or pcl/io/openni_grabber.h not found.")
+ENDIF(OPENNI_FOUND AND PCL_OPENNI_GRABBER_FILE_FOUND)
 
 IF(Octomap_FOUND)
   MESSAGE(STATUS "[OK]      Building GPU-Voxels with Octomap support. Octomap found.")
@@ -135,8 +171,10 @@ MESSAGE(STATUS "----------------------------------------------------------------
 
 # Change these lines to increase performance if your GPU's compute capability is higher
 # GPU-Voxels requires GPU CUDA capabilities >= 2.0
-#SET(ICMAKER_CUDA_COMPUTE_VERSION 20)
-SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
+#   examples: GTX980 is 5.2, Jetson TX1 is 5.3
+#   Cuda 11 will print warnings for deprecated architectures like 3.5 and 3.7
+#SET(ICMAKER_CUDA_COMPUTE_VERSION 35)
+SET(ICMAKER_CUDA_COMPUTE_VERSION 52)
 
 SET(ICMAKER_CUDA_ARCH compute_${ICMAKER_CUDA_COMPUTE_VERSION})
 SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION})
@@ -153,8 +191,16 @@ SET(ICMAKER_CUDA_CODE compute_${ICMAKER_CUDA_COMPUTE_VERSION})
 
 SET(ICMAKER_CUDA_PTXAS_VERBOSE "") # "--resource-usage") #nvcc outputs register and memory usage data for each kernel
 SET(ICMAKER_CUDA_WALL "-Xcompiler=-Wall")
-SET(ICMAKER_CUDA_MAXREGS "--maxrregcount=63") # set to 31 to compile on JetsonTX1/TX2/Nano (compute capability 5.3/6.2); N*blocksize must be smaller than max registers per block
 SET(ICMAKER_CUDA_DEBUG "-lineinfo") # "-lineinfo") #"-g -G") # -G disables optimization. use -lineinfo for profiling
+
+# might be replaced by setting per-kernel launch bounds: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#launch-bounds
+# TODO: test again if using 32 (Jetson) or 64 (non-Jetson) instead of 31/63 causes problems
+IF(JETSON_SUPPORT)
+  # set to 31 to compile on JetsonTX1/TX2/Nano (compute capability 5.3/6.2); N*blocksize must be smaller than max registers per block
+  SET(ICMAKER_CUDA_MAXREGS "--maxrregcount=31")
+ELSE(JETSON_SUPPORT)
+  SET(ICMAKER_CUDA_MAXREGS "--maxrregcount=63") # there are 64K registers on current Geforce GPUs, fittting 1K threads with 64 registers
+ENDIF(JETSON_SUPPORT)
 
 # Enable position independent code
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
@@ -166,7 +212,7 @@ ELSE()
  SET(ICMAKER_CUDA_THRUST_DEBUG "" )
 ENDIF()
 
-SET(ICMAKER_CUDA_CPPDEFINES "${ICMAKER_CUDA_DEBUG} ${ICMAKER_CUDA_MAXREGS} ${ICMAKER_CUDA_PTXAS_VERBOSE} -gencode=arch=${ICMAKER_CUDA_ARCH},code=[${ICMAKER_CUDA_CODE}] ${ICMAKER_CUDA_THRUST_DEBUG} ${ICMAKER_CUDA_WALL}")
+SET(ICMAKER_CUDA_CPPDEFINES "${ICMAKER_CUDA_DEBUG} ${ICMAKER_CUDA_MAXREGS} ${ICMAKER_CUDA_PTXAS_VERBOSE} -gencode=arch=${ICMAKER_CUDA_ARCH},code=[${ICMAKER_CUDA_CODE}] ${ICMAKER_CUDA_THRUST_DEBUG} ${ICMAKER_CUDA_CXX_STANDARD} ${ICMAKER_CUDA_WALL} ${SUPPRESS_NVCC_DEFAULTED_WARNINGS}")
 
 MESSAGE("ICMAKER_CUDA_CPPDEFINES: ${ICMAKER_CUDA_CPPDEFINES}")
 
@@ -199,7 +245,9 @@ ICMAKER_CONFIGURE_PACKAGE()
 
 ###############################################################################
 # Build examples
-ADD_SUBDIRECTORY(src/examples)
+IF(BUILD_EXAMPLES)
+  ADD_SUBDIRECTORY(src/examples)
+ENDIF()
 
 IF(BUILD_TESTS)
 ENDIF(BUILD_TESTS)

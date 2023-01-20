@@ -42,6 +42,9 @@
 
 struct Visitor : boost::unit_test::test_tree_visitor
 {
+  // silence warning about partial overriding
+  using boost::unit_test::test_tree_visitor::visit;
+
   void visit(boost::unit_test::test_case const& test)
   {  }
 
