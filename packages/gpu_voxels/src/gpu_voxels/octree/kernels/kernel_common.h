@@ -51,9 +51,9 @@ namespace cub = thrust::cuda_cub::cub;
 
 // __ballot has been replaced by __ballot_sync in Cuda9
 #if(__CUDACC_VER_MAJOR__ >= 9)
-#define FULL_MASK 0xffffffff
-#define BALLOT(PREDICATE) __ballot_sync(FULL_MASK, PREDICATE)
-#define ANYWARP(PREDICATE) __any_sync(FULL_MASK, PREDICATE)
+//#define FULL_MASK 0xffffffff
+#define BALLOT(PREDICATE) __ballot_sync(__activemask(), PREDICATE)
+#define ANYWARP(PREDICATE) __any_sync(__activemask(), PREDICATE)
 #else
 #define BALLOT(PREDICATE) __ballot(PREDICATE)
 #define ANYWARP(PREDICATE) __any(PREDICATE)
